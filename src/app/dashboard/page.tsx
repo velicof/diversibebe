@@ -1,0 +1,619 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getSession } from "next-auth/react";
+import Navbar from "../components/Navbar";
+import type { FoodCatalogItem, FoodEntry, UserAccount } from "../lib/store";
+import {
+  calculateBabyAge,
+  getCurrentAgeGroup,
+  getCurrentUser,
+  getDiversificationInfo,
+  getFoodEntries,
+  getFoodsByAgeGroup,
+  getMildReactionsCount,
+  getNextSuggestedFood,
+  getRecentActivity,
+  getStreak,
+  getTriedFoodsCount,
+  getUnreadNotificationsCount,
+  isLoggedIn as storeIsLoggedIn,
+  parseDate,
+  setDiversificationStartDate,
+  syncGoogleSessionToLocalUser,
+} from "../lib/store";
+import { useStoreRefresh } from "../lib/useStoreRefresh";
+
+type PersistedSlice = {
+  appState?: { currentUser?: UserAccount | null; isLoggedIn?: boolean };
+  currentUser?: UserAccount | null;
+};
+
+function formatActivityRelative(entry: FoodEntry): string {
+  const [y, m, d] = entry.date.split("-").map(Number);
+  if (!y || !m || !d) return "";
+  const dt = new Date(y, m - 1, d);
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startEntry = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  const diff = Math.round(
+    (startToday.getTime() - startEntry.getTime()) / 86400000
+  );
+  if (diff === 0) return "Azi";
+  if (diff === 1) return "Ieri";
+  if (diff >= 2 && diff <= 14) return `Acum ${diff} zile`;
+  return dt.toLocaleDateString("ro-RO");
+}
+
+function activityEntryName(entry: FoodEntry) {
+  return entry.type === "recipe" && entry.recipeName
+    ? entry.recipeName
+    : entry.foodName;
+}
+
+function activityEntryHref(entry: FoodEntry) {
+  if (entry.type === "recipe" && entry.recipeId) {
+    return `/retete/${entry.recipeId}`;
+  }
+  return `/alimente/${entry.foodId}`;
+}
+
+function hasNonTrivialSymptoms(entry: FoodEntry) {
+  return (
+    entry.symptoms.length > 0 && !entry.symptoms.includes("Nicio reacție")
+  );
+}
+
+function reactionLineDashboard(r: FoodEntry["reaction"]): string {
+  if (r === "loved") return "😍 Adorat";
+  if (r === "ok") return "😊 Ok";
+  if (r === "disliked") return "😕 Nu a plăcut";
+  if (r === "refused") return "🙅 Refuzat";
+  return "";
+}
+
+function portionBulletDashboard(p: FoodEntry["portion"]): string {
+  if (p === "putin") return "• Puțin";
+  if (p === "jumatate") return "• Jumătate";
+  if (p === "tot") return "• Tot";
+  return "";
+}
+
+function activityMetaLine(entry: FoodEntry): string {
+  const parts: string[] = [];
+  const rx = reactionLineDashboard(entry.reaction);
+  if (rx) parts.push(rx);
+  const pb = portionBulletDashboard(entry.portion);
+  if (pb) parts.push(pb);
+  if (hasNonTrivialSymptoms(entry)) {
+    parts.push(
+      entry.symptoms.filter((s) => s !== "Nicio reacție").join(", ")
+    );
+  }
+  return parts.join(" ");
+}
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const storeVersion = useStoreRefresh();
+  const [visitorBannerVisible, setVisitorBannerVisible] = useState(true);
+  const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<UserAccount | null>(null);
+  const [entries, setEntries] = useState<FoodEntry[]>([]);
+  const [targetFoods, setTargetFoods] = useState(40);
+  const [dayOfMonth, setDayOfMonth] = useState(1);
+
+  useEffect(() => {
+    try {
+      const data = JSON.parse(
+        localStorage.getItem("diversibebe_data") || "{}"
+      ) as PersistedSlice;
+      const u = data.appState?.currentUser ?? data.currentUser ?? null;
+      setUser(u);
+      setEntries(getRecentActivity());
+      setDayOfMonth(new Date().getDate());
+      const birthDate = u?.baby?.birthDate ?? "";
+      const parsed = birthDate ? parseDate(birthDate) : null;
+      const ageMonths =
+        parsed && !Number.isNaN(parsed.getTime())
+          ? Math.floor(
+              (Date.now() - parsed.getTime()) /
+                (1000 * 60 * 60 * 24 * 30.44)
+            )
+          : 0;
+      const target =
+        ageMonths < 6
+          ? 3
+          : ageMonths < 8
+            ? 8
+            : ageMonths < 10
+              ? 15
+              : ageMonths < 12
+                ? 25
+                : 40;
+      setTargetFoods(target);
+    } catch {
+      setUser(null);
+      setEntries([]);
+      setTargetFoods(40);
+    }
+    setMounted(true);
+  }, [storeVersion]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const session = await getSession();
+      if (cancelled || !session?.user) return;
+      const email = session.user.email;
+      if (!email) return;
+      syncGoogleSessionToLocalUser({
+        email,
+        name: session.user.name ?? null,
+      });
+      if (cancelled) return;
+      const u = getCurrentUser();
+      if (
+        u?.email?.toLowerCase() === email.toLowerCase() &&
+        !u.baby?.name?.trim()
+      ) {
+        router.replace("/onboarding");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router, storeVersion]);
+
+  if (!mounted) {
+    return null;
+  }
+
+  const isLoggedIn = storeIsLoggedIn();
+  const currentUser = user;
+  const userName = currentUser?.baby.name ?? "";
+  const userAge = calculateBabyAge(currentUser?.baby.birthDate ?? "");
+
+  const isVisitor = !isLoggedIn || userName.trim().length === 0;
+
+  const triedFoods = isVisitor ? 0 : getTriedFoodsCount();
+  const mildReactions = isVisitor ? 0 : getMildReactionsCount();
+  const streak = isVisitor ? 0 : getStreak();
+  const recent = isVisitor ? [] : entries;
+  const div = isVisitor
+    ? { startDate: null, week: 0, expectedFoods: 0 }
+    : getDiversificationInfo();
+
+  const progress = isVisitor
+    ? 60
+    : div.startDate
+      ? Math.min((triedFoods / targetFoods) * 100, 100)
+      : 0;
+  const unreadCount = getUnreadNotificationsCount();
+  const ageGroup = getCurrentAgeGroup();
+
+  const triedFoodIdSet = new Set(
+    getFoodEntries()
+      .filter((e) => e.type === "food")
+      .map((e) => e.foodId)
+  );
+  const eligibleFoods = getFoodsByAgeGroup(ageGroup);
+  const untriedFoods = eligibleFoods.filter((f) => !triedFoodIdSet.has(f.id));
+
+  let nextFood: FoodCatalogItem | null = null;
+  let allRecommendedTried = false;
+  if (isVisitor) {
+    nextFood = getNextSuggestedFood();
+  } else if (eligibleFoods.length > 0 && untriedFoods.length === 0) {
+    allRecommendedTried = true;
+  } else if (untriedFoods.length > 0) {
+    nextFood = untriedFoods[dayOfMonth % untriedFoods.length];
+  }
+
+  const nextGroupMap: Record<typeof ageGroup, string> = {
+    "4-6": "6-8",
+    "6-8": "8-10",
+    "8-10": "10-12",
+    "10-12": "12+",
+  };
+
+  return (
+    <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center overflow-y-auto">
+      {isVisitor && visitorBannerVisible ? (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 w-full max-w-[393px] bg-[#EDE7F6] text-[#534AB7] text-[12px] rounded-[14px] px-4 py-3 z-[60] flex items-center justify-between gap-3">
+          <span className="leading-tight">
+            Explorezi ca vizitator · Creează cont pentru a salva
+          </span>
+          <button
+            type="button"
+            onClick={() => setVisitorBannerVisible(false)}
+            className="w-7 h-7 rounded-full flex items-center justify-center cursor-pointer"
+            aria-label="Închide"
+          >
+            <span className="text-[18px] leading-none">×</span>
+          </button>
+        </div>
+      ) : null}
+
+      <main key={storeVersion} className="w-full max-w-[393px] px-6 pb-[88px]">
+        <header className="pt-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[13px] font-normal text-[#8B7A8E]">
+                {isVisitor ? "Bună! 👋" : "Bună dimineața!"}
+              </p>
+              <p className="mt-1 text-[22px] font-extrabold text-[#3D2C3E]">
+                {isVisitor
+                  ? "Descoperă DiversiBebe"
+                  : `${userName} — ${userAge.display}`}
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Link
+                href="/notificari"
+                className="relative cursor-pointer"
+                aria-label="Notificări"
+              >
+                <span className="text-[22px] leading-none">🔔</span>
+                {unreadCount > 0 ? (
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-[#FF3B30] rounded-full" />
+                ) : null}
+              </Link>
+
+              {isVisitor ? (
+                <Link
+                  href="/login"
+                  className="text-[14px] font-bold text-[#D4849A] leading-none cursor-pointer"
+                >
+                  Conectează-te
+                </Link>
+              ) : (
+                <Link
+                  href="/profil"
+                  className="w-[44px] h-[44px] rounded-full bg-[#FDE8EE] flex items-center justify-center text-[22px] cursor-pointer"
+                  aria-label="Profil"
+                >
+                  👶
+                </Link>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <section
+          className="mt-6 rounded-[20px] bg-gradient-to-b from-[#FDE8EE] to-[#EDE7F6] p-5"
+          style={{ boxShadow: "0 2px 12px rgba(212,132,154,0.15)" }}
+        >
+          <p className="text-[11px] font-bold uppercase tracking-wide text-[#D4849A]">
+            {isVisitor
+              ? "EXEMPLU DE DIVERSIFICARE"
+              : div.startDate
+              ? `SĂPTĂMÂNA ${div.week} DE DIVERSIFICARE`
+              : "BINE AI VENIT!"}
+          </p>
+          <p className="mt-2 text-[20px] font-bold text-[#3D2C3E]">
+            {isVisitor
+              ? "3 din 5 alimente noi"
+              : div.startDate
+                ? `${triedFoods} din ${targetFoods} alimente noi`
+                : "Începe diversificarea când ești gata"}
+          </p>
+
+          <div className="mt-4 h-[6px] w-full rounded-full bg-white/60 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-[#D4849A] transition-[width] duration-[1000ms] ease-in-out"
+              style={{
+                width: `${isVisitor || div.startDate ? progress : 0}%`,
+              }}
+            />
+          </div>
+
+          {isVisitor ? (
+            <div className="mt-4 pt-3 border-t border-[#EDE7F6] flex items-center justify-between gap-3">
+              <p className="text-[12px] font-normal text-[#534AB7] leading-tight">
+                Creează un cont gratuit pentru a-ți urmări progresul
+              </p>
+              <Link
+                href="/register"
+                className="h-8 px-4 bg-[#D4849A] text-white rounded-full font-bold text-[12px] flex items-center cursor-pointer whitespace-nowrap"
+              >
+                Creează cont →
+              </Link>
+            </div>
+          ) : !div.startDate ? (
+            <div className="mt-4 pt-3 border-t border-[#EDE7F6] flex items-center justify-between gap-3">
+              <p className="text-[12px] font-normal text-[#534AB7] leading-tight">
+                Bine ai venit! Începe diversificarea când ești gata
+              </p>
+              <button
+                type="button"
+                className="h-8 px-4 bg-[#D4849A] text-white rounded-full font-bold text-[12px]"
+                onClick={() => setDiversificationStartDate(new Date().toISOString())}
+              >
+                Am început diversificarea
+              </button>
+            </div>
+          ) : null}
+        </section>
+
+        <Link
+          href={
+            allRecommendedTried
+              ? `/alimente?group=${nextGroupMap[ageGroup]}`
+              : nextFood
+                ? `/alimente/${nextFood.id}`
+                : `/alimente?group=${nextGroupMap[ageGroup]}`
+          }
+          className="mt-4 rounded-[20px] bg-white border border-[#E0F5F0] p-5 flex items-center justify-between cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-[0_12px_24px_rgba(212,132,154,0.15)]"
+          aria-label="Încearcă azi"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-[48px] h-[48px] rounded-[16px] bg-[#E0F5F0] flex items-center justify-center text-[24px]">
+              {nextFood ? nextFood.emoji : "🎉"}
+            </div>
+
+            <div className="min-w-0 text-left">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-[#6BBFAD]">
+                ÎNCEARCĂ AZI
+              </p>
+              <p className="mt-2 text-[17px] font-bold text-[#3D2C3E]">
+                {allRecommendedTried
+                  ? `🎉 Ai încercat toate alimentele recomandate pentru vârsta lui ${userName}!`
+                  : nextFood
+                    ? nextFood.name
+                    : "Felicitări! Ai încercat toate alimentele!"}
+              </p>
+              <p className="mt-1 text-[12px] font-normal text-[#8B7A8E]">
+                {allRecommendedTried
+                  ? "Explorează și alte grupe de vârstă"
+                  : nextFood
+                    ? "Potrivit vârstei curente"
+                    : "Treci la grupa următoare"}
+              </p>
+            </div>
+          </div>
+
+          <span className="text-[28px] text-[#B8A9BB] leading-none">›</span>
+        </Link>
+
+        <div className="mt-5 grid grid-cols-3 gap-2.5">
+          <Link
+            href="/alimente"
+            className="rounded-[16px] bg-[#FDE8EE] py-[14px] px-2 text-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-[0_10px_20px_rgba(212,132,154,0.12)]"
+          >
+            <div className="text-[22px]">🥄</div>
+            <div className="mt-1 text-[22px] font-bold text-[#D4849A]">
+              {triedFoods}
+            </div>
+            <p className="mt-1 text-[10px] font-semibold text-[#993556]">
+              {triedFoods === 0 ? "Niciun aliment încă" : "Alimente încercate"}
+            </p>
+          </Link>
+
+          <Link
+            href="/alergii"
+            className="rounded-[16px] bg-[#FAEEDA] py-[14px] px-2 text-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-[0_10px_20px_rgba(212,132,154,0.12)]"
+          >
+            <div className="text-[22px]">⚠️</div>
+            <div className="mt-1 text-[22px] font-bold text-[#854F0B]">
+              {mildReactions}
+            </div>
+            <p className="mt-1 text-[10px] font-semibold text-[#633806]">
+              {mildReactions === 0 ? "Nicio reacție" : "Reacție ușoară"}
+            </p>
+          </Link>
+
+          <div className="rounded-[16px] bg-[#E0F5F0] py-[14px] px-2 text-center">
+            <div className="text-[22px]">🔥</div>
+            <div className="mt-1 text-[22px] font-bold text-[#0F6E56]">
+              {streak}
+            </div>
+            <p className="mt-1 text-[10px] font-semibold text-[#085041]">
+              {streak === 0 ? "Începe azi!" : "Zile consecutive"}
+            </p>
+          </div>
+        </div>
+
+        <section className="mt-6">
+          <p className="text-[15px] font-bold text-[#3D2C3E]">
+            Activitate recentă
+          </p>
+
+          {isVisitor ? (
+            <div className="mt-3 flex flex-col gap-2">
+              <Link
+                href="/alimente/cartof-dulce"
+                className="flex flex-row items-center gap-3 rounded-[12px] bg-white py-[10px] pl-[14px] pr-[10px] cursor-pointer"
+                style={{
+                  marginBottom: 8,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[18px]"
+                  style={{ background: "#FFF0F5" }}
+                >
+                  🍠
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="text-[13px] font-bold leading-tight"
+                    style={{ color: "#3D2C3E" }}
+                  >
+                    Cartof dulce
+                  </p>
+                  <p
+                    className="mt-0.5 text-[11px] leading-snug"
+                    style={{ color: "#8B7A8E" }}
+                  >
+                    😍 Adorat • Jumătate
+                  </p>
+                </div>
+                <span
+                  className="shrink-0 text-[11px] whitespace-nowrap"
+                  style={{ color: "#B0A0B8" }}
+                >
+                  Azi
+                </span>
+              </Link>
+
+              <Link
+                href="/alimente/morcov"
+                className="flex flex-row items-center gap-3 rounded-[12px] bg-white py-[10px] pl-[14px] pr-[10px] cursor-pointer"
+                style={{
+                  marginBottom: 8,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[18px]"
+                  style={{ background: "#FFF0F5" }}
+                >
+                  🥕
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="text-[13px] font-bold leading-tight"
+                    style={{ color: "#3D2C3E" }}
+                  >
+                    Morcov
+                  </p>
+                  <p
+                    className="mt-0.5 text-[11px] leading-snug"
+                    style={{ color: "#8B7A8E" }}
+                  >
+                    😊 Ok • Tot
+                  </p>
+                </div>
+                <span
+                  className="shrink-0 text-[11px] whitespace-nowrap"
+                  style={{ color: "#B0A0B8" }}
+                >
+                  Ieri
+                </span>
+              </Link>
+
+              <Link
+                href="/alimente/dovlecel"
+                className="flex flex-row items-center gap-3 rounded-[12px] bg-white py-[10px] pl-[14px] pr-[10px] cursor-pointer"
+                style={{
+                  marginBottom: 8,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[18px]"
+                  style={{ background: "#FFF0F5" }}
+                >
+                  🥒
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="text-[13px] font-bold leading-tight"
+                    style={{ color: "#3D2C3E" }}
+                  >
+                    Dovlecel
+                  </p>
+                  <p
+                    className="mt-0.5 text-[11px] leading-snug"
+                    style={{ color: "#8B7A8E" }}
+                  >
+                    😊 Ok • Puțin
+                  </p>
+                </div>
+                <span
+                  className="shrink-0 text-[11px] whitespace-nowrap"
+                  style={{ color: "#B0A0B8" }}
+                >
+                  Ieri
+                </span>
+              </Link>
+            </div>
+          ) : recent.length === 0 ? (
+            <div className="mt-3 text-center">
+              <p className="text-[14px] text-[#8B7A8E]">
+                📝 Nicio masă jurnalizată încă
+              </p>
+              <button
+                type="button"
+                onClick={() => router.push("/jurnal")}
+                className="mt-4 w-full rounded-[12px] border border-[#EDE7F6] bg-white py-3 text-center text-[13px] font-semibold cursor-pointer"
+                style={{ color: "#D4849A" }}
+              >
+                ➕ Jurnalizează prima masă
+              </button>
+            </div>
+          ) : (
+            <div className="mt-3 flex flex-col">
+              {recent.map((entry) => {
+                const bad = hasNonTrivialSymptoms(entry);
+                return (
+                  <Link
+                    key={entry.id}
+                    href={activityEntryHref(entry)}
+                    className="flex flex-row items-center gap-3 rounded-[12px] bg-white py-[10px] pl-[14px] pr-[10px] cursor-pointer"
+                    style={{
+                      marginBottom: 8,
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                      borderLeft: bad ? "3px solid #E74C3C" : undefined,
+                    }}
+                  >
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[18px]"
+                      style={{ background: "#FFF0F5" }}
+                    >
+                      {entry.emoji}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="text-[13px] font-bold leading-tight truncate"
+                        style={{ color: "#3D2C3E" }}
+                      >
+                        {activityEntryName(entry)}
+                      </p>
+                      <p
+                        className="mt-0.5 text-[11px] leading-snug line-clamp-2"
+                        style={{ color: "#8B7A8E" }}
+                      >
+                        {activityMetaLine(entry)}
+                      </p>
+                    </div>
+                    <span
+                      className="shrink-0 text-[11px] whitespace-nowrap self-start pt-0.5"
+                      style={{ color: "#B0A0B8" }}
+                    >
+                      {formatActivityRelative(entry)}
+                    </span>
+                  </Link>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => router.push("/istoric")}
+                className="mt-1 w-full rounded-[12px] border border-[#EDE7F6] bg-white py-3 text-center text-[13px] font-semibold cursor-pointer"
+                style={{ color: "#D4849A" }}
+              >
+                📋 Vezi istoricul complet →
+              </button>
+            </div>
+          )}
+        </section>
+      </main>
+
+      <Link
+        href="/jurnal"
+        className="fixed z-20 w-[56px] h-[56px] rounded-full bg-[#D4849A] flex items-center justify-center shadow-[0_14px_26px_rgba(212,132,154,0.35)] cursor-pointer"
+        style={{ bottom: "88px", right: "calc(50% - 196px + 24px)" }}
+        aria-label="Adaugă intrare jurnal"
+      >
+        <span className="text-[24px] font-bold leading-none text-white">+</span>
+      </Link>
+
+      <Navbar activeTab="acasa" />
+    </div>
+  );
+}
+
