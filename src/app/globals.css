@@ -25,3 +25,27 @@ body {
   color: var(--foreground);
   font-family: "Nunito", Arial, Helvetica, sans-serif;
 }
+
+/* Readable form text on light pastel backgrounds (auth, onboarding, lists) */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  color: #3d2c3e;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6b5b71 !important;
+  opacity: 1;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #3d2c3e;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+input[type="date"] {
+  color-scheme: light;
+}

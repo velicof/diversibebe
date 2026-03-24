@@ -330,7 +330,7 @@ export default function IstoricPage() {
     >
       <main
         key={storeVersion}
-        className="w-full max-w-[393px] px-6 pb-24"
+        className="w-full max-w-[393px] px-6 pb-[128px]"
       >
         <header className="pt-6">
           <button

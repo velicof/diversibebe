@@ -264,6 +264,9 @@ Numele părintelui: ${user.parentName || "Părintele"}
     "Ce alimente urmează să introduc?",
   ];
 
+  /** Above bottom nav (72px); on dashboard also clear the jurnal FAB (~56px + gap). */
+  const pillBottomPx = pathname === "/dashboard" ? 152 : 88;
+
   return (
     <>
       {!isOpen ? (
@@ -272,26 +275,27 @@ Numele părintelui: ${user.parentName || "Părintele"}
           onClick={() => setIsOpen(true)}
           style={{
             position: "fixed",
-            bottom: 80,
+            bottom: `calc(${pillBottomPx}px + env(safe-area-inset-bottom, 0px))`,
             left: "50%",
             transform: "translateX(-50%)",
-            zIndex: 1000,
+            zIndex: 40,
             width: "fit-content",
-            maxWidth: 353,
+            maxWidth: "min(320px, calc(100vw - 24px))",
             background: "linear-gradient(135deg, #D4849A, #C4B5E0)",
-            borderRadius: 30,
-            padding: "10px 20px",
+            borderRadius: 999,
+            padding: "8px 14px",
             color: "white",
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: 700,
             border: "none",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
-            gap: 8,
-            boxShadow: "0 4px 16px rgba(212,132,154,0.4)",
+            gap: 6,
+            boxShadow: "0 3px 14px rgba(212,132,154,0.35)",
             fontFamily: "Nunito, sans-serif",
             whiteSpace: "nowrap",
+            lineHeight: 1.25,
           }}
           aria-label="Deschide BebeAsist"
         >

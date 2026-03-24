@@ -29,7 +29,7 @@ export default function NotificariPage() {
 
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center transition-colors">
-      <main className="w-full max-w-[393px] px-6 pb-[88px]">
+      <main className="w-full max-w-[393px] px-6 pb-[128px]">
         <header className="pt-6">
           <div className="flex items-center justify-between gap-4">
             <button

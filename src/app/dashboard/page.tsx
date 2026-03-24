@@ -237,7 +237,7 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      <main key={storeVersion} className="w-full max-w-[393px] px-6 pb-[88px]">
+      <main key={storeVersion} className="w-full max-w-[393px] px-6 pb-[168px]">
         <header className="pt-6">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -339,6 +339,9 @@ export default function DashboardPage() {
           ) : null}
         </section>
 
+        <p className="mt-5 text-[11px] font-bold uppercase tracking-wide text-[#8B7A8E]">
+          Recomandare pentru azi
+        </p>
         <Link
           href={
             allRecommendedTried
@@ -347,7 +350,7 @@ export default function DashboardPage() {
                 ? `/alimente/${nextFood.id}`
                 : `/alimente?group=${nextGroupMap[ageGroup]}`
           }
-          className="mt-4 rounded-[20px] bg-white border border-[#E0F5F0] p-5 flex items-center justify-between cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-[0_12px_24px_rgba(212,132,154,0.15)]"
+          className="mt-2 rounded-[20px] bg-white border border-[#E0F5F0] p-5 flex items-center justify-between cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-[0_12px_24px_rgba(212,132,154,0.15)]"
           aria-label="Încearcă azi"
         >
           <div className="flex items-center gap-4">
@@ -379,10 +382,16 @@ export default function DashboardPage() {
           <span className="text-[28px] text-[#B8A9BB] leading-none">›</span>
         </Link>
 
-        <div className="mt-5 grid grid-cols-3 gap-2.5">
+        {!isVisitor ? (
+          <p className="mt-5 text-[12px] text-[#534AB7] font-semibold leading-snug px-0.5">
+            Pasul următor: jurnalizează mesele sau deschide recomandarea de mai sus.
+          </p>
+        ) : null}
+
+        <div className="mt-4 grid grid-cols-3 gap-2.5">
           <Link
-            href="/alimente"
-            className="rounded-[16px] bg-[#FDE8EE] py-[14px] px-2 text-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-[0_10px_20px_rgba(212,132,154,0.12)]"
+            href="/alimente?filter=incercate"
+            className="rounded-[16px] bg-[#FDE8EE] py-[14px] px-2 text-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-[0_10px_20px_rgba(212,132,154,0.12)] min-h-[96px] flex flex-col justify-center"
           >
             <div className="text-[22px]">🥄</div>
             <div className="mt-1 text-[22px] font-bold text-[#D4849A]">
@@ -395,7 +404,7 @@ export default function DashboardPage() {
 
           <Link
             href="/alergii"
-            className="rounded-[16px] bg-[#FAEEDA] py-[14px] px-2 text-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-[0_10px_20px_rgba(212,132,154,0.12)]"
+            className="rounded-[16px] bg-[#FAEEDA] py-[14px] px-2 text-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-[0_10px_20px_rgba(212,132,154,0.12)] min-h-[96px] flex flex-col justify-center"
           >
             <div className="text-[22px]">⚠️</div>
             <div className="mt-1 text-[22px] font-bold text-[#854F0B]">
@@ -406,7 +415,7 @@ export default function DashboardPage() {
             </p>
           </Link>
 
-          <div className="rounded-[16px] bg-[#E0F5F0] py-[14px] px-2 text-center">
+          <div className="rounded-[16px] bg-[#E0F5F0] py-[14px] px-2 text-center min-h-[96px] flex flex-col justify-center">
             <div className="text-[22px]">🔥</div>
             <div className="mt-1 text-[22px] font-bold text-[#0F6E56]">
               {streak}
@@ -417,10 +426,25 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <section className="mt-6">
-          <p className="text-[15px] font-bold text-[#3D2C3E]">
-            Activitate recentă
-          </p>
+        <section className="mt-7">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-[15px] font-bold text-[#3D2C3E]">
+                Activitate recentă
+              </p>
+              <p className="mt-0.5 text-[12px] text-[#8B7A8E]">
+                Ultimele jurnalizări
+              </p>
+            </div>
+            {!isVisitor ? (
+              <Link
+                href="/jurnal"
+                className="shrink-0 text-[12px] font-bold text-[#D4849A]"
+              >
+                + Jurnal
+              </Link>
+            ) : null}
+          </div>
 
           {isVisitor ? (
             <div className="mt-3 flex flex-col gap-2">

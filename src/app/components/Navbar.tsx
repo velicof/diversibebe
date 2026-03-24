@@ -19,8 +19,11 @@ export default function Navbar({ activeTab }: NavbarProps) {
   const normalized = (activeTab || "").toLowerCase();
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[393px] h-[72px] bg-white border-t border-[#FDE8EE] z-10">
-      <div className="h-full px-2 flex items-center justify-between gap-0.5">
+    <nav
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[393px] bg-white border-t border-[#FDE8EE] z-10"
+      style={{ paddingBottom: "max(0px, env(safe-area-inset-bottom))" }}
+    >
+      <div className="h-[72px] px-2 flex items-center justify-between gap-0.5">
         {NAV_ITEMS.map((item) => {
           const isActive = normalized === item.key;
           const color = isActive ? "#D4849A" : "#8B7A8E";

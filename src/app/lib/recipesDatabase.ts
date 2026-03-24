@@ -11,6 +11,9 @@ import {
 
 export type MealType = "mic-dejun" | "pranz" | "cina" | "gustare";
 
+/** Benzi de vârstă pentru porții recomandate (luni). */
+export type AgeBandId = "4-6" | "6-8" | "8-10" | "10-12";
+
 export type RecipeCatalogItem = {
   id: string;
   name: string;
@@ -19,12 +22,25 @@ export type RecipeCatalogItem = {
   time: string;
   age: string;
   difficulty: "Ușor" | "Mediu";
+  /** Reținut pentru compatibilitate; poate reflecta porții „familie” sau un batch. */
   servings: number | string;
   ingredients: string[];
   steps: string[];
   relatedFoods: string[];
   allergens: string[];
   storage: string;
+  /**
+   * Greutate aproximativă a preparatului gata (tot bolul / tava), în g.
+   * Folosit pentru a calcula câte porții pentru bebe ies din rețetă.
+   */
+  totalYieldGrams?: number;
+  /**
+   * Porție recomandată (g preparat) per bandă, pentru bebeluș.
+   * Lipsă = se folosesc valorile implicite din `recipePortions.ts`.
+   */
+  babyPortionGramsByAgeBand?: Partial<Record<AgeBandId, number>>;
+  /** Notă scurtă despre textură per bandă (opțional). */
+  textureNoteByAgeBand?: Partial<Record<AgeBandId, string>>;
 };
 
 const LEGACY_RECIPES: RecipeCatalogItem[] = [
@@ -55,6 +71,13 @@ const LEGACY_RECIPES: RecipeCatalogItem[] = [
     relatedFoods: ["dovlecel"],
     allergens: [],
     storage: "Se păstrează la frigider în recipient închis până la 2 zile.",
+    totalYieldGrams: 220,
+    babyPortionGramsByAgeBand: {
+      "4-6": 40,
+      "6-8": 65,
+      "8-10": 95,
+      "10-12": 115,
+    },
   },
   {
     id: "piure-morcov",

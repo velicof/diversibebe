@@ -1,8 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { use, useMemo } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { estimateRecipeNutrition, getServingSuggestion } from "@/app/lib/nutrition";
+import {
+  ageBandLabelRo,
+  ageMonthsToAgeBand,
+  formatApproxBabyServingsRo,
+  formatRecipePortionLineRo,
+  inferTotalYieldGrams,
+  nutritionAgeKeyFromMonths,
+  readBabyAgeMonthsFromStorage,
+} from "@/app/lib/recipePortions";
 import Navbar from "../../components/Navbar";
 import { getRecipeById, type RecipeCatalogItem } from "../../lib/store";
 
@@ -88,12 +97,19 @@ export default function RecipeDetailPage({
   const router = useRouter();
   const { id } = use(params);
   const recipe = useMemo(() => getRecipeById(id), [id]);
-  const ageGroup = recipe?.age?.split(" ")[0] ?? "8+";
+  const [babyAgeMonths, setBabyAgeMonths] = useState<number | null>(null);
+
+  useEffect(() => {
+    setBabyAgeMonths(readBabyAgeMonthsFromStorage());
+  }, []);
+
+  const effectiveMonths = babyAgeMonths ?? 8;
+  const nutAgeKey = nutritionAgeKeyFromMonths(effectiveMonths);
   const nutrition = recipe
-    ? estimateRecipeNutrition(recipe.ingredients, ageGroup)
+    ? estimateRecipeNutrition(recipe.ingredients, nutAgeKey)
     : null;
   const serving = recipe
-    ? getServingSuggestion(ageGroup, recipe.mealType)
+    ? getServingSuggestion(nutAgeKey, recipe.mealType)
     : { texture: "", howToServe: "", icon: "" };
   const needs = nutrition?.dailyNeeds;
   const kcalPercent =
@@ -101,10 +117,15 @@ export default function RecipeDetailPage({
       ? Math.min(Math.round((nutrition.kcal / needs.kcal) * 100), 100)
       : 0;
 
+  const textureBandNote =
+    recipe && babyAgeMonths !== null
+      ? recipe.textureNoteByAgeBand?.[ageMonthsToAgeBand(babyAgeMonths)]
+      : undefined;
+
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
       <main
-        className="w-full max-w-[393px] px-6 pb-[88px]"
+        className="w-full max-w-[393px] px-6 pb-[128px]"
         style={{ fontFamily: '"Nunito", sans-serif' }}
       >
         <header className="pt-6">
@@ -150,9 +171,14 @@ export default function RecipeDetailPage({
                   color: "#0F6E56",
                 },
                 {
-                  label: `🍽 Porții: ${servingsBadgeText(recipe.servings)}`,
+                  label: `⚖️ Preparat ~${inferTotalYieldGrams(recipe)} g (tot)`,
                   bg: "#EDE7F6",
                   color: "#534AB7",
+                },
+                {
+                  label: `🍽 Rețetă: ${servingsBadgeText(recipe.servings)} porții (fișă)`,
+                  bg: "#F3E5FF",
+                  color: "#6B4E9E",
                 },
                 {
                   label: `👶 ${recipe.age}`,
@@ -175,10 +201,34 @@ export default function RecipeDetailPage({
                 style={{ backgroundColor: "#E8F4FD" }}
               >
                 <p className="text-[14px] font-bold text-[#3D2C3E]">
-                  Porție pentru bebeluș
+                  Porție pentru bebeluș (orientativ)
                 </p>
+                {babyAgeMonths !== null ? (
+                  <p className="mt-1 text-[12px] font-semibold text-[#534AB7]">
+                    Vârstă profil: {babyAgeMonths} luni ·{" "}
+                    {ageBandLabelRo(ageMonthsToAgeBand(babyAgeMonths))}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[12px] text-[#8B7A8E]">
+                    Adaugă profilul bebelușului pentru porții personalizate (afișăm
+                    exemplu pentru ~8 luni).
+                  </p>
+                )}
                 <p
                   className="mt-2 text-[14px] text-[#3D2C3E] leading-relaxed"
+                  style={{ lineHeight: 1.6 }}
+                >
+                  <span className="font-semibold text-[#0F6E56]">
+                    {formatRecipePortionLineRo(recipe, effectiveMonths)}
+                  </span>
+                  <br />
+                  <span className="text-[13px]">
+                    {formatApproxBabyServingsRo(recipe, effectiveMonths)} (din
+                    preparatul total ~{inferTotalYieldGrams(recipe)} g).
+                  </span>
+                </p>
+                <p
+                  className="mt-3 text-[13px] text-[#3D2C3E] leading-relaxed border-t border-[#D4849A]/20 pt-3"
                   style={{ lineHeight: 1.6 }}
                 >
                   {getBabyPortion(recipe.age)}
@@ -221,6 +271,7 @@ export default function RecipeDetailPage({
                     style={{ fontSize: 11, color: "#D4849A", fontWeight: 600 }}
                   >
                     {serving.texture}
+                    {textureBandNote ? ` — ${textureBandNote}` : ""}
                   </div>
                 </div>
               </div>

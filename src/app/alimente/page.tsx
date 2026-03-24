@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
 import {
   getAllFoods,
+  getFoodEntries,
   getFoodStatus,
   getFoodStatusMeta,
   getFoodsByAgeGroup,
@@ -67,6 +68,8 @@ function AlimentePageInner() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const groupFromUrl = searchParams.get("group");
+  const triedOnly = searchParams.get("filter") === "incercate";
+
   useEffect(() => {
     if (groupFromUrl && AGE_TAB_IDS.has(groupFromUrl)) {
       setActiveTab(groupFromUrl as AgeTabId);
@@ -116,21 +119,41 @@ function AlimentePageInner() {
 
   const searchTrim = searchQuery.trim();
   const foods = useMemo(() => {
-    if (!searchTrim) return foodsByCategory;
-    const q = normalizeForSearch(searchTrim);
-    return getAllFoods().filter((f) => normalizeForSearch(f.name).includes(q));
-  }, [foodsByCategory, searchTrim]);
+    let list: ReturnType<typeof getAllFoods>;
+    if (!searchTrim) list = foodsByCategory;
+    else {
+      const q = normalizeForSearch(searchTrim);
+      list = getAllFoods().filter((f) => normalizeForSearch(f.name).includes(q));
+    }
+    if (!triedOnly) return list;
+    const triedIds = new Set(
+      getFoodEntries()
+        .filter((e) => e.type === "food")
+        .map((e) => e.foodId)
+    );
+    return list.filter((f) => triedIds.has(f.id));
+  }, [foodsByCategory, searchTrim, triedOnly, storeVersion]);
 
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center transition-colors">
-      <main className="w-full max-w-[393px] px-6 pb-[88px]">
+      <main className="w-full max-w-[393px] px-6 pb-[128px]">
         <header className="pt-6">
           <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
-            Calendarul alimentar 🥄
+            {triedOnly ? "Alimente încercate 🥄" : "Calendarul alimentar 🥄"}
           </h1>
           <p className="mt-1 text-[13px] font-normal text-[#8B7A8E]">
-            Alimente recomandate pe grupe de vârstă
+            {triedOnly
+              ? "Doar alimentele deja încercate și jurnalizate pentru bebeluș"
+              : "Alimente recomandate pe grupe de vârstă"}
           </p>
+          {triedOnly ? (
+            <Link
+              href="/alimente"
+              className="mt-3 inline-block text-[13px] font-bold text-[#D4849A]"
+            >
+              ← Vezi tot calendarul alimentar
+            </Link>
+          ) : null}
         </header>
 
         <div className="relative mt-5 w-full">
@@ -214,10 +237,19 @@ function AlimentePageInner() {
           {foods.length} alimente
         </p>
 
-        {foods.length === 0 && searchTrim ? (
-          <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
-            Niciun aliment găsit pentru „{searchTrim}”
-          </p>
+        {foods.length === 0 ? (
+          searchTrim || triedOnly ? (
+            <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
+              {searchTrim ? (
+                <>Niciun aliment găsit pentru „{searchTrim}”</>
+              ) : (
+                <>
+                  Niciun aliment încercat încă în această selecție. Explorează
+                  calendarul sau schimbă filtrele.
+                </>
+              )}
+            </p>
+          ) : null
         ) : (
           <div
             key={storeVersion}
@@ -277,7 +309,7 @@ export default function AlimentePage() {
     <Suspense
       fallback={
         <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
-          <main className="w-full max-w-[393px] px-6 pt-6 pb-[88px]">
+          <main className="w-full max-w-[393px] px-6 pt-6 pb-[128px]">
             <p className="text-[14px] text-[#8B7A8E]">Se încarcă…</p>
           </main>
           <Navbar activeTab="alimente" />

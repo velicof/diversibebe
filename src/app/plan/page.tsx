@@ -10,6 +10,13 @@ import {
   getRecipeTags,
 } from "@/app/lib/nutrition";
 import {
+  ageBandLabelRo,
+  ageMonthsToAgeBand,
+  formatApproxBabyServingsRo,
+  formatRecipePortionLineRo,
+  inferTotalYieldGrams,
+} from "@/app/lib/recipePortions";
+import {
   RECIPES,
   type MealType,
   type RecipeCatalogItem,
@@ -56,15 +63,6 @@ const MEAL_CHIP_LABEL: Partial<Record<MealType, string>> = {
   gustare: "Gustare",
   pranz: "Prânz",
   cina: "Cină",
-};
-
-const MEAL_CHIP_STYLE: Partial<
-  Record<MealType, { bg: string; color: string }>
-> = {
-  "mic-dejun": { bg: "#FFF3E0", color: "#E8A020" },
-  gustare: { bg: "#F3E5FF", color: "#9B59B6" },
-  pranz: { bg: "#E8F8F5", color: "#27AE60" },
-  cina: { bg: "#EEF2FF", color: "#5B6CF5" },
 };
 
 type PersistedShape = {
@@ -378,7 +376,7 @@ export default function PlanPage() {
     return (
       <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
         <main
-          className="w-full max-w-[393px] px-6 pb-[88px] pt-6"
+          className="w-full max-w-[393px] px-6 pb-[128px] pt-6"
           style={{ fontFamily: '"Nunito", sans-serif' }}
         >
           <button
@@ -407,7 +405,7 @@ export default function PlanPage() {
     return (
       <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
         <main
-          className="w-full max-w-[393px] px-6 pb-[88px]"
+          className="w-full max-w-[393px] px-6 pb-[128px]"
           style={{ fontFamily: '"Nunito", sans-serif' }}
         >
           <header className="pt-6">
@@ -451,7 +449,7 @@ export default function PlanPage() {
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
       <main
         key={storeVersion}
-        className="w-full max-w-[393px] px-6 pb-[88px]"
+        className="w-full max-w-[393px] px-6 pb-[128px]"
         style={{ fontFamily: '"Nunito", sans-serif' }}
       >
         <header className="pt-6">
@@ -473,6 +471,18 @@ export default function PlanPage() {
           <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
             Plan săptămânal 📅
           </h1>
+          <p className="mt-2 text-[13px] font-semibold leading-snug text-[#534AB7]">
+            {ageMonths} luni · {ageBandLabelRo(ageMonthsToAgeBand(ageMonths))} ·{" "}
+            {mealTypes.length}{" "}
+            {mealTypes.length === 1
+              ? "masă planificată/zi"
+              : "mese planificate/zi"}
+          </p>
+          <p className="mt-1 text-[12px] text-[#8B7A8E] leading-relaxed">
+            {mode === "normal"
+              ? "Plan echilibrat: mic dejun → gustare → prânz → cină (după vârstă)."
+              : "Plan anticonstipație: mai multe fibre & rețete ușoare, adaptate vârstei."}
+          </p>
           <div className="mt-3 flex items-center justify-between gap-2">
             <button
               type="button"
@@ -634,114 +644,117 @@ export default function PlanPage() {
                   </div>
                 </div>
 
-                <div className="mt-2">
+                <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-[#B8A9BB]">
+                  Pe feluri (mic dejun → gustare → prânz → cină)
+                </p>
+                <div className="mt-1">
                   {meals.map((slot, rowIdx) => {
-                    const chip = MEAL_CHIP_STYLE[slot.mealType];
                     const isLast = rowIdx === meals.length - 1;
                     const recipe = slot.recipe;
                     const recipeName = recipe?.name ?? "Nicio rețetă disponibilă";
-                    const shouldTruncate = recipeName.length > 25;
 
                     return (
                       <div
                         key={`${slot.mealType}-${slot.mealIndex}`}
-                        className={`flex items-center gap-3 py-2 ${
-                          isLast ? "" : "border-b border-[#F5F0F8]"
-                        }`}
+                        className={`py-2 ${isLast ? "" : "border-b border-[#F5F0F8]"}`}
                       >
-                        <button
-                          type="button"
-                          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-left"
-                          onClick={() => {
-                            if (recipe) {
-                              router.push(`/retete/${recipe.id}`);
-                            }
-                          }}
-                          disabled={!recipe}
-                        >
-                          <span className="w-12 shrink-0 text-[12px] text-[#B0A0B8]">
-                            {MEAL_TIME_LABEL[slot.mealType] ?? ""}
-                          </span>
-                          <div
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[20px] leading-none"
-                            style={{ backgroundColor: "#FFF0F5" }}
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-left"
+                            onClick={() => {
+                              if (recipe) {
+                                router.push(`/retete/${recipe.id}`);
+                              }
+                            }}
+                            disabled={!recipe}
                           >
-                            {recipe?.emoji ?? "—"}
-                          </div>
-                          <div className="flex min-w-0 flex-1 items-center">
-                            <span
-                              className="min-w-0"
-                              title={recipeName}
-                              style={{
-                                whiteSpace: "normal",
-                                overflow: "visible",
-                                textOverflow: "unset",
-                                maxWidth: "160px",
-                                lineHeight: "1.3",
-                                fontSize: "13px",
-                                color: "#3D2C3E",
-                                fontWeight: 500,
-                              }}
-                            >
-                              {recipeName}
+                            <span className="w-12 shrink-0 text-[12px] text-[#B0A0B8]">
+                              {MEAL_TIME_LABEL[slot.mealType] ?? ""}
                             </span>
-                            {recipe
-                              ? (() => {
-                                  const tags = getRecipeTags(recipe);
-                                  return (
-                                    <span
-                                      style={{
-                                        display: "flex",
-                                        gap: 2,
-                                        marginLeft: 4,
-                                        flexShrink: 0,
-                                      }}
-                                    >
-                                      {tags.includes("low-budget") && (
-                                        <span style={{ fontSize: 10 }}>💰</span>
-                                      )}
-                                      {tags.includes("anticonstipatie") && (
-                                        <span style={{ fontSize: 10 }}>🥦</span>
-                                      )}
-                                      {tags.includes("dulce") && (
-                                        <span style={{ fontSize: 10 }}>🍬</span>
-                                      )}
-                                    </span>
-                                  );
-                                })()
-                              : null}
-                          </div>
-                          {chip ? (
-                            <span
-                              className="shrink-0 rounded-[20px] text-[10px] font-semibold"
-                              style={{
-                                backgroundColor: chip.bg,
-                                color: chip.color,
-                                padding: "2px 8px",
-                              }}
+                            <div
+                              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[20px] leading-none"
+                              style={{ backgroundColor: "#FFF0F5" }}
                             >
-                              {MEAL_CHIP_LABEL[slot.mealType]}
-                            </span>
-                          ) : null}
-                        </button>
-                        <button
-                          type="button"
-                          className="shrink-0 cursor-pointer border-0 bg-transparent p-1 text-[14px] leading-none"
-                          style={{ color: "#C4B5E0" }}
-                          aria-label="Alege altă rețetă"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openAlternatives({
-                              weekKey,
-                              dayIndex,
-                              mealIndex: slot.mealIndex,
-                              mealType: slot.mealType,
-                              currentId: recipe?.id ?? null,
-                            });
-                          }}
-                        >
-                          ✏️
-                        </button>
+                              {recipe?.emoji ?? "—"}
+                            </div>
+                            <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+                              <span
+                                className="text-[10px] font-bold uppercase tracking-wide text-[#D4849A]"
+                              >
+                                {MEAL_CHIP_LABEL[slot.mealType] ?? slot.mealType}
+                              </span>
+                              <div className="flex min-w-0 flex-1 items-center">
+                                <span
+                                  className="min-w-0"
+                                  title={recipeName}
+                                  style={{
+                                    whiteSpace: "normal",
+                                    overflow: "visible",
+                                    textOverflow: "unset",
+                                    maxWidth: "200px",
+                                    lineHeight: "1.3",
+                                    fontSize: "13px",
+                                    color: "#3D2C3E",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  {recipeName}
+                                </span>
+                                {recipe
+                                  ? (() => {
+                                      const tags = getRecipeTags(recipe);
+                                      return (
+                                        <span
+                                          style={{
+                                            display: "flex",
+                                            gap: 2,
+                                            marginLeft: 4,
+                                            flexShrink: 0,
+                                          }}
+                                        >
+                                          {tags.includes("low-budget") && (
+                                            <span style={{ fontSize: 10 }}>💰</span>
+                                          )}
+                                          {tags.includes("anticonstipatie") && (
+                                            <span style={{ fontSize: 10 }}>🥦</span>
+                                          )}
+                                          {tags.includes("dulce") && (
+                                            <span style={{ fontSize: 10 }}>🍬</span>
+                                          )}
+                                        </span>
+                                      );
+                                    })()
+                                  : null}
+                              </div>
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            className="shrink-0 cursor-pointer border-0 bg-transparent p-1 text-[14px] leading-none"
+                            style={{ color: "#C4B5E0" }}
+                            aria-label="Alege altă rețetă"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openAlternatives({
+                                weekKey,
+                                dayIndex,
+                                mealIndex: slot.mealIndex,
+                                mealType: slot.mealType,
+                                currentId: recipe?.id ?? null,
+                              });
+                            }}
+                          >
+                            ✏️
+                          </button>
+                        </div>
+                        {recipe ? (
+                          <p className="mt-1.5 pl-[84px] pr-2 text-[10px] leading-snug text-[#0F6E56]">
+                            {formatRecipePortionLineRo(recipe, ageMonths)} ·{" "}
+                            {formatApproxBabyServingsRo(recipe, ageMonths)} ·
+                            preparat ~{inferTotalYieldGrams(recipe)} g
+                          </p>
+                        ) : null}
                       </div>
                     );
                   })}

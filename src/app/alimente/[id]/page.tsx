@@ -87,7 +87,7 @@ export default function FoodDetailPage({
   if (!food) {
     return (
       <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
-        <main className="w-full max-w-[393px] px-6 pb-[88px]">
+        <main className="w-full max-w-[393px] px-6 pb-[128px]">
           <p className="mt-10 text-[14px] text-[#8B7A8E]">Aliment inexistent</p>
           <div className="mt-4">
             <Link
@@ -163,7 +163,7 @@ export default function FoodDetailPage({
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
       <main
         key={storeVersion}
-        className="w-full max-w-[393px] px-6 pb-[88px]"
+        className="w-full max-w-[393px] px-6 pb-[128px]"
         style={{ fontFamily: '"Nunito", sans-serif' }}
       >
         <header className="pt-6">

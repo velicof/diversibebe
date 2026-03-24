@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  formatRecipeCardHintRo,
+  readBabyAgeMonthsFromStorage,
+} from "../lib/recipePortions";
 import Navbar from "../components/Navbar";
 import { getRecipes, parseDate, type MealType } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
@@ -70,6 +74,7 @@ export default function RetetePage() {
   const [manualAgeFilter, setManualAgeFilter] = useState<AgeFilterId | null>(
     null
   );
+  const [babyAgeMonths, setBabyAgeMonths] = useState<number | null>(null);
   const ageFilter = manualAgeFilter ?? profileAgeFilter;
   const prevBirthKey = useRef<string | null>(null);
 
@@ -110,6 +115,10 @@ export default function RetetePage() {
   }, [storeVersion]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  useEffect(() => {
+    setBabyAgeMonths(readBabyAgeMonthsFromStorage());
+  }, [storeVersion]);
+
   const searchTrim = searchQuery.trim();
 
   const visible = useMemo(() => {
@@ -131,7 +140,7 @@ export default function RetetePage() {
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center transition-colors">
       <main
-        className="w-full max-w-[393px] px-6 pb-[88px]"
+        className="w-full max-w-[393px] px-6 pb-[128px]"
         style={{ fontFamily: '"Nunito", sans-serif' }}
       >
         <header className="pt-6">
@@ -251,6 +260,15 @@ export default function RetetePage() {
                           📊 {r.difficulty}
                         </span>
                       </div>
+                      {babyAgeMonths !== null ? (
+                        <p className="mt-2 text-[11px] font-semibold text-[#0F6E56] leading-snug">
+                          {formatRecipeCardHintRo(r, babyAgeMonths)}
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-[10px] text-[#B8A9BB] leading-snug">
+                          Porție bebe: completează profilul pentru estimări
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

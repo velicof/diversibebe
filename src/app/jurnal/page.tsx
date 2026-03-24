@@ -223,7 +223,7 @@ function JurnalInner() {
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
       <main
-        className="w-full max-w-[393px] px-6 pb-[88px]"
+        className="w-full max-w-[393px] px-6 pb-[128px]"
         style={{ fontFamily: '"Nunito", sans-serif' }}
       >
         <header className="flex items-center gap-3 pt-6">

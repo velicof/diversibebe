@@ -134,7 +134,7 @@ export default function ProfilPage() {
   ];
 
   return (
-    <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center px-6 pb-[24px]">
+    <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center px-6 pb-[120px]">
       <main key={storeVersion} className="relative w-full max-w-[393px]">
         <button
           type="button"
