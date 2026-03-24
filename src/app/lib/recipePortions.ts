@@ -2,11 +2,12 @@ import { parseDate } from "./store";
 import type { AgeBandId, RecipeCatalogItem } from "./recipesDatabase";
 
 /** Porții implicite (g preparat) când rețeta nu are `babyPortionGramsByAgeBand`. */
+/** Porții mici, realiste pentru o porție de bebeluș (g preparat). */
 export const DEFAULT_BABY_PORTION_GRAMS: Record<AgeBandId, number> = {
-  "4-6": 45,
-  "6-8": 70,
-  "8-10": 100,
-  "10-12": 125,
+  "4-6": 38,
+  "6-8": 60,
+  "8-10": 85,
+  "10-12": 110,
 };
 
 export function ageMonthsToAgeBand(ageMonths: number): AgeBandId {

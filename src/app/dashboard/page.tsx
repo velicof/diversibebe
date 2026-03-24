@@ -95,6 +95,14 @@ function activityMetaLine(entry: FoodEntry): string {
   return parts.join(" ");
 }
 
+/** Salut după ora locală (Romanian). */
+function greetingForLocalHour(d = new Date()): string {
+  const h = d.getHours();
+  if (h >= 5 && h < 12) return "Bună dimineața";
+  if (h >= 12 && h < 18) return "Bună ziua";
+  return "Bună seara";
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const storeVersion = useStoreRefresh();
@@ -383,9 +391,28 @@ export default function DashboardPage() {
         </Link>
 
         {!isVisitor ? (
-          <p className="mt-5 text-[12px] text-[#534AB7] font-semibold leading-snug px-0.5">
-            Pasul următor: jurnalizează mesele sau deschide recomandarea de mai sus.
-          </p>
+          <div className="mt-5 rounded-[14px] bg-white/80 border border-[#EDE7F6] px-4 py-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[#8B7A8E]">
+              Pasul următor
+            </p>
+            <p className="mt-1 text-[13px] text-[#3D2C3E] font-semibold leading-snug">
+              Notează o masă în jurnal sau deschide recomandarea de mai sus.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link
+                href="/jurnal"
+                className="inline-flex items-center justify-center rounded-full bg-[#D4849A] text-white text-[12px] font-bold px-4 py-2"
+              >
+                + Jurnal masă
+              </Link>
+              <Link
+                href="/alimente?filter=incercate"
+                className="inline-flex items-center justify-center rounded-full border border-[#D4849A] text-[#993556] text-[12px] font-bold px-4 py-2"
+              >
+                Alimente încercate
+              </Link>
+            </div>
+          </div>
         ) : null}
 
         <div className="mt-4 grid grid-cols-3 gap-2.5">

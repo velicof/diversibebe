@@ -88,6 +88,9 @@ export type FoodStatus =
 
 export const STORE_UPDATED_EVENT = "diversibebe_store_updated";
 
+let applyingRemoteSync = false;
+let cloudSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
 type PersistedData = { appState: AppState; accounts: UserAccount[] };
 
 const STORAGE_KEY = "diversibebe_data";
@@ -229,6 +232,13 @@ function sortFoodEntries(entries: FoodEntry[]): FoodEntry[] {
   });
 }
 
+function mergeFoodEntriesById(local: FoodEntry[], remote: FoodEntry[]): FoodEntry[] {
+  const map = new Map<string, FoodEntry>();
+  for (const e of local) map.set(e.id, e);
+  for (const e of remote) map.set(e.id, e);
+  return sortFoodEntries([...map.values()]);
+}
+
 function readUserPersistedSlice(email: string): UserPersistedSlice {
   return safeParse<UserPersistedSlice>(
     localStorage.getItem(getUserKey(email)),
@@ -331,6 +341,15 @@ function readData(): PersistedData {
   return out;
 }
 
+function scheduleCloudSync(): void {
+  if (!isBrowser() || applyingRemoteSync) return;
+  if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(() => {
+    cloudSyncTimer = null;
+    void import("@/lib/supabaseDataSync").then((m) => m.pushLocalToCloud());
+  }, 2500);
+}
+
 function writeData(data: PersistedData) {
   if (!isBrowser()) return;
   const email = data.appState.currentUser?.email?.trim() || null;
@@ -350,6 +369,9 @@ function writeData(data: PersistedData) {
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(toPersist));
   window.dispatchEvent(new CustomEvent(STORE_UPDATED_EVENT));
+  if (!applyingRemoteSync) {
+    scheduleCloudSync();
+  }
 }
 
 function entryDateKey(e: FoodEntry) {
@@ -680,6 +702,134 @@ export type AllergyRecord = {
   severity: "sever" | "usor";
 };
 
+export type RemoteSyncPayload = {
+  profile?: {
+    parentName?: string;
+    baby?: Partial<BabyProfile>;
+    isPremium?: boolean;
+  } | null;
+  foodEntries?: unknown[];
+  allergies?: unknown[];
+};
+
+function parseAllergyPayload(raw: unknown): AllergyRecord | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.foodId !== "string" || !o.foodId) return null;
+  return {
+    foodId: o.foodId,
+    foodName: typeof o.foodName === "string" ? o.foodName : "",
+    emoji: typeof o.emoji === "string" ? o.emoji : "🍽️",
+    symptoms: Array.isArray(o.symptoms)
+      ? o.symptoms.filter((s): s is string => typeof s === "string")
+      : [],
+    firstDate: typeof o.firstDate === "string" ? o.firstDate : "",
+    severity: o.severity === "sever" ? "sever" : "usor",
+  };
+}
+
+function mergeAllergyLists(local: AllergyRecord[], remote: AllergyRecord[]): AllergyRecord[] {
+  const map = new Map<string, AllergyRecord>();
+  for (const a of local) map.set(a.foodId, a);
+  for (const a of remote) map.set(a.foodId, a);
+  return [...map.values()];
+}
+
+function mergeAccountFromRemote(
+  local: UserAccount,
+  remote: NonNullable<RemoteSyncPayload["profile"]>
+): UserAccount {
+  const rb = remote.baby;
+  const mergedBaby: BabyProfile = {
+    ...local.baby,
+    ...(rb
+      ? {
+          name: rb.name?.trim() ? rb.name.trim() : local.baby.name,
+          birthDate: rb.birthDate?.trim() ? rb.birthDate.trim() : local.baby.birthDate,
+          weight:
+            rb.weight !== undefined && String(rb.weight).length > 0
+              ? String(rb.weight)
+              : local.baby.weight,
+          gender: rb.gender !== undefined ? rb.gender : local.baby.gender,
+          allergies:
+            Array.isArray(rb.allergies) && rb.allergies.length > 0
+              ? rb.allergies
+              : local.baby.allergies,
+          diversificationStartDate:
+            rb.diversificationStartDate !== undefined
+              ? rb.diversificationStartDate
+              : local.baby.diversificationStartDate,
+        }
+      : {}),
+  };
+  return {
+    ...local,
+    parentName: remote.parentName?.trim()
+      ? remote.parentName.trim()
+      : local.parentName,
+    baby: mergedBaby,
+    isPremium: remote.isPremium ?? local.isPremium,
+  };
+}
+
+/**
+ * Merge server snapshot into local store (Google session). Idempotent-friendly.
+ */
+export function applyRemoteSyncFromServer(payload: RemoteSyncPayload): void {
+  if (!isBrowser()) return;
+  const data = readData();
+  const email = data.appState.currentUser?.email?.trim();
+  if (!email) return;
+
+  const account = data.accounts.find(
+    (a) => a.email.toLowerCase() === email.toLowerCase()
+  );
+  if (!account) return;
+
+  applyingRemoteSync = true;
+  try {
+    if (payload.profile) {
+      const nextAccount = mergeAccountFromRemote(account, payload.profile);
+      const idx = data.accounts.findIndex((a) => a.email === nextAccount.email);
+      if (idx >= 0) data.accounts[idx] = nextAccount;
+      data.appState.currentUser = nextAccount;
+    }
+
+    const localFood = loadMigratedFoodEntriesForEmail(email);
+    const remoteRaw = Array.isArray(payload.foodEntries) ? payload.foodEntries : [];
+    const remoteFood: FoodEntry[] = [];
+    for (const raw of remoteRaw) {
+      const m = migrateFoodEntry(raw as Record<string, unknown>);
+      if (m) remoteFood.push(m);
+    }
+    const mergedFood = mergeFoodEntriesById(localFood, remoteFood);
+
+    const localUd = readUserPersistedSlice(email);
+    const localAllergies = (
+      Array.isArray(localUd.allergies) ? localUd.allergies : []
+    )
+      .map((a) => parseAllergyPayload(a))
+      .filter((a): a is AllergyRecord => a !== null);
+
+    const remoteAllergies = (Array.isArray(payload.allergies) ? payload.allergies : [])
+      .map((a) => parseAllergyPayload(a))
+      .filter((a): a is AllergyRecord => a !== null);
+
+    const mergedAllergies = mergeAllergyLists(localAllergies, remoteAllergies);
+
+    writeUserPersistedSlice(email, {
+      ...localUd,
+      foodEntries: mergedFood,
+      allergies: mergedAllergies,
+    });
+
+    syncSessionFoodEntries(data);
+    writeData(recalcState(data));
+  } finally {
+    applyingRemoteSync = false;
+  }
+}
+
 export function getAllergies(): AllergyRecord[] {
   if (!isBrowser()) return [];
   try {
@@ -724,6 +874,7 @@ export function removeAllergy(foodId: string): void {
   ).filter((a) => a.foodId !== foodId);
   writeUserPersistedSlice(userEmail, { ...ud, allergies });
   window.dispatchEvent(new CustomEvent(STORE_UPDATED_EVENT));
+  writeData(recalcState(readData()));
 }
 
 export function addManualAllergy(record: AllergyRecord): void {
@@ -751,6 +902,7 @@ export function addManualAllergy(record: AllergyRecord): void {
     allergies: [...list, record],
   });
   window.dispatchEvent(new CustomEvent(STORE_UPDATED_EVENT));
+  writeData(recalcState(readData()));
 }
 
 export function getTriedFoodsCount(): number {

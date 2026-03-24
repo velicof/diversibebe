@@ -264,8 +264,13 @@ Numele părintelui: ${user.parentName || "Părintele"}
     "Ce alimente urmează să introduc?",
   ];
 
-  /** Above bottom nav (72px); on dashboard also clear the jurnal FAB (~56px + gap). */
-  const pillBottomPx = pathname === "/dashboard" ? 152 : 88;
+  /** Above bottom nav (~72px + safe area); higher on screens with extra FABs. */
+  const pillBottomPx =
+    pathname === "/dashboard"
+      ? 176
+      : pathname === "/jurnal" || pathname.startsWith("/jurnal/")
+        ? 132
+        : 92;
 
   return (
     <>
