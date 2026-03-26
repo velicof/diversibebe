@@ -85,18 +85,20 @@ function readBirthDateFromStorage(): string | null {
 }
 
 function ageMonthsFromBirth(birthDate: string): number {
-  const d = parseDate(birthDate);
-  if (!d || Number.isNaN(d.getTime())) return 0;
-  return Math.floor(
-    (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-  );
+  const d = new Date(birthDate);
+  if (Number.isNaN(d.getTime())) return 0;
+  return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
 }
 
-function mealTypesForAge(ageMonths: number): MealType[] {
-  if (ageMonths < 6) return ["mic-dejun"];
-  if (ageMonths < 8) return ["mic-dejun", "pranz"];
-  if (ageMonths < 10) return ["mic-dejun", "gustare", "pranz"];
-  return ["mic-dejun", "gustare", "pranz", "cina"];
+function getMealsForAge(ageMonths: number): string[] {
+  if (ageMonths < 7) {
+    return ["pranz"];
+  } else if (ageMonths === 7) {
+    return ["mic-dejun", "pranz"];
+  } else {
+    // 8+ months
+    return ["mic-dejun", "pranz", "cina"];
+  }
 }
 
 function recipeMinAgeTier(age: string): number {
@@ -270,7 +272,10 @@ export default function PlanPage() {
     return Math.max(0, ageMonthsFromBirth(birthDate));
   }, [birthDate]);
 
-  const mealTypes = useMemo(() => mealTypesForAge(ageMonths), [ageMonths]);
+  const mealTypes = useMemo(
+    () => getMealsForAge(ageMonths) as MealType[],
+    [ageMonths]
+  );
 
   const ageFilteredRecipes = useMemo(
     () => filterRecipesByBabyAge(RECIPES, ageMonths),
@@ -296,7 +301,7 @@ export default function PlanPage() {
       generateSmartWeekPlan(
         smartRecipes,
         ageGroupFromMonths(ageMonths),
-        mealTypes,
+        getMealsForAge(ageMonths),
         weekNumber + weekSeedOffset,
         mode
       ),
@@ -395,6 +400,32 @@ export default function PlanPage() {
             ←
           </button>
           <p className="text-[14px] text-[#8B7A8E]">Se încarcă…</p>
+          <div className="mt-4 flex w-full max-w-full flex-nowrap gap-2 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => setMode("normal")}
+              className="shrink-0 rounded-[20px] border px-4 py-1.5 text-[13px] font-semibold"
+              style={{
+                backgroundColor: mode === "normal" ? "#D4849A" : "#FFFFFF",
+                color: mode === "normal" ? "#FFFFFF" : "#D4849A",
+                borderColor: "#D4849A",
+              }}
+            >
+              📅 Plan Normal
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("anticonstipatie")}
+              className="shrink-0 rounded-[20px] border px-4 py-1.5 text-[13px] font-semibold"
+              style={{
+                backgroundColor: mode === "anticonstipatie" ? "#A8DCD1" : "#FFFFFF",
+                color: "#0F6E56",
+                borderColor: "#A8DCD1",
+              }}
+            >
+              🥦 Plan Anticonstipație
+            </button>
+          </div>
         </main>
         <Navbar activeTab="plan" />
       </div>
@@ -427,6 +458,32 @@ export default function PlanPage() {
             <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
               Plan săptămânal 📅
             </h1>
+            <div className="mt-3 flex w-full max-w-full flex-nowrap gap-2 overflow-x-auto pb-1">
+              <button
+                type="button"
+                onClick={() => setMode("normal")}
+                className="shrink-0 rounded-[20px] border px-4 py-1.5 text-[13px] font-semibold"
+                style={{
+                  backgroundColor: mode === "normal" ? "#D4849A" : "#FFFFFF",
+                  color: mode === "normal" ? "#FFFFFF" : "#D4849A",
+                  borderColor: "#D4849A",
+                }}
+              >
+                📅 Plan Normal
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("anticonstipatie")}
+                className="shrink-0 rounded-[20px] border px-4 py-1.5 text-[13px] font-semibold"
+                style={{
+                  backgroundColor: mode === "anticonstipatie" ? "#A8DCD1" : "#FFFFFF",
+                  color: "#0F6E56",
+                  borderColor: "#A8DCD1",
+                }}
+              >
+                🥦 Plan Anticonstipație
+              </button>
+            </div>
           </header>
           <div className="mt-10 text-center">
             <p className="text-[15px] text-[#3D2C3E] leading-relaxed">
@@ -471,6 +528,32 @@ export default function PlanPage() {
           <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
             Plan săptămânal 📅
           </h1>
+          <div className="mt-3 flex w-full max-w-full flex-nowrap gap-2 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => setMode("normal")}
+              className="shrink-0 rounded-[20px] border px-4 py-1.5 text-[13px] font-semibold"
+              style={{
+                backgroundColor: mode === "normal" ? "#D4849A" : "#FFFFFF",
+                color: mode === "normal" ? "#FFFFFF" : "#D4849A",
+                borderColor: "#D4849A",
+              }}
+            >
+              📅 Plan Normal
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("anticonstipatie")}
+              className="shrink-0 rounded-[20px] border px-4 py-1.5 text-[13px] font-semibold"
+              style={{
+                backgroundColor: mode === "anticonstipatie" ? "#A8DCD1" : "#FFFFFF",
+                color: "#0F6E56",
+                borderColor: "#A8DCD1",
+              }}
+            >
+              🥦 Plan Anticonstipație
+            </button>
+          </div>
           <p className="mt-2 text-[13px] font-semibold leading-snug text-[#534AB7]">
             {ageMonths} luni · {ageBandLabelRo(ageMonthsToAgeBand(ageMonths))} ·{" "}
             {mealTypes.length}{" "}
@@ -480,7 +563,11 @@ export default function PlanPage() {
           </p>
           <p className="mt-1 text-[12px] text-[#8B7A8E] leading-relaxed">
             {mode === "normal"
-              ? "Plan echilibrat: mic dejun → gustare → prânz → cină (după vârstă)."
+              ? ageMonths <= 6
+                ? "Plan: doar prânz (după vârstă). Gustare opțională de la 7 luni."
+                : ageMonths < 8
+                  ? "Plan: mic dejun și prânz; gustare opțională între ele."
+                  : "Plan: mic dejun, prânz și cină; gustare opțională între mese."
               : "Plan anticonstipație: mai multe fibre & rețete ușoare, adaptate vârstei."}
           </p>
           <div className="mt-3 flex items-center justify-between gap-2">
@@ -514,33 +601,6 @@ export default function PlanPage() {
               </span>
             </div>
           ) : null}
-
-          <div className="mt-3 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setMode("normal")}
-              className="rounded-[20px] border px-4 py-1.5 text-[13px] font-semibold"
-              style={{
-                backgroundColor: mode === "normal" ? "#D4849A" : "#FFFFFF",
-                color: mode === "normal" ? "#FFFFFF" : "#D4849A",
-                borderColor: "#D4849A",
-              }}
-            >
-              📅 Plan Normal
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("anticonstipatie")}
-              className="rounded-[20px] border px-4 py-1.5 text-[13px] font-semibold"
-              style={{
-                backgroundColor: mode === "anticonstipatie" ? "#A8DCD1" : "#FFFFFF",
-                color: "#0F6E56",
-                borderColor: "#A8DCD1",
-              }}
-            >
-              🥦 Plan Anticonstipație
-            </button>
-          </div>
 
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
             {[
@@ -645,18 +705,20 @@ export default function PlanPage() {
                 </div>
 
                 <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-[#B8A9BB]">
-                  Pe feluri (mic dejun → gustare → prânz → cină)
+                  {ageMonths < 7
+                    ? "Pe feluri (prânz)"
+                    : ageMonths === 7
+                      ? "Pe feluri (mic dejun → prânz)"
+                      : "Pe feluri (mic dejun → prânz → cină)"}
                 </p>
-                <div className="mt-1">
-                  {meals.map((slot, rowIdx) => {
-                    const isLast = rowIdx === meals.length - 1;
+                <div className="mt-1 divide-y divide-[#F5F0F8]">
+                  {meals.map((slot) => {
                     const recipe = slot.recipe;
                     const recipeName = recipe?.name ?? "Nicio rețetă disponibilă";
-
                     return (
                       <div
                         key={`${slot.mealType}-${slot.mealIndex}`}
-                        className={`py-2 ${isLast ? "" : "border-b border-[#F5F0F8]"}`}
+                        className="py-2"
                       >
                         <div className="flex items-center gap-3">
                           <button
@@ -750,8 +812,8 @@ export default function PlanPage() {
                         </div>
                         {recipe ? (
                           <p className="mt-1.5 pl-[84px] pr-2 text-[10px] leading-snug text-[#0F6E56]">
-                            {formatRecipePortionLineRo(recipe, ageMonths)} ·{" "}
-                            {formatApproxBabyServingsRo(recipe, ageMonths)} ·
+                            {formatRecipePortionLineRo(recipe)} ·{" "}
+                            {formatApproxBabyServingsRo(recipe)} ·
                             preparat ~{inferTotalYieldGrams(recipe)} g
                           </p>
                         ) : null}

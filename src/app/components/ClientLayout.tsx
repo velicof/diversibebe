@@ -9,7 +9,7 @@ export default function ClientLayout({
 }) {
   return (
     <>
-      {children}
+      <div className="pb-28">{children}</div>
       <AIChat />
     </>
   );

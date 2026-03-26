@@ -1,16 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import SocialLoginButtons from "../../components/SocialLoginButtons";
 import { registerUser, type UserAccount } from "../../lib/store";
+import { upsertCurrentBaby } from "../../lib/supabaseData";
 
 type Gender = "boy" | "girl" | null;
 
 export default function RegisterStep2Page() {
   const router = useRouter();
+
+  const STEP2_STORAGE_KEY = "diversibebe_register_step2";
+  const [hydrated, setHydrated] = useState(false);
   const [gender, setGender] = useState<Gender>(null);
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -48,6 +52,62 @@ export default function RegisterStep2Page() {
     window.setTimeout(() => setToastFading(true), 3000);
     window.setTimeout(() => setToastVisible(false), 3300);
   };
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STEP2_STORAGE_KEY);
+      if (!raw) {
+        setHydrated(true);
+        return;
+      }
+      const saved = JSON.parse(raw) as Partial<{
+        gender: Gender;
+        babyName: string;
+        birthDate: string;
+        birthWeight: string;
+        agreed: boolean;
+        diversificationMode: "not_started" | "started";
+        divStartDate: string;
+      }>;
+
+      if (saved.gender !== undefined) setGender(saved.gender);
+      if (typeof saved.babyName === "string") setBabyName(saved.babyName);
+      if (typeof saved.birthDate === "string") setBirthDate(saved.birthDate);
+      if (typeof saved.birthWeight === "string") setBirthWeight(saved.birthWeight);
+      if (typeof saved.agreed === "boolean") setAgreed(saved.agreed);
+      if (
+        saved.diversificationMode === "not_started" ||
+        saved.diversificationMode === "started"
+      ) {
+        setDiversificationMode(saved.diversificationMode);
+      }
+      if (typeof saved.divStartDate === "string") setDivStartDate(saved.divStartDate);
+    } catch {
+      // ignore
+    } finally {
+      setHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(
+        STEP2_STORAGE_KEY,
+        JSON.stringify({
+          gender,
+          babyName,
+          birthDate,
+          birthWeight,
+          agreed,
+          diversificationMode,
+          divStartDate,
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [hydrated, gender, babyName, birthDate, birthWeight, agreed, diversificationMode, divStartDate]);
 
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex items-center justify-center px-6 text-center">
@@ -100,12 +160,16 @@ export default function RegisterStep2Page() {
           </div>
 
           <div className="text-left">
+            <p className="mb-1 text-[14px] font-semibold text-[#3D2C3E]">
+              Data nașterii bebelușului
+            </p>
             <input
               value={birthDate}
               onChange={(e) => setBirthDate(e.target.value)}
               onBlur={() => setBirthBlurred(true)}
               className="h-12 w-full rounded-2xl border border-[#EDE7F6] bg-white px-4 text-[14px] outline-none"
               type="date"
+              placeholder="ZZ/LL/AAAA"
             />
             {showBirthError ? (
               <p className="mt-1 text-[12px]" style={{ color: "#E74C3C" }}>
@@ -224,7 +288,7 @@ export default function RegisterStep2Page() {
             className={`h-12 w-full rounded-full bg-[#D4849A] text-white font-bold text-[16px] mt-4 ${
               canCreate ? "cursor-pointer" : "opacity-50 cursor-not-allowed"
             }`}
-            onClick={() => {
+            onClick={async () => {
               setSubmitAttempted(true);
               setNameBlurred(true);
               setBirthBlurred(true);
@@ -261,6 +325,17 @@ export default function RegisterStep2Page() {
                   createdAt: new Date().toISOString(),
                 };
                 registerUser(newUser);
+                await upsertCurrentBaby({
+                  name: nameTrim,
+                  birthdate: birthDate.trim(),
+                  gender,
+                  weightKg: Number.parseFloat(birthWeight.replace(",", ".")) || null,
+                });
+                try {
+                  localStorage.removeItem(STEP2_STORAGE_KEY);
+                } catch {
+                  /* ignore */
+                }
               } catch {
                 // ignore
               }

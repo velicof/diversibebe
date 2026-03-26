@@ -13,6 +13,12 @@ import {
 } from "../lib/store";
 import type { FoodCatalogItem } from "../lib/store";
 import type { RecipeCatalogItem } from "../lib/recipesDatabase";
+import {
+  addAllergyRecord,
+  addFoodJournalEntry,
+  getCurrentUserId,
+  upsertTriedFood,
+} from "../lib/supabaseData";
 
 const SYMPTOM_OPTIONS = [
   "Roșeață",
@@ -98,6 +104,7 @@ function JurnalInner() {
   const [pickerTab, setPickerTab] = useState<"food" | "recipe">("food");
   const [search, setSearch] = useState("");
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [selectionKnown, setSelectionKnown] = useState(true);
 
   const [dateStr, setDateStr] = useState(todayISO);
   const [timeStr, setTimeStr] = useState(nowTime);
@@ -107,16 +114,26 @@ function JurnalInner() {
   const [symptoms, setSymptoms] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [toast, setToast] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
 
   const babyName = getCurrentUser()?.baby.name?.trim() || "bebe";
   const foods = useMemo(() => getAllFoods(), []);
   const recipes = useMemo(() => getRecipes(), []);
 
   useEffect(() => {
+    void (async () => {
+      const uid = await getCurrentUserId();
+      setIsAuthed(Boolean(uid));
+    })();
+  }, []);
+
+  useEffect(() => {
     if (!fromParams) return;
     const catalog = foods.find((f) => f.id === fromParams.foodId);
     if (catalog) {
       setSelection({ kind: "food", food: catalog });
+      setSelectionKnown(true);
       return;
     }
     const rec = getRecipeById(fromParams.foodId);
@@ -125,6 +142,7 @@ function JurnalInner() {
         kind: "recipe",
         recipe: rec,
       });
+      setSelectionKnown(true);
       return;
     }
     setSelection({
@@ -135,6 +153,7 @@ function JurnalInner() {
         emoji: fromParams.emoji,
       } as FoodCatalogItem,
     });
+    setSelectionKnown(false);
   }, [fromParams, foods]);
 
   const filteredFoods = useMemo(() => {
@@ -177,8 +196,20 @@ function JurnalInner() {
         ? selection.recipe.emoji
         : "";
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selection || reaction === null) return;
+    setErrorText(null);
+    if (!isAuthed) {
+      setErrorText("Autentifică-te pentru a salva în jurnal.");
+      return;
+    }
+
+    if (!selectionKnown) {
+      setErrorText(
+        "Alimentul introdus nu este în lista noastră. Te rugăm să alegi un aliment din lista sugerată."
+      );
+      return;
+    }
     const entry: FoodEntry =
       selection.kind === "food"
         ? {
@@ -211,11 +242,53 @@ function JurnalInner() {
             notes: notes.trim(),
             babyMood,
           };
-    addFoodEntry(entry);
-    setToast(true);
-    window.setTimeout(() => {
-      router.back();
-    }, 1500);
+    try {
+      const mealType =
+        selection.kind === "recipe"
+          ? selection.recipe.mealType
+          : "pranz";
+      const loggedAt = `${dateStr}T${timeStr || "12:00"}:00`;
+      const ok = await addFoodJournalEntry({
+        foodId:
+          selection.kind === "food" ? selection.food.id : selection.recipe.id,
+        foodName:
+          selection.kind === "food" ? selection.food.name : selection.recipe.name,
+        mealType,
+        reaction,
+        notes: notes.trim(),
+        loggedAt,
+      });
+      if (!ok) {
+        setErrorText("Salvarea a eșuat. Te rugăm să încerci din nou.");
+        return;
+      }
+      if (selection.kind === "food") {
+        await upsertTriedFood({
+          foodId: selection.food.id,
+          foodName: selection.food.name,
+        });
+      }
+      if (symptoms.length > 0 && !symptoms.includes("Nicio reacție")) {
+        await addAllergyRecord({
+          foodId:
+            selection.kind === "food" ? selection.food.id : selection.recipe.id,
+          foodName:
+            selection.kind === "food" ? selection.food.name : selection.recipe.name,
+          severity:
+            symptoms.includes("Erupție") || symptoms.includes("Vărsături")
+              ? "sever"
+              : "usor",
+          notes: symptoms.join(", "),
+        });
+      }
+      addFoodEntry(entry);
+      setToast(true);
+      window.setTimeout(() => {
+        router.back();
+      }, 1500);
+    } catch {
+      setErrorText("Salvarea a eșuat. Te rugăm să încerci din nou.");
+    }
   };
 
   const showPicker = !fromParams;
@@ -247,7 +320,20 @@ function JurnalInner() {
           </h1>
         </header>
 
-        {showPicker ? (
+        {isAuthed === false ? (
+          <section className="mt-8 text-center">
+            <p className="text-[14px] text-[#8B7A8E]">
+              Autentifică-te pentru a jurnaliza mesele.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/login")}
+              className="mt-4 rounded-full bg-[#D4849A] px-5 py-2 text-[13px] font-bold text-white"
+            >
+              Conectează-te
+            </button>
+          </section>
+        ) : showPicker ? (
           <section className="mt-5">
             <div
               className="flex gap-2 rounded-[20px] p-1"
@@ -292,20 +378,32 @@ function JurnalInner() {
               className="mt-3 w-full rounded-[12px] px-4 py-3 text-[14px] outline-none"
               style={{ backgroundColor: "#F5F0F8", color: "#3D2C3E" }}
             />
+            {errorText ? (
+              <p className="mt-2 text-[12px]" style={{ color: "#E74C3C" }}>
+                {errorText}
+              </p>
+            ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
               {(pickerTab === "food" ? filteredFoods : filteredRecipes).map(
                 (item) => (
                   <button
                     key={pickerTab === "food" ? item.id : (item as RecipeCatalogItem).id}
                     type="button"
-                    onClick={() =>
-                      pickerTab === "food"
-                        ? setSelection({ kind: "food", food: item as FoodCatalogItem })
-                        : setSelection({
-                            kind: "recipe",
-                            recipe: item as RecipeCatalogItem,
-                          })
-                    }
+                    onClick={() => {
+                      setErrorText(null);
+                      setSelectionKnown(true);
+                      if (pickerTab === "food") {
+                        setSelection({
+                          kind: "food",
+                          food: item as FoodCatalogItem,
+                        });
+                      } else {
+                        setSelection({
+                          kind: "recipe",
+                          recipe: item as RecipeCatalogItem,
+                        });
+                      }
+                    }}
                     className="rounded-full border border-[#EDE7F6] bg-white px-3 py-2 text-left text-[12px] font-semibold text-[#3D2C3E] cursor-pointer"
                   >
                     <span className="mr-1">
@@ -331,6 +429,12 @@ function JurnalInner() {
             <span className="text-[40px] leading-none">{displayEmoji}</span>
             <p className="text-[18px] font-bold text-[#3D2C3E]">{displayTitle}</p>
           </section>
+        ) : null}
+
+        {!showPicker && errorText ? (
+          <p className="mt-3 text-[12px]" style={{ color: "#E74C3C" }}>
+            {errorText}
+          </p>
         ) : null}
 
         <section className="mt-5 grid grid-cols-2 gap-3">

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getCurrentUser, registerUser, type UserAccount } from "../../lib/store";
+import { getCurrentBaby, upsertCurrentBaby } from "../../lib/supabaseData";
 
 type Gender = "boy" | "girl";
 
@@ -12,6 +13,8 @@ function CameraIcon() {
 
 export default function ProfilBebelusPage() {
   const current = getCurrentUser();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [gender, setGender] = useState<Gender>(
     (current?.baby.gender as Gender) || "boy"
   );
@@ -21,6 +24,30 @@ export default function ProfilBebelusPage() {
     current?.baby.birthDate || "15 Octombrie 2025"
   );
   const [birthWeight, setBirthWeight] = useState(current?.baby.weight || "3.450 kg");
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const baby = await getCurrentBaby();
+      if (!active) return;
+      if (baby) {
+        setFullName(baby.name || "");
+        setBirthDate(baby.birthdate || "");
+        setBirthWeight(
+          typeof baby.weight_kg === "number" && !Number.isNaN(baby.weight_kg)
+            ? String(baby.weight_kg)
+            : ""
+        );
+        if (baby.gender === "boy" || baby.gender === "girl") {
+          setGender(baby.gender);
+        }
+      }
+      setLoading(false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const allergyTags = useMemo(
     () => [
@@ -63,15 +90,26 @@ export default function ProfilBebelusPage() {
 
         <form
           className="mt-6 flex flex-col gap-4"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             if (!current) return;
+            setError("");
+            const saved = await upsertCurrentBaby({
+              name: fullName.trim(),
+              birthdate: birthDate.trim(),
+              gender,
+              weightKg: Number.parseFloat(birthWeight.replace(",", ".")) || null,
+            });
+            if (!saved) {
+              setError("Nu am putut salva profilul bebelușului. Încearcă din nou.");
+              return;
+            }
             const updated: UserAccount = {
               ...current,
               baby: {
                 ...current.baby,
-                name: fullName.trim(),
-                birthDate: birthDate.trim(),
+                name: saved.name,
+                birthDate: saved.birthdate,
                 weight: birthWeight.trim(),
                 gender,
               },
@@ -157,10 +195,12 @@ export default function ProfilBebelusPage() {
 
           <button
             type="submit"
-            className="mt-5 h-12 w-full rounded-full bg-[#D4849A] text-white font-bold cursor-pointer"
+            disabled={loading}
+            className="mt-5 h-12 w-full rounded-full bg-[#D4849A] text-white font-bold cursor-pointer disabled:opacity-60"
           >
             Salvează modificările
           </button>
+          {error ? <p className="text-[12px] text-[#E74C3C]">{error}</p> : null}
         </form>
       </main>
     </div>

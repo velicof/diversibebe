@@ -3,7 +3,6 @@
 import { getSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { pullRemoteUserData } from "@/lib/supabaseDataSync";
 import { syncGoogleSessionToLocalUser } from "../lib/store";
 
 /**
@@ -24,7 +23,6 @@ export default function AuthSessionSync() {
           email,
           name: session.user?.name ?? null,
         });
-        await pullRemoteUserData();
       } catch {
         /* ignoră — rețeaua / API indisponibil */
       }

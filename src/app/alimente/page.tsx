@@ -6,13 +6,12 @@ import { useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
 import {
   getAllFoods,
-  getFoodEntries,
   getFoodStatus,
   getFoodStatusMeta,
   getFoodsByAgeGroup,
-  parseDate,
 } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
+import { getCurrentBaby, getCurrentUserId, listTriedFoods } from "../lib/supabaseData";
 
 type AgeTabId = "all" | "4-6" | "6-8" | "8-10" | "10-12" | "12+";
 
@@ -66,6 +65,8 @@ function AlimentePageInner() {
   const [activeTab, setActiveTab] = useState<AgeTabId>("4-6");
   const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [triedIds, setTriedIds] = useState<string[]>([]);
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
 
   const groupFromUrl = searchParams.get("group");
   const triedOnly = searchParams.get("filter") === "incercate";
@@ -78,17 +79,9 @@ function AlimentePageInner() {
 
   useEffect(() => {
     if (groupFromUrl && AGE_TAB_IDS.has(groupFromUrl)) return;
-    try {
-      const data = JSON.parse(
-        localStorage.getItem("diversibebe_data") || "{}"
-      ) as {
-        appState?: { currentUser?: { baby?: { birthDate?: string } } };
-        currentUser?: { baby?: { birthDate?: string } };
-      };
-      const birthDate =
-        data.appState?.currentUser?.baby?.birthDate ??
-        data.currentUser?.baby?.birthDate;
-      const d = birthDate ? parseDate(birthDate) : null;
+    void (async () => {
+      const baby = await getCurrentBaby();
+      const d = baby?.birthdate ? new Date(baby.birthdate) : null;
       const ageMonths =
         d && !Number.isNaN(d.getTime())
           ? Math.floor(
@@ -102,10 +95,22 @@ function AlimentePageInner() {
       else if (ageMonths < 12) tab = "10-12";
       else tab = "12+";
       setActiveTab(tab);
-    } catch {
-      /* ignore */
-    }
+    })();
   }, [groupFromUrl, storeVersion]);
+
+  useEffect(() => {
+    void (async () => {
+      const uid = await getCurrentUserId();
+      if (!uid) {
+        setIsAuthed(false);
+        setTriedIds([]);
+        return;
+      }
+      setIsAuthed(true);
+      const tried = await listTriedFoods();
+      setTriedIds(tried.map((t) => t.food_id));
+    })();
+  }, [storeVersion]);
 
   const foodsInAgeGroup = useMemo(() => {
     if (activeTab === "all") return getAllFoods();
@@ -126,18 +131,22 @@ function AlimentePageInner() {
       list = getAllFoods().filter((f) => normalizeForSearch(f.name).includes(q));
     }
     if (!triedOnly) return list;
-    const triedIds = new Set(
-      getFoodEntries()
-        .filter((e) => e.type === "food")
-        .map((e) => e.foodId)
-    );
-    return list.filter((f) => triedIds.has(f.id));
-  }, [foodsByCategory, searchTrim, triedOnly, storeVersion]);
+    const ids = new Set(triedIds);
+    return list.filter((f) => ids.has(f.id));
+  }, [foodsByCategory, searchTrim, triedOnly, triedIds]);
 
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center transition-colors">
       <main className="w-full max-w-[393px] px-6 pb-[128px]">
         <header className="pt-6">
+          {triedOnly ? (
+            <Link
+              href="/dashboard"
+              className="mb-3 inline-flex items-center gap-1 text-[14px] font-bold text-[#D4849A]"
+            >
+              ← Înapoi
+            </Link>
+          ) : null}
           <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
             {triedOnly ? "Alimente încercate 🥄" : "Calendarul alimentar 🥄"}
           </h1>
@@ -238,7 +247,19 @@ function AlimentePageInner() {
         </p>
 
         {foods.length === 0 ? (
-          searchTrim || triedOnly ? (
+          triedOnly && isAuthed === false ? (
+            <div className="mt-6 text-center">
+              <p className="text-[14px] text-[#8B7A8E]">
+                Autentifică-te pentru a vedea alimentele încercate.
+              </p>
+              <Link
+                href="/login"
+                className="mt-3 inline-flex rounded-full bg-[#D4849A] px-5 py-2 text-[13px] font-bold text-white"
+              >
+                Conectează-te
+              </Link>
+            </div>
+          ) : searchTrim || triedOnly ? (
             <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
               {searchTrim ? (
                 <>Niciun aliment găsit pentru „{searchTrim}”</>

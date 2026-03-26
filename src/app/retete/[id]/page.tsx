@@ -14,6 +14,12 @@ import {
 } from "@/app/lib/recipePortions";
 import Navbar from "../../components/Navbar";
 import { getRecipeById, type RecipeCatalogItem } from "../../lib/store";
+import {
+  getCurrentUserId,
+  isRecipeFavorited,
+  markRecipeCooked,
+  toggleRecipeFavorite,
+} from "../../lib/supabaseData";
 
 type Pill = {
   label: string;
@@ -98,10 +104,29 @@ export default function RecipeDetailPage({
   const { id } = use(params);
   const recipe = useMemo(() => getRecipeById(id), [id]);
   const [babyAgeMonths, setBabyAgeMonths] = useState<number | null>(null);
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+  const [favorited, setFavorited] = useState(false);
+  const [cookedToast, setCookedToast] = useState(false);
 
   useEffect(() => {
     setBabyAgeMonths(readBabyAgeMonthsFromStorage());
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const uid = await getCurrentUserId();
+      if (!active) return;
+      setIsAuthed(Boolean(uid));
+      if (uid && recipe?.id) {
+        const f = await isRecipeFavorited(recipe.id);
+        if (active) setFavorited(f);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [recipe?.id]);
 
   const effectiveMonths = babyAgeMonths ?? 8;
   const nutAgeKey = nutritionAgeKeyFromMonths(effectiveMonths);
@@ -219,11 +244,11 @@ export default function RecipeDetailPage({
                   style={{ lineHeight: 1.6 }}
                 >
                   <span className="font-semibold text-[#0F6E56]">
-                    {formatRecipePortionLineRo(recipe, effectiveMonths)}
+                    {formatRecipePortionLineRo(recipe)}
                   </span>
                   <br />
                   <span className="text-[13px]">
-                    {formatApproxBabyServingsRo(recipe, effectiveMonths)} (din
+                    {formatApproxBabyServingsRo(recipe)} (din
                     preparatul total ~{inferTotalYieldGrams(recipe)} g).
                   </span>
                 </p>
@@ -486,16 +511,35 @@ export default function RecipeDetailPage({
               <button
                 type="button"
                 className="flex-1 h-12 bg-[#D4849A] text-white rounded-full font-bold cursor-pointer"
-                onClick={() => {}}
+                onClick={async () => {
+                  if (!recipe) return;
+                  if (!isAuthed) {
+                    router.push("/login");
+                    return;
+                  }
+                  const ok = await markRecipeCooked(recipe.id);
+                  if (!ok) return;
+                  setCookedToast(true);
+                  window.setTimeout(() => setCookedToast(false), 2000);
+                }}
               >
-                Am gătit!
+                {cookedToast ? "✓ Gătit!" : "Am gătit!"}
               </button>
               <button
                 type="button"
                 className="w-[48px] h-[48px] rounded-full bg-[#FDE8EE] flex items-center justify-center cursor-pointer"
                 aria-label="Reacție"
+                onClick={async () => {
+                  if (!recipe) return;
+                  if (!isAuthed) {
+                    router.push("/login");
+                    return;
+                  }
+                  const next = await toggleRecipeFavorite(recipe.id);
+                  setFavorited(next);
+                }}
               >
-                <span style={{ fontSize: 20 }}>❤️</span>
+                <span style={{ fontSize: 20 }}>{favorited ? "❤️" : "🤍"}</span>
               </button>
             </section>
           </>

@@ -2,7 +2,13 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { getUserKey } from "../lib/store";
+import {
+  getCurrentBaby,
+  getCurrentUserId,
+  listAllergyRecords,
+  listFoodJournal,
+  listTriedFoods,
+} from "../lib/supabaseData";
 
 interface Message {
   role: "user" | "assistant";
@@ -10,48 +16,10 @@ interface Message {
 }
 
 type PersistedUser = {
-  email?: string;
-  parentName?: string;
   baby?: {
     name?: string;
-    birthDate?: string;
-    gender?: "boy" | "girl" | null;
   };
 };
-
-type FoodEntryRaw = {
-  foodName?: string;
-  date?: string;
-  time?: string;
-  reaction?: string | null;
-};
-
-type AllergyRaw = {
-  foodName?: string;
-  symptoms?: string[];
-};
-
-function readCurrentUserFromStorage(): PersistedUser | null {
-  try {
-    const data = JSON.parse(
-      localStorage.getItem("diversibebe_data") || "{}"
-    ) as {
-      appState?: { currentUser?: PersistedUser | null };
-      currentUser?: PersistedUser | null;
-    };
-    return data.appState?.currentUser ?? data.currentUser ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function sortEntriesByRecent(entries: FoodEntryRaw[]): FoodEntryRaw[] {
-  return [...entries].sort((a, b) => {
-    const da = (a.date || "").localeCompare(b.date || "");
-    if (da !== 0) return -da;
-    return (b.time || "").localeCompare(a.time || "");
-  });
-}
 
 function toApiMessages(msgs: Message[]): { role: "user" | "assistant"; content: string }[] {
   const copy = [...msgs];
@@ -61,27 +29,51 @@ function toApiMessages(msgs: Message[]): { role: "user" | "assistant"; content: 
   return copy.map((m) => ({ role: m.role, content: m.content }));
 }
 
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/**
+ * Renderare markdown minimală pentru BebeAsist:
+ * - bold: **text** -> <strong>text</strong>
+ * - headers: liniile care încep cu "##" sunt ignorate (## eliminat)
+ * - newline: \n -> <br />
+ */
+function renderAssistantMarkdownLite(text: string): string {
+  const escaped = escapeHtml(text)
+    // Remove headers markers (optional)
+    .replace(/^##\s+/gm, "");
+
+  const withBold = escaped.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  return withBold.replace(/\n/g, "<br />");
+}
+
 function pillLabelForPath(pathname: string): string {
   const p = pathname || "";
   if (p === "/" || p === "/dashboard") {
-    return "🍼 Întreabă despre diversificare";
+    return "🍼 Diversificare";
   }
   if (p.startsWith("/foods") || p.startsWith("/alimente")) {
-    return "🥕 Întreabă despre alimente";
+    return "🥕 Alimente";
   }
   if (p.startsWith("/recipes") || p.startsWith("/retete")) {
-    return "🍳 Întreabă despre rețete";
+    return "🍳 Rețete";
   }
   if (p.startsWith("/plan")) {
-    return "📅 Întreabă despre planul alimentar";
+    return "📅 Plan";
   }
   if (p.startsWith("/alergii")) {
-    return "🚨 Întreabă despre alergii";
+    return "🚨 Alergii";
   }
   if (p.startsWith("/ghid")) {
-    return "📖 Întreabă despre ghidul de diversificare";
+    return "📖 Ghid";
   }
-  return "💬 BebeAsist - Întreabă orice";
+  return "💬 BebeAsist";
 }
 
 export default function AIChat() {
@@ -91,96 +83,18 @@ export default function AIChat() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [babyContext, setBabyContext] = useState("");
-  const [babyName, setBabyName] = useState("bebelușul");
+  const [babyName, setBabyName] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    try {
-      const user = readCurrentUserFromStorage();
-      if (user?.baby) {
-        const baby = user.baby;
-        const birthDate = baby.birthDate ? new Date(baby.birthDate) : null;
-        const ageMonths =
-          birthDate && !Number.isNaN(birthDate.getTime())
-            ? Math.floor(
-                (Date.now() - birthDate.getTime()) /
-                  (1000 * 60 * 60 * 24 * 30.44)
-              )
-            : 0;
-
-        const displayName = baby.name?.trim() || "bebelușul";
-        setBabyName(displayName);
-
-        const email = user.email?.trim();
-        let triedFoods: string[] = [];
-        let allergies: AllergyRaw[] = [];
-        let entries: FoodEntryRaw[] = [];
-
-        if (email) {
-          const userKey = getUserKey(email);
-          const userData = JSON.parse(
-            localStorage.getItem(userKey) || "{}"
-          ) as {
-            foodEntries?: FoodEntryRaw[];
-            allergies?: AllergyRaw[];
-          };
-          entries = Array.isArray(userData.foodEntries)
-            ? userData.foodEntries
-            : [];
-          allergies = Array.isArray(userData.allergies)
-            ? userData.allergies
-            : [];
-          triedFoods = [
-            ...new Set(
-              entries
-                .map((e) => e.foodName)
-                .filter((n): n is string => typeof n === "string" && !!n)
-            ),
-          ];
-        }
-
-        const sorted = sortEntriesByRecent(entries);
-        const last = sorted[0];
-
-        const context = `
-Nume bebeluș: ${baby.name || "Necunoscut"}
-Vârstă: ${ageMonths} luni
-Gen: ${baby.gender === "boy" ? "Băiat" : baby.gender === "girl" ? "Fată" : "Necunoscut"}
-Alimente deja încercate (${triedFoods.length}): ${triedFoods.length > 0 ? triedFoods.slice(0, 20).join(", ") : "Niciun aliment încă"}
-Alergii detectate: ${
-          allergies.length > 0
-            ? allergies
-                .map((a) => {
-                  const name = a.foodName || "?";
-                  const sym = Array.isArray(a.symptoms)
-                    ? a.symptoms.join(", ")
-                    : "";
-                  return `${name} (${sym})`;
-                })
-                .join(", ")
-            : "Nicio alergie detectată"
-        }
-Ultima masă jurnalizată: ${
-          last?.foodName
-            ? `${last.foodName} - ${last.reaction ?? "—"}`
-            : "Niciuna"
-        }
-Numele părintelui: ${user.parentName || "Părintele"}
-        `.trim();
-
-        setBabyContext(context);
-
-        const nm = baby.name?.trim();
-        setMessages([
-          {
-            role: "assistant",
-            content: `Bună! 🍼 Sunt BebeAsist, asistentul tău personal pentru diversificarea lui ${nm || "bebelușului tău"}. Știu că ${nm || "bebelușul"} are ${ageMonths} luni și am acces la istoricul său alimentar. Cu ce te pot ajuta azi?`,
-          },
-        ]);
-      } else {
-        setBabyName("bebelușul");
+    let active = true;
+    void (async () => {
+      const uid = await getCurrentUserId();
+      if (!active) return;
+      if (!uid) {
+        setBabyName("");
         setBabyContext("Nu există profil de bebeluș creat încă.");
         setMessages([
           {
@@ -189,18 +103,57 @@ Numele părintelui: ${user.parentName || "Părintele"}
               "Bună! 🍼 Sunt BebeAsist, asistentul tău pentru diversificarea bebelușului. Cu ce te pot ajuta azi?",
           },
         ]);
+        return;
       }
-    } catch {
-      setBabyName("bebelușul");
-      setBabyContext("Nu există profil de bebeluș creat încă.");
+
+      const baby = await getCurrentBaby();
+      const name = baby?.name?.trim() || "";
+      setBabyName(name);
+
+      const ageMonths =
+        baby?.birthdate && !Number.isNaN(new Date(baby.birthdate).getTime())
+          ? Math.floor(
+              (Date.now() - new Date(baby.birthdate).getTime()) /
+                (1000 * 60 * 60 * 24 * 30.44)
+            )
+          : 0;
+
+      const tried = await listTriedFoods();
+      const allergies = await listAllergyRecords();
+      const journal = await listFoodJournal(20);
+
+      const last = journal[0];
+      const triedNames = tried.map((t) => t.food_name).filter(Boolean);
+
+      const context = `
+Nume bebeluș: ${name || "Necunoscut"}
+Vârstă: ${ageMonths} luni
+Gen: ${baby?.gender === "boy" ? "Băiat" : baby?.gender === "girl" ? "Fată" : "Necunoscut"}
+Alimente deja încercate (${triedNames.length}): ${triedNames.length > 0 ? triedNames.slice(0, 20).join(", ") : "Niciun aliment încă"}
+Alergii detectate: ${
+        allergies.length > 0
+          ? allergies
+              .map((a) => `${a.food_name} (${a.notes ?? ""})`.trim())
+              .join(", ")
+          : "Nicio alergie detectată"
+      }
+Ultima masă jurnalizată: ${
+        last?.food_name ? `${last.food_name} - ${last.reaction ?? "—"}` : "Niciuna"
+      }
+      `.trim();
+
+      setBabyContext(context);
       setMessages([
         {
           role: "assistant",
-          content:
-            "Bună! 🍼 Sunt BebeAsist. Cu ce te pot ajuta cu diversificarea bebelușului?",
+          content: `Bună! 🍼 Sunt BebeAsist, asistentul tău personal pentru diversificarea lui ${name || "bebelușului tău"}. Știu că ${name || "bebelușul"} are ${ageMonths} luni și am acces la istoricul său alimentar. Cu ce te pot ajuta azi?`,
         },
       ]);
-    }
+    })();
+
+    return () => {
+      active = false;
+    };
   }, [isOpen]);
 
   useEffect(() => {
@@ -264,13 +217,17 @@ Numele părintelui: ${user.parentName || "Părintele"}
     "Ce alimente urmează să introduc?",
   ];
 
-  /** Above bottom nav (~72px + safe area); higher on screens with extra FABs. */
+  const subtitleBaby = babyName.trim().length
+    ? `bebelușul ${babyName.trim()}`
+    : "bebelușul tău";
+
+  /** Deasupra barei de jos (nav ~72px + safe area); mai sus unde e FAB extra. */
   const pillBottomPx =
     pathname === "/dashboard"
-      ? 176
+      ? 168
       : pathname === "/jurnal" || pathname.startsWith("/jurnal/")
-        ? 132
-        : 92;
+        ? 124
+        : 100;
 
   return (
     <>
@@ -283,20 +240,20 @@ Numele părintelui: ${user.parentName || "Părintele"}
             bottom: `calc(${pillBottomPx}px + env(safe-area-inset-bottom, 0px))`,
             left: "50%",
             transform: "translateX(-50%)",
-            zIndex: 40,
+            zIndex: 30,
             width: "fit-content",
-            maxWidth: "min(320px, calc(100vw - 24px))",
+            maxWidth: "min(260px, calc(100vw - 32px))",
             background: "linear-gradient(135deg, #D4849A, #C4B5E0)",
             borderRadius: 999,
-            padding: "8px 14px",
+            padding: "6px 10px",
             color: "white",
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: 700,
             border: "none",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
-            gap: 6,
+            gap: 5,
             boxShadow: "0 3px 14px rgba(212,132,154,0.35)",
             fontFamily: "Nunito, sans-serif",
             whiteSpace: "nowrap",
@@ -378,7 +335,7 @@ Numele părintelui: ${user.parentName || "Părintele"}
                   <div
                     style={{ color: "rgba(255,255,255,0.8)", fontSize: 11 }}
                   >
-                    Asistent personal pentru {babyName}
+                    Asistent personal pentru {subtitleBaby}
                   </div>
                 </div>
               </div>
@@ -461,7 +418,15 @@ Numele părintelui: ${user.parentName || "Părintele"}
                       whiteSpace: "pre-wrap",
                     }}
                   >
-                    {msg.content}
+                    {msg.role === "assistant" ? (
+                      <span
+                        dangerouslySetInnerHTML={{
+                          __html: renderAssistantMarkdownLite(msg.content),
+                        }}
+                      />
+                    ) : (
+                      msg.content
+                    )}
                   </div>
                 </div>
               ))}
