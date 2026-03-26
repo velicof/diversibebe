@@ -4,9 +4,9 @@ import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
+import { createBrowserClient } from "@supabase/auth-helpers-nextjs";
 import {
   getAllFoods,
-  getFoodEntries,
   getFoodStatus,
   getFoodStatusMeta,
   getFoodsByAgeGroup,
@@ -58,12 +58,22 @@ function normalizeForSearch(s: string) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+type TriedFoodRow = {
+  food_id: string;
+  food_name: string;
+  try_count: number;
+  first_tried_at: string;
+};
+
 function AlimentePageInner() {
   const storeVersion = useStoreRefresh();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<AgeTabId>("6-8");
   const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [triedFoods, setTriedFoods] = useState<TriedFoodRow[]>([]);
+  const [triedLoading, setTriedLoading] = useState(false);
+  const [triedAuthMissing, setTriedAuthMissing] = useState(false);
 
   const groupFromUrl = searchParams.get("group");
   const triedOnly = searchParams.get("filter") === "incercate";
@@ -104,6 +114,100 @@ function AlimentePageInner() {
     }
   }, [groupFromUrl, storeVersion]);
 
+  useEffect(() => {
+    if (!triedOnly) return;
+    let active = true;
+    void (async () => {
+      setTriedLoading(true);
+      setTriedAuthMissing(false);
+
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
+      );
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!active) return;
+      if (!session) {
+        setTriedAuthMissing(true);
+        setTriedFoods([]);
+        setTriedLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("tried_foods")
+        .select("food_id, food_name, try_count, first_tried_at")
+        .eq("user_id", session.user.id)
+        .order("first_tried_at", { ascending: false });
+
+      if (!active) return;
+      if (error || !data) {
+        setTriedFoods([]);
+      } else {
+        setTriedFoods(data as TriedFoodRow[]);
+      }
+      setTriedLoading(false);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [triedOnly]);
+
+  const triedIdSet = useMemo(
+    () => new Set(triedFoods.map((t) => t.food_id)),
+    [triedFoods]
+  );
+  const triedByFoodId = useMemo(
+    () => new Map(triedFoods.map((t) => [t.food_id, t])),
+    [triedFoods]
+  );
+
+  if (triedOnly && triedLoading) {
+    return (
+      <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
+        <main className="w-full max-w-[393px] px-6 pb-[128px]">
+          <header className="pt-6">
+            <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
+              Alimente încercate 🥄
+            </h1>
+          </header>
+          <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
+            Se încarcă…
+          </p>
+        </main>
+        <Navbar activeTab="alimente" />
+      </div>
+    );
+  }
+
+  if (triedOnly && triedAuthMissing) {
+    return (
+      <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
+        <main className="w-full max-w-[393px] px-6 pb-[128px]">
+          <header className="pt-6">
+            <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
+              Alimente încercate 🥄
+            </h1>
+            <p className="mt-1 text-[13px] font-normal text-[#8B7A8E]">
+              Doar alimentele deja încercate și jurnalizate pentru bebeluș
+            </p>
+          </header>
+          <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
+            Autentifică-te pentru a vedea alimentele încercate{" "}
+            <Link href="/login" className="font-bold text-[#D4849A]">
+              aici
+            </Link>
+          </p>
+        </main>
+        <Navbar activeTab="alimente" />
+      </div>
+    );
+  }
+
   const foodsInAgeGroup = useMemo(() => {
     if (activeTab === "all") return getAllFoods();
     if (activeTab === "12+") return getFoodsByAgeGroup("10-12");
@@ -123,13 +227,8 @@ function AlimentePageInner() {
       list = getAllFoods().filter((f) => normalizeForSearch(f.name).includes(q));
     }
     if (!triedOnly) return list;
-    const triedIds = new Set(
-      getFoodEntries()
-        .filter((e) => e.type === "food")
-        .map((e) => e.foodId)
-    );
-    return list.filter((f) => triedIds.has(f.id));
-  }, [foodsByCategory, searchTrim, triedOnly, storeVersion]);
+    return list.filter((f) => triedIdSet.has(f.id));
+  }, [foodsByCategory, searchTrim, triedOnly, triedIdSet, storeVersion]);
 
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center transition-colors">
@@ -241,8 +340,7 @@ function AlimentePageInner() {
                 <>Niciun aliment găsit pentru „{searchTrim}”</>
               ) : (
                 <>
-                  Niciun aliment încercat încă în această selecție. Explorează
-                  calendarul sau schimbă filtrele.
+                  Niciun aliment încercat încă. Jurnalizează prima masă!
                 </>
               )}
             </p>
@@ -253,7 +351,14 @@ function AlimentePageInner() {
             className="mt-5 grid grid-cols-2 gap-[10px]"
           >
             {foods.map((food) => {
-              const s = getFoodStatusMeta(getFoodStatus(food.id).status);
+              const tried = triedByFoodId.get(food.id);
+              const s = triedOnly
+                ? {
+                    border: "#EDE7F6",
+                    statusColor: "#8B7A8E",
+                    statusText: "",
+                  }
+                : getFoodStatusMeta(getFoodStatus(food.id).status);
               return (
                 <Link
                   key={food.id}
@@ -284,8 +389,16 @@ function AlimentePageInner() {
                           className="mt-1 text-[13px] font-normal"
                           style={{ color: s.statusColor }}
                         >
-                          {s.statusText}
+                          {triedOnly && tried ? `Încercat de ${tried.try_count} ori` : s.statusText}
                         </div>
+                        {triedOnly && tried ? (
+                          <div
+                            className="mt-0.5 text-[12px] font-normal"
+                            style={{ color: "#B8A9BB" }}
+                          >
+                            {new Date(tried.first_tried_at).toLocaleDateString("ro-RO")}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>

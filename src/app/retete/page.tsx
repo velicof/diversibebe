@@ -262,7 +262,9 @@ export default function RetetePage() {
                       </div>
                       {babyAgeMonths !== null ? (
                         <p className="mt-2 text-[11px] font-semibold text-[#0F6E56] leading-snug">
-                          {formatRecipeCardHintRo(r, babyAgeMonths)}
+                          {formatRecipeCardHintRo(r, babyAgeMonths)
+                            .split("·")[0]
+                            .trim()}
                         </p>
                       ) : (
                         <p className="mt-2 text-[10px] text-[#B8A9BB] leading-snug">

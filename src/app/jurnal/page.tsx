@@ -3,8 +3,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
+import { createBrowserClient } from "@supabase/auth-helpers-nextjs";
 import {
-  addFoodEntry,
   getAllFoods,
   getCurrentUser,
   getRecipeById,
@@ -106,7 +106,7 @@ function JurnalInner() {
   const [babyMood, setBabyMood] = useState<FoodEntry["babyMood"]>(null);
   const [symptoms, setSymptoms] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
-  const [toast, setToast] = useState(false);
+  const [toast, setToast] = useState<null | "success" | "auth">(null);
 
   const babyName = getCurrentUser()?.baby.name?.trim() || "bebe";
   const foods = useMemo(() => getAllFoods(), []);
@@ -177,7 +177,7 @@ function JurnalInner() {
         ? selection.recipe.emoji
         : "";
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selection || reaction === null) return;
     const entry: FoodEntry =
       selection.kind === "food"
@@ -211,11 +211,65 @@ function JurnalInner() {
             notes: notes.trim(),
             babyMood,
           };
-    addFoodEntry(entry);
-    setToast(true);
-    window.setTimeout(() => {
-      router.back();
-    }, 1500);
+    try {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
+      );
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        setToast("auth");
+        return;
+      }
+
+      const userId = session.user.id;
+      const loggedAt = new Date(`${entry.date}T${entry.time}`).toISOString();
+
+      // 1) Insert into food_journal
+      await supabase.from("food_journal").insert({
+        user_id: userId,
+        baby_id: null,
+        food_id: entry.foodId,
+        food_name: entry.foodName,
+        meal_type: null,
+        reaction: entry.reaction,
+        notes: entry.notes,
+        logged_at: loggedAt,
+      });
+
+      // 2) Upsert into tried_foods (increment try_count)
+      const { data: existing } = await supabase
+        .from("tried_foods")
+        .select("id, try_count")
+        .eq("user_id", userId)
+        .eq("food_id", entry.foodId)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("tried_foods")
+          .update({ try_count: Number(existing.try_count ?? 0) + 1 })
+          .eq("id", existing.id);
+      } else {
+        await supabase.from("tried_foods").insert({
+          user_id: userId,
+          baby_id: null,
+          food_id: entry.foodId,
+          food_name: entry.foodName,
+          first_tried_at: new Date().toISOString(),
+          try_count: 1,
+        });
+      }
+
+      setToast("success");
+      window.setTimeout(() => {
+        router.back();
+      }, 1500);
+    } catch {
+      // ignoră — UI va rămâne neschimbat
+    }
   };
 
   const showPicker = !fromParams;
@@ -499,9 +553,11 @@ function JurnalInner() {
       {toast ? (
         <div
           className="fixed bottom-24 left-1/2 z-[70] -translate-x-1/2 rounded-[14px] px-5 py-3 text-[14px] font-bold text-[#3D2C3E] shadow-lg"
-          style={{ backgroundColor: "#A8DCD1" }}
+          style={{
+            backgroundColor: toast === "auth" ? "#FDE8EE" : "#A8DCD1",
+          }}
         >
-          ✅ Jurnalizat cu succes!
+          {toast === "auth" ? "Autentifică-te pentru a salva" : "✅ Jurnalizat cu succes!"}
         </div>
       ) : null}
 

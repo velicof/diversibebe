@@ -706,9 +706,7 @@ export default function PlanPage() {
                         </div>
                         {recipe ? (
                           <p className="mt-1.5 pl-[84px] pr-2 text-[10px] leading-snug text-[#0F6E56]">
-                            {formatRecipePortionLineRo(recipe, ageMonths)} ·{" "}
-                            {formatApproxBabyServingsRo(recipe, ageMonths)} ·
-                            preparat ~{inferTotalYieldGrams(recipe)} g
+                            {formatRecipePortionLineRo(recipe, ageMonths)}
                           </p>
                         ) : null}
                       </div>

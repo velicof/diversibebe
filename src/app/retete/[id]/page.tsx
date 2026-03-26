@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
 import { estimateRecipeNutrition, getServingSuggestion } from "@/app/lib/nutrition";
+import { createBrowserClient } from "@supabase/auth-helpers-nextjs";
 import {
   ageBandLabelRo,
   ageMonthsToAgeBand,
@@ -94,10 +95,42 @@ export default function RecipeDetailPage({
   const { id } = use(params);
   const recipe = useMemo(() => getRecipeById(id), [id]);
   const [babyAgeMonths, setBabyAgeMonths] = useState<number | null>(null);
+  const [cookedState, setCookedState] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [authSaveMessage, setAuthSaveMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setBabyAgeMonths(readBabyAgeMonthsFromStorage());
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      if (!recipe) return;
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
+      );
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data } = await supabase
+        .from("favorite_recipes")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .eq("recipe_id", recipe.id)
+        .maybeSingle();
+
+      if (!active) return;
+      setIsFavorite(Boolean(data));
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [recipe?.id]);
 
   const effectiveMonths = babyAgeMonths ?? 8;
   const nutAgeKey = nutritionAgeKeyFromMonths(effectiveMonths);
@@ -216,11 +249,6 @@ export default function RecipeDetailPage({
                 >
                   <span className="font-semibold text-[#0F6E56]">
                     {formatRecipePortionLineRo(recipe, effectiveMonths)}
-                  </span>
-                  <br />
-                  <span className="text-[13px]">
-                    {formatApproxBabyServingsRo(recipe, effectiveMonths)} (din
-                    preparatul total ~{inferTotalYieldGrams(recipe)} g).
                   </span>
                 </p>
                 <p
@@ -481,19 +509,87 @@ export default function RecipeDetailPage({
             <section className="mt-6 flex gap-[10px]">
               <button
                 type="button"
-                className="flex-1 h-12 bg-[#D4849A] text-white rounded-full font-bold cursor-pointer"
-                onClick={() => {}}
+                className={`flex-1 h-12 rounded-full font-bold cursor-pointer text-white ${
+                  cookedState ? "bg-[#0F6E56]" : "bg-[#D4849A]"
+                }`}
+                onClick={async () => {
+                  setAuthSaveMessage(null);
+                  if (!recipe) return;
+                  const supabase = createBrowserClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
+                  );
+                  const {
+                    data: { session },
+                  } = await supabase.auth.getSession();
+                  if (!session) {
+                    setAuthSaveMessage("Autentifică-te pentru a salva");
+                    return;
+                  }
+
+                  await supabase.from("cooked_recipes").insert({
+                    user_id: session.user.id,
+                    recipe_id: recipe.id,
+                    cooked_at: new Date().toISOString(),
+                  });
+
+                  setCookedState(true);
+                  window.setTimeout(() => {
+                    setCookedState(false);
+                  }, 2000);
+                }}
               >
-                Am gătit!
+                {cookedState ? "✓ Gătit!" : "Am gătit!"}
               </button>
               <button
                 type="button"
                 className="w-[48px] h-[48px] rounded-full bg-[#FDE8EE] flex items-center justify-center cursor-pointer"
                 aria-label="Reacție"
+                onClick={async () => {
+                  setAuthSaveMessage(null);
+                  if (!recipe) return;
+                  const supabase = createBrowserClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
+                  );
+                  const {
+                    data: { session },
+                  } = await supabase.auth.getSession();
+                  if (!session) {
+                    setAuthSaveMessage("Autentifică-te pentru a salva");
+                    return;
+                  }
+
+                  if (isFavorite) {
+                    await supabase
+                      .from("favorite_recipes")
+                      .delete()
+                      .eq("user_id", session.user.id)
+                      .eq("recipe_id", recipe.id);
+                    setIsFavorite(false);
+                  } else {
+                    await supabase.from("favorite_recipes").insert({
+                      user_id: session.user.id,
+                      recipe_id: recipe.id,
+                      saved_at: new Date().toISOString(),
+                    });
+                    setIsFavorite(true);
+                  }
+                }}
               >
-                <span style={{ fontSize: 20 }}>❤️</span>
+                <span style={{ fontSize: 20 }}>
+                  {isFavorite ? "❤️" : "🤍"}
+                </span>
               </button>
             </section>
+            {authSaveMessage ? (
+              <p
+                className="mt-2 text-[13px] font-bold text-[#D4849A]"
+                style={{ lineHeight: 1.4 }}
+              >
+                {authSaveMessage}
+              </p>
+            ) : null}
           </>
         )}
       </main>
