@@ -47,8 +47,6 @@ function servingsBadgeText(s: number | string) {
 function getBabyPortion(ageLabel: string): string {
   const s = ageLabel.trim().toLowerCase();
 
-  const fourToSix =
-    "Începe cu 1-2 lingurițe și crește treptat după apetit. Fiecare bebeluș e diferit!";
   const sixToEight =
     "Oferă 2-6 linguri și adaptează după apetit. Unii bebeluși mănâncă mai mult — e normal!";
   const sevenPlus =
@@ -60,12 +58,11 @@ function getBabyPortion(ageLabel: string): string {
   const twelvePlus =
     "Porție orientativă 150-250g. La această vârstă bebelușul mănâncă aproape ca un adult mic!";
 
-  if (s.includes("4-6")) return fourToSix;
   if (s.includes("6-8")) return sixToEight;
   if (s.includes("8-10")) return eightToTen;
   if (s.includes("10-12")) return tenToTwelve;
 
-  const head = s.match(/^(12|10|8|7|6|5|4)\s*\+/);
+  const head = s.match(/^(12|10|8|7|6|5)\s*\+/);
   if (head) {
     switch (head[1]) {
       case "12":
@@ -79,8 +76,7 @@ function getBabyPortion(ageLabel: string): string {
       case "6":
         return sixToEight;
       case "5":
-      case "4":
-        return fourToSix;
+        return sixToEight;
       default:
         break;
     }

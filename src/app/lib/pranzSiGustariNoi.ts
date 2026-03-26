@@ -32,7 +32,7 @@ export const PRANZ_6_8_RECIPES: RecipeCatalogItem[] = [
     relatedFoods: ["dovlecel", "linte"],
     storage: "Se păstrează la frigider 2 zile sau congelator 1 lună.",
     totalYieldGrams: 280,
-    babyPortionGramsByAgeBand: { "4-6": 40, "6-8": 70, "8-10": 100, "10-12": 120 },
+    babyPortionGramsByAgeBand: { "6-8": 70, "8-10": 100, "10-12": 120 },
   },
   {
     id: "piure-morcov-fasole-verde",
@@ -60,7 +60,7 @@ export const PRANZ_6_8_RECIPES: RecipeCatalogItem[] = [
     relatedFoods: ["morcov", "fasole-verde"],
     storage: "Se păstrează la frigider 2 zile.",
     totalYieldGrams: 260,
-    babyPortionGramsByAgeBand: { "4-6": 40, "6-8": 70, "8-10": 95, "10-12": 115 },
+    babyPortionGramsByAgeBand: { "6-8": 70, "8-10": 95, "10-12": 115 },
   },
   {
     id: "piure-mazare-cartof-dulce",
@@ -88,7 +88,7 @@ export const PRANZ_6_8_RECIPES: RecipeCatalogItem[] = [
     relatedFoods: ["cartof-dulce", "mazare"],
     storage: "Se păstrează la frigider 2 zile sau congelator 1 lună.",
     totalYieldGrams: 300,
-    babyPortionGramsByAgeBand: { "4-6": 45, "6-8": 70, "8-10": 100, "10-12": 120 },
+    babyPortionGramsByAgeBand: { "6-8": 70, "8-10": 100, "10-12": 120 },
   },
   {
     id: "piure-conopida-pui-6",
@@ -315,7 +315,7 @@ export const PRANZ_6_8_RECIPES: RecipeCatalogItem[] = [
     relatedFoods: ["dovleac-butternut", "linte", "turmeric"],
     storage: "Se păstrează la frigider 3 zile sau congelator 2 luni.",
     totalYieldGrams: 380,
-    babyPortionGramsByAgeBand: { "4-6": 45, "6-8": 70, "8-10": 100, "10-12": 120 },
+    babyPortionGramsByAgeBand: { "6-8": 70, "8-10": 100, "10-12": 120 },
   },
   {
     id: "piure-fasole-verde-cartof-6",
@@ -932,7 +932,7 @@ export const GUSTARE_RECIPES: RecipeCatalogItem[] = [
     relatedFoods: ["mere", "scortisoara"],
     storage: "Se păstrează la frigider 3 zile.",
     totalYieldGrams: 200,
-    babyPortionGramsByAgeBand: { "4-6": 35, "6-8": 45, "8-10": 60, "10-12": 75 },
+    babyPortionGramsByAgeBand: { "6-8": 45, "8-10": 60, "10-12": 75 },
   },
   {
     id: "avocado-suc-lamaie",
@@ -958,7 +958,7 @@ export const GUSTARE_RECIPES: RecipeCatalogItem[] = [
     relatedFoods: ["avocado"],
     storage: "Consum imediat.",
     totalYieldGrams: 80,
-    babyPortionGramsByAgeBand: { "4-6": 30, "6-8": 40, "8-10": 55, "10-12": 65 },
+    babyPortionGramsByAgeBand: { "6-8": 40, "8-10": 55, "10-12": 65 },
   },
   {
     id: "pere-iaurt-ghimbir",
@@ -1038,7 +1038,7 @@ export const GUSTARE_RECIPES: RecipeCatalogItem[] = [
     relatedFoods: ["cartof-dulce", "scortisoara"],
     storage: "Se păstrează la frigider 2 zile.",
     totalYieldGrams: 180,
-    babyPortionGramsByAgeBand: { "4-6": 35, "6-8": 50, "8-10": 65, "10-12": 80 },
+    babyPortionGramsByAgeBand: { "6-8": 50, "8-10": 65, "10-12": 80 },
   },
   {
     id: "branza-vaci-afine-8",

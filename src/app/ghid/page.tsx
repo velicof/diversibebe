@@ -108,7 +108,7 @@ export default function GhidPage() {
 
           <AccordionCard
             title="🍼 Lapte și mese pe vârstă"
-            preview="De la 1 masă/zi (4-6 luni) până la 4 mese + lapte redus (12+ luni)."
+            preview="De la 1 masă/zi (6-8 luni) până la 4 mese + lapte redus (12+ luni)."
           >
             <div className="overflow-x-auto rounded-[8px] bg-[#F5F0F8]">
               <table className="w-full min-w-[320px] border-collapse text-[12px]">
@@ -122,7 +122,7 @@ export default function GhidPage() {
                 </thead>
                 <tbody>
                   {[
-                    ["4-6 luni", "1 masă", "700-800ml", "3-4 ore"],
+                    ["6-8 luni", "1 masă", "700-800ml", "3-4 ore"],
                     ["6-8 luni", "2 mese", "600-700ml", "3-4 ore"],
                     ["8-10 luni", "3 mese", "500-600ml", "3 ore"],
                     ["10-12 luni", "3-4 mese", "400-500ml", "3 ore"],
@@ -150,7 +150,7 @@ export default function GhidPage() {
           >
             <div className="space-y-2">
               <p>
-                🟢 4-6 luni: Legume (morcov, cartof dulce, dovleac), fructe (măr, pară,
+                🟢 6-8 luni: Legume (morcov, cartof dulce, dovleac), fructe (măr, pară,
                 banană), cereale fără gluten (orez, porumb). Textură: piure fin.
               </p>
               <p>
@@ -252,11 +252,11 @@ export default function GhidPage() {
 
           <AccordionCard
             title="⏰ Programul zilnic pe vârste"
-            preview="De la o masă pe zi (4-6 luni) până la 3 mese + gustări (10-12 luni)."
+            preview="De la o masă pe zi (6-8 luni) până la 3 mese + gustări (10-12 luni)."
           >
             <div className="space-y-2">
               <p>
-                <strong>4-6 luni:</strong> 08:00 Lapte | 10:00 Masă solidă (2-3 linguri) |
+                <strong>6-8 luni:</strong> 08:00 Lapte | 10:00 Masă solidă (2-3 linguri) |
                 12:00 Lapte | 15:00 Lapte | 18:00 Lapte | 21:00 Lapte
               </p>
               <p>

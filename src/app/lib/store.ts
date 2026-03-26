@@ -709,7 +709,7 @@ export function getUnreadNotificationsCount(): number {
   return readData().appState.notifications.filter((n) => !n.read).length;
 }
 
-export function getFoodsByAgeGroup(group: "4-6" | "6-8" | "8-10" | "10-12"): FoodCatalogItem[] {
+export function getFoodsByAgeGroup(group: "6-8" | "8-10" | "10-12"): FoodCatalogItem[] {
   return FOOD_CATALOG.filter((f) => f.ageGroup === group);
 }
 
@@ -808,10 +808,9 @@ export function getRecipesByFoodId(foodId: string): RecipeCatalogItem[] {
   return RECIPES.filter((r) => r.relatedFoods.includes(foodId));
 }
 
-export function getCurrentAgeGroup(): "4-6" | "6-8" | "8-10" | "10-12" {
+export function getCurrentAgeGroup(): "6-8" | "8-10" | "10-12" {
   const user = getCurrentUser();
   const months = calculateBabyAge(user?.baby.birthDate || "").months;
-  if (months < 6) return "4-6";
   if (months < 8) return "6-8";
   if (months < 10) return "8-10";
   return "10-12";

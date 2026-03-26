@@ -17,7 +17,7 @@ import {
 export type MealType = "mic-dejun" | "pranz" | "cina" | "gustare";
 
 /** Benzi de vârstă pentru porții recomandate (luni). */
-export type AgeBandId = "4-6" | "6-8" | "8-10" | "10-12";
+export type AgeBandId = "6-8" | "8-10" | "10-12";
 
 export type RecipeCatalogItem = {
   id: string;
@@ -78,7 +78,6 @@ const LEGACY_RECIPES: RecipeCatalogItem[] = [
     storage: "Se păstrează la frigider în recipient închis până la 2 zile.",
     totalYieldGrams: 220,
     babyPortionGramsByAgeBand: {
-      "4-6": 40,
       "6-8": 65,
       "8-10": 95,
       "10-12": 115,
@@ -262,26 +261,26 @@ const MIC_DEJUN_RECIPES: RecipeCatalogItem[] = [
   },
   {
     id: "toast-avocado",
-    name: "Toast cu avocado",
+    name: "Pâine moale cu avocado",
     emoji: "🥑",
     mealType: "mic-dejun",
     time: "5 min",
-    age: "6+ luni",
+    age: "8+ luni",
     difficulty: "Ușor",
     servings: 1,
     ingredients: [
-      "1 felie pâine toast",
+      "1 felie pâine moale",
       "½ avocado copt",
       "¼ linguriță suc de lămâie",
       "¼ linguriță ulei de măsline",
       "1 vârf semințe de susan (opțional)",
     ],
     steps: [
-      "Prăjește ușor pâinea și taie crusta.",
+      "Taie pâinea moale în bucăți potrivite pentru bebeluș.",
       "Curăță avocado și scoate sâmburele.",
-      "Pasează jumătate din avocado și întinde pe toast.",
+      "Pasează jumătate din avocado și întinde pe pâinea moale.",
       "Taie cealaltă jumătate în bețișoare subțiri.",
-      "Taie toast-ul în bețișoare groase cât 2 degete.",
+      "Taie pâinea moale în bețișoare groase cât 2 degete.",
       "Stropește cu ulei de măsline și suc de lămâie.",
       "Presară semințe de susan deasupra.",
     ],
@@ -662,7 +661,7 @@ const MIC_DEJUN_RECIPES: RecipeCatalogItem[] = [
     servings: 1,
     ingredients: [
       "1 cartof dulce mediu",
-      "1 felie pâine toast (opțional)",
+      "1 felie pâine moale (opțional)",
       "1 vârf scorțișoară (opțional)",
     ],
     steps: [
@@ -726,7 +725,7 @@ const MIC_DEJUN_RECIPES: RecipeCatalogItem[] = [
       "1 cană lapte (de cocos, matern sau formulă)",
       "1 vârf scorțișoară, coriandru și chimion (opțional)",
       "1 lingură tahini de susan (opțional)",
-      "1 felie pâine toast",
+      "1 felie pâine moale",
       "½ cană iaurt natural (opțional)",
       "1 vârf migdale măcinate (opțional)",
     ],
@@ -804,7 +803,7 @@ const MIC_DEJUN_RECIPES: RecipeCatalogItem[] = [
   },
   {
     id: "hummus-castravete",
-    name: "Hummus cu castravete și toast",
+    name: "Hummus cu castravete și pâine moale",
     emoji: "🫘",
     mealType: "mic-dejun",
     time: "20 min",
@@ -818,7 +817,7 @@ const MIC_DEJUN_RECIPES: RecipeCatalogItem[] = [
       "2 linguri ulei de măsline",
       "2 linguri apă",
       "2 linguri tahini de susan",
-      "1 felie pâine toast",
+      "1 felie pâine moale",
       "1 castravete mic",
       "½ linguriță semințe de susan (opțional)",
     ],
@@ -827,7 +826,7 @@ const MIC_DEJUN_RECIPES: RecipeCatalogItem[] = [
       "Pune totul în blender: năut, usturoi, suc de lămâie, ulei, apă, tahini.",
       "Mixează până e cremos. Adaugă apă dacă e prea dens.",
       "Curăță castravetele și taie-l în bețișoare.",
-      "Prăjește pâinea și taie-o în bețișoare.",
+      "Taie pâinea moale în bețișoare.",
       "Pune hummus în castronul bebelușului.",
       "Presară semințe de susan. Servește cu bețișoare pentru a învăța să înmoaie.",
     ],
@@ -882,7 +881,7 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
       "1 vârf usturoi pudră",
       "½ cană iaurt natural",
       "1 vârf semințe de susan",
-      "1 felie pâine toast (opțional)",
+      "1 felie pâine moale (opțional)",
     ],
     steps: [
       "Clătește fasolea pentru a elimina sodiul.",
@@ -890,7 +889,7 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
       "Taie roșia în cuburi mici. Amestecă cu fasolea.",
       "Adaugă uleiul și pudra de usturoi. Lasă 5 minute.",
       "Pune iaurtul în castron, adaugă fasolea deasupra.",
-      "Presară susan. Servește cu toast pe lângă.",
+      "Presară susan. Servește cu pâine moale pe lângă.",
     ],
     allergens: ["Lactoză", "Susan", "Gluten"],
     relatedFoods: ["rosii", "iaurt", "usturoi", "paine"],
@@ -987,8 +986,8 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
     storage: "Avocado tăiat se păstrează 3 zile la frigider.",
   },
   {
-    id: "hummus-brocoli-toast",
-    name: "Hummus cu broccoli la abur și toast",
+    id: "hummus-brocoli-paine-moale",
+    name: "Hummus cu broccoli la abur și pâine moale",
     emoji: "🥦",
     mealType: "pranz",
     time: "15 min",
@@ -1000,16 +999,16 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
       "½ cană broccoli buchețele",
       "½ lingurița ulei de măsline",
       "½ lingurița suc de lămâie",
-      "1 felie pâine toast",
+      "1 felie pâine moale",
       "1 vârf semințe de susan",
     ],
     steps: [
       "Fierbe broccoli la abur 10 minute până e moale.",
       "Stropește cu ulei și suc de lămâie.",
-      "Prăjește pâinea și taie-o în bețișoare.",
+      "Taie pâinea moale în bețișoare.",
       "Pune hummus în castronul bebelușului.",
       "Presară semințe de susan deasupra.",
-      "Servește cu broccoli și toast pentru a învăța să înmoaie.",
+      "Servește cu broccoli și pâine moale pentru a învăța să înmoaie.",
     ],
     allergens: ["Susan", "Gluten"],
     relatedFoods: ["naut", "broccoli", "paine"],
@@ -1609,12 +1608,12 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
     storage: "Se păstrează la frigider 2 zile.",
   },
   {
-    id: "piure-mazare-menta-toast",
-    name: "Piure de mazăre cu mentă pe toast",
+    id: "piure-mazare-menta-paine-moale",
+    name: "Piure de mazăre cu mentă pe pâine moale",
     emoji: "🫛",
     mealType: "pranz",
     time: "10 min",
-    age: "6+ luni",
+    age: "8+ luni",
     difficulty: "Ușor",
     servings: 1,
     ingredients: [
@@ -1622,15 +1621,15 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
       "2-3 frunze mentă proaspătă (opțional)",
       "1 linguriță ulei de măsline",
       "1 linguriță suc de lămâie",
-      "1 felie pâine toast",
+      "1 felie pâine moale",
       "½ avocado (opțional)",
     ],
     steps: [
       "Fierbe mazărea 5 minute. Scurge.",
       "Pasează cu furculița sau blenderul (nu trebuie să fie perfect fin).",
       "Adaugă menta tocată fin, uleiul și sucul de lămâie.",
-      "Prăjește pâinea, taie-o în bețișoare.",
-      "Întinde piureul de mazăre pe toast.",
+      "Taie pâinea moale în bețișoare.",
+      "Întinde piureul de mazăre pe pâine moale.",
       "Servește cu avocado feliat pe lângă.",
     ],
     allergens: ["Gluten"],
@@ -1745,7 +1744,7 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
       "2 lingurițe ulei de măsline",
       "3 ouă",
       "1 lingură brânză de capră",
-      "1 felie pâine toast (opțional)",
+      "1 felie pâine moale (opțional)",
       "½ lingurița semințe de cânepă",
     ],
     steps: [
@@ -1869,7 +1868,7 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
       "1 cană apă",
       "1 ceapă mică",
       "2 linguri unt nesărat",
-      "1 felie pâine toast",
+      "1 felie pâine moale",
       "1 pară (opțional)",
     ],
     steps: [
@@ -1878,7 +1877,7 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
       "Verifică să nu mai fie roz deloc înăuntru.",
       "Scurge, pune ficatul și ceapa în blender.",
       "Adaugă untul. Mixează până e cremos.",
-      "Întinde max 1 lingură pe toast pentru bebeluș.",
+      "Întinde max 1 lingură pe pâine moale pentru bebeluș.",
       "Congelează restul în forme de gheață — porții perfecte!",
       "Fierbe para tăiată felii 10 minute. Servește pe lângă.",
     ],
@@ -1990,7 +1989,7 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
     storage: "Se păstrează la congelator 2 luni.",
   },
   {
-    id: "piure-pastarnac-mar-toast",
+    id: "piure-pastarnac-mar-paine-moale",
     name: "Piure de păstârnac cu măr",
     emoji: "🥕",
     mealType: "pranz",
@@ -2003,7 +2002,7 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
       "1 măr",
       "½ cană lapte (matern sau formulă)",
       "1 lingură unt nesărat (opțional)",
-      "1 felie pâine toast (opțional)",
+      "1 felie pâine moale (opțional)",
       "1 vârf nuci măcinate (opțional)",
     ],
     steps: [
@@ -2127,7 +2126,7 @@ const OLDER_BABY_RECIPES: RecipeCatalogItem[] = [
     difficulty: "Ușor",
     servings: 1,
     ingredients: [
-      "1 felie pâine toast groasă",
+      "1 felie pâine moale groasă",
       "2 linguri sos de roșii fără sare",
       "30g mozzarella rasă",
       "2 buchețele broccoli fierte și tocate",

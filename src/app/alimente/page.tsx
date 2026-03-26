@@ -14,7 +14,7 @@ import {
 } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 
-type AgeTabId = "all" | "4-6" | "6-8" | "8-10" | "10-12" | "12+";
+type AgeTabId = "all" | "6-8" | "8-10" | "10-12" | "12+";
 
 type CategoryId =
   | "all"
@@ -27,7 +27,6 @@ type CategoryId =
 
 const AGE_TABS: Array<{ id: AgeTabId; label: string }> = [
   { id: "all", label: "Toate" },
-  { id: "4-6", label: "4-6 luni" },
   { id: "6-8", label: "6-8 luni" },
   { id: "8-10", label: "8-10 luni" },
   { id: "10-12", label: "10-12 luni" },
@@ -46,7 +45,6 @@ const CATEGORY_TABS: Array<{ id: CategoryId; label: string }> = [
 
 const AGE_TAB_IDS = new Set<string>([
   "all",
-  "4-6",
   "6-8",
   "8-10",
   "10-12",
@@ -63,7 +61,7 @@ function normalizeForSearch(s: string) {
 function AlimentePageInner() {
   const storeVersion = useStoreRefresh();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<AgeTabId>("4-6");
+  const [activeTab, setActiveTab] = useState<AgeTabId>("6-8");
   const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -96,8 +94,7 @@ function AlimentePageInner() {
             )
           : 0;
       let tab: AgeTabId = "12+";
-      if (ageMonths < 6) tab = "4-6";
-      else if (ageMonths < 8) tab = "6-8";
+      if (ageMonths < 8) tab = "6-8";
       else if (ageMonths < 10) tab = "8-10";
       else if (ageMonths < 12) tab = "10-12";
       else tab = "12+";

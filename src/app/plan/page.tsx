@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 import {
-  analyzeWeekBalance,
   generateSmartWeekPlan,
   getRecipeTags,
 } from "@/app/lib/nutrition";
@@ -329,8 +328,6 @@ export default function PlanPage() {
     return days;
   }, [smartPlan, meals, ageFilteredRecipes, weekKey, overrideTick]);
 
-  const balance = useMemo(() => analyzeWeekBalance(smartPlan), [smartPlan]);
-
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
@@ -548,62 +545,15 @@ export default function PlanPage() {
             </button>
           </div>
 
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            {[
-              { icon: "💪", label: "Proteic", value: balance.proteic, key: "proteic" },
-              { icon: "🥦", label: "Legume", value: balance.legume, key: "legume" },
-              { icon: "🌾", label: "Cereale", value: balance.cereale, key: "cereale" },
-              {
-                icon: "🍬",
-                label: "Prea dulce?",
-                value: balance.dulce,
-                key: "dulce",
-              },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="min-w-[80px] rounded-[10px] px-3 py-2 text-center"
-                style={{
-                  backgroundColor:
-                    item.key === "dulce" && balance.dulce > 0 ? "#FFF3CD" : "#FFFFFF",
-                }}
-              >
-                <p
-                  className="text-[16px] font-bold"
-                  style={{
-                    color:
-                      item.key === "dulce" && balance.dulce > 0 ? "#E8A020" : "#3D2C3E",
-                  }}
-                >
-                  {item.icon} {item.value}
-                </p>
-                <p className="text-[10px] text-[#8B7A8E]">{item.label} mese</p>
-                <p className="text-[9px] text-[#B0A0B8]">
-                  (
-                  {balance.total > 0
-                    ? Math.round((item.value / balance.total) * 100)
-                    : 0}
-                  %)
-                </p>
-              </div>
-            ))}
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              className="rounded-[20px] bg-[#D4849A] px-3.5 py-1 text-[12px] text-white"
+              onClick={() => setWeekSeedOffset((v) => v + 1)}
+            >
+              Regenerează 🔄
+            </button>
           </div>
-
-          {balance.dulce >= 2 || balance.tooSweet ? (
-            <div className="mt-2 rounded-[10px] bg-[#FFF3CD] px-3.5 py-2.5">
-              <p className="text-[12px] text-[#3D2C3E]">
-                ⚠️ Planul conține multe rețete dulci. Apasă &quot;Regenerează&quot;
-                pentru un plan mai echilibrat.
-              </p>
-              <button
-                type="button"
-                className="mt-2 rounded-[20px] bg-[#D4849A] px-3.5 py-1 text-[12px] text-white"
-                onClick={() => setWeekSeedOffset((v) => v + 1)}
-              >
-                Regenerează 🔄
-              </button>
-            </div>
-          ) : null}
         </header>
 
         <section className="mt-5">
