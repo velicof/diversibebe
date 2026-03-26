@@ -9,21 +9,27 @@ import type { FoodCatalogItem, FoodEntry, UserAccount } from "../lib/store";
 import {
   calculateBabyAge,
   getCurrentAgeGroup,
+  getCurrentUser,
   getDiversificationInfo,
+  getFoodEntries,
   getFoodsByAgeGroup,
+  getMildReactionsCount,
   getNextSuggestedFood,
+  getRecentActivity,
+  getStreak,
+  getTriedFoodsCount,
   getUnreadNotificationsCount,
   isLoggedIn as storeIsLoggedIn,
+  parseDate,
   setDiversificationStartDate,
   syncGoogleSessionToLocalUser,
 } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
-import {
-  getCurrentBaby,
-  getCurrentUserId,
-  listFoodJournal,
-  listTriedFoods,
-} from "../lib/supabaseData";
+
+type PersistedSlice = {
+  appState?: { currentUser?: UserAccount | null; isLoggedIn?: boolean };
+  currentUser?: UserAccount | null;
+};
 
 function formatActivityRelative(entry: FoodEntry): string {
   const [y, m, d] = entry.date.split("-").map(Number);
@@ -103,98 +109,21 @@ export default function DashboardPage() {
   const [visitorBannerVisible, setVisitorBannerVisible] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<UserAccount | null>(null);
-  const [isAuthed, setIsAuthed] = useState(false);
   const [entries, setEntries] = useState<FoodEntry[]>([]);
-  const [triedFoodIds, setTriedFoodIds] = useState<string[]>([]);
-  const [mildReactions, setMildReactions] = useState(0);
-  const [streak, setStreak] = useState(0);
   const [targetFoods, setTargetFoods] = useState(40);
   const [dayOfMonth, setDayOfMonth] = useState(1);
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setDayOfMonth(new Date().getDate());
-      const userId = await getCurrentUserId();
-      if (!userId) {
-        if (cancelled) return;
-        setIsAuthed(false);
-        setUser(null);
-        setEntries([]);
-        setTriedFoodIds([]);
-        setMildReactions(0);
-        setStreak(0);
-        setTargetFoods(40);
-        setMounted(true);
-        return;
-      }
-
-      const baby = await getCurrentBaby();
-      const journal = await listFoodJournal();
-      const tried = await listTriedFoods();
-      if (cancelled) return;
-
-      const birthDate = baby?.birthdate ?? "";
-      const u: UserAccount = {
-        email: "",
-        password: "",
-        parentName: "",
-        baby: {
-          name: baby?.name ?? "",
-          birthDate,
-          weight: baby?.weight_kg ? String(baby.weight_kg) : "",
-          gender: (baby?.gender as "boy" | "girl" | null) ?? null,
-          allergies: [],
-          diversificationStartDate: null,
-        },
-        isPremium: false,
-        createdAt: "",
-      };
-      setIsAuthed(true);
+    try {
+      const data = JSON.parse(
+        localStorage.getItem("diversibebe_data") || "{}"
+      ) as PersistedSlice;
+      const u = data.appState?.currentUser ?? data.currentUser ?? null;
       setUser(u);
-
-      const mappedEntries: FoodEntry[] = journal.slice(0, 5).map((j) => {
-        const dt = new Date(j.logged_at);
-        return {
-          id: j.id,
-          type: "food",
-          foodId: j.food_id,
-          foodName: j.food_name,
-          emoji: "🍽️",
-          date: dt.toISOString().slice(0, 10),
-          time: dt.toTimeString().slice(0, 5),
-          reaction:
-            j.reaction === "loved" ||
-            j.reaction === "ok" ||
-            j.reaction === "disliked" ||
-            j.reaction === "refused"
-              ? j.reaction
-              : null,
-          portion: null,
-          symptoms: [],
-          notes: j.notes ?? "",
-          babyMood: null,
-        };
-      });
-      setEntries(mappedEntries);
-      setTriedFoodIds(tried.map((t) => t.food_id));
-
-      const mild = journal.filter((j) => (j.notes ?? "").toLowerCase().includes("reac")).length;
-      setMildReactions(mild);
-
-      const daySet = new Set(
-        journal.map((j) => new Date(j.logged_at).toISOString().slice(0, 10))
-      );
-      const today = new Date();
-      let s = 0;
-      const cursor = new Date(today);
-      while (daySet.has(cursor.toISOString().slice(0, 10))) {
-        s += 1;
-        cursor.setDate(cursor.getDate() - 1);
-      }
-      setStreak(s);
-
-      const parsed = birthDate ? new Date(birthDate) : null;
+      setEntries(getRecentActivity());
+      setDayOfMonth(new Date().getDate());
+      const birthDate = u?.baby?.birthDate ?? "";
+      const parsed = birthDate ? parseDate(birthDate) : null;
       const ageMonths =
         parsed && !Number.isNaN(parsed.getTime())
           ? Math.floor(
@@ -213,11 +142,12 @@ export default function DashboardPage() {
                 ? 25
                 : 40;
       setTargetFoods(target);
-      setMounted(true);
-    })();
-    return () => {
-      cancelled = true;
-    };
+    } catch {
+      setUser(null);
+      setEntries([]);
+      setTargetFoods(40);
+    }
+    setMounted(true);
   }, [storeVersion]);
 
   useEffect(() => {
@@ -232,8 +162,11 @@ export default function DashboardPage() {
         name: session.user.name ?? null,
       });
       if (cancelled) return;
-      const baby = await getCurrentBaby();
-      if (!baby?.name?.trim()) {
+      const u = getCurrentUser();
+      if (
+        u?.email?.toLowerCase() === email.toLowerCase() &&
+        !u.baby?.name?.trim()
+      ) {
         router.replace("/onboarding");
       }
     })();
@@ -246,14 +179,16 @@ export default function DashboardPage() {
     return null;
   }
 
-  const isLoggedIn = isAuthed || storeIsLoggedIn();
+  const isLoggedIn = storeIsLoggedIn();
   const currentUser = user;
   const userName = currentUser?.baby.name ?? "";
   const userAge = calculateBabyAge(currentUser?.baby.birthDate ?? "");
 
   const isVisitor = !isLoggedIn || userName.trim().length === 0;
 
-  const triedFoods = isVisitor ? 0 : triedFoodIds.length;
+  const triedFoods = isVisitor ? 0 : getTriedFoodsCount();
+  const mildReactions = isVisitor ? 0 : getMildReactionsCount();
+  const streak = isVisitor ? 0 : getStreak();
   const recent = isVisitor ? [] : entries;
   const div = isVisitor
     ? { startDate: null, week: 0, expectedFoods: 0 }
@@ -267,7 +202,11 @@ export default function DashboardPage() {
   const unreadCount = getUnreadNotificationsCount();
   const ageGroup = getCurrentAgeGroup();
 
-  const triedFoodIdSet = new Set(triedFoodIds);
+  const triedFoodIdSet = new Set(
+    getFoodEntries()
+      .filter((e) => e.type === "food")
+      .map((e) => e.foodId)
+  );
   const eligibleFoods = getFoodsByAgeGroup(ageGroup);
   const untriedFoods = eligibleFoods.filter((f) => !triedFoodIdSet.has(f.id));
 
@@ -292,16 +231,13 @@ export default function DashboardPage() {
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center overflow-y-auto">
       {isVisitor && visitorBannerVisible ? (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 w-full max-w-[393px] bg-[#EDE7F6] text-[#534AB7] text-[12px] rounded-[14px] px-4 py-3 z-[60] flex items-center justify-between gap-3">
-          <Link
-            href="/login"
-            className="flex-1 min-w-0 leading-tight text-left cursor-pointer"
-          >
+          <span className="leading-tight">
             Explorezi ca vizitator · Creează cont pentru a salva
-          </Link>
+          </span>
           <button
             type="button"
             onClick={() => setVisitorBannerVisible(false)}
-            className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center cursor-pointer"
+            className="w-7 h-7 rounded-full flex items-center justify-center cursor-pointer"
             aria-label="Închide"
           >
             <span className="text-[18px] leading-none">×</span>
@@ -538,15 +474,113 @@ export default function DashboardPage() {
           </div>
 
           {isVisitor ? (
-            <div className="mt-3 rounded-[12px] border border-[#EDE7F6] bg-white px-4 py-6 text-center">
-              <p className="text-[14px] text-[#8B7A8E] leading-relaxed">
-                Autentifică-te pentru a vedea istoricul
-              </p>
+            <div className="mt-3 flex flex-col gap-2">
               <Link
-                href="/login"
-                className="mt-4 inline-flex items-center justify-center rounded-full bg-[#D4849A] px-6 py-2.5 text-[13px] font-bold text-white"
+                href="/alimente/cartof-dulce"
+                className="flex flex-row items-center gap-3 rounded-[12px] bg-white py-[10px] pl-[14px] pr-[10px] cursor-pointer"
+                style={{
+                  marginBottom: 8,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                }}
               >
-                Conectează-te
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[18px]"
+                  style={{ background: "#FFF0F5" }}
+                >
+                  🍠
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="text-[13px] font-bold leading-tight"
+                    style={{ color: "#3D2C3E" }}
+                  >
+                    Cartof dulce
+                  </p>
+                  <p
+                    className="mt-0.5 text-[11px] leading-snug"
+                    style={{ color: "#8B7A8E" }}
+                  >
+                    😍 Adorat • Jumătate
+                  </p>
+                </div>
+                <span
+                  className="shrink-0 text-[11px] whitespace-nowrap"
+                  style={{ color: "#B0A0B8" }}
+                >
+                  Azi
+                </span>
+              </Link>
+
+              <Link
+                href="/alimente/morcov"
+                className="flex flex-row items-center gap-3 rounded-[12px] bg-white py-[10px] pl-[14px] pr-[10px] cursor-pointer"
+                style={{
+                  marginBottom: 8,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[18px]"
+                  style={{ background: "#FFF0F5" }}
+                >
+                  🥕
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="text-[13px] font-bold leading-tight"
+                    style={{ color: "#3D2C3E" }}
+                  >
+                    Morcov
+                  </p>
+                  <p
+                    className="mt-0.5 text-[11px] leading-snug"
+                    style={{ color: "#8B7A8E" }}
+                  >
+                    😊 Ok • Tot
+                  </p>
+                </div>
+                <span
+                  className="shrink-0 text-[11px] whitespace-nowrap"
+                  style={{ color: "#B0A0B8" }}
+                >
+                  Ieri
+                </span>
+              </Link>
+
+              <Link
+                href="/alimente/dovlecel"
+                className="flex flex-row items-center gap-3 rounded-[12px] bg-white py-[10px] pl-[14px] pr-[10px] cursor-pointer"
+                style={{
+                  marginBottom: 8,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[18px]"
+                  style={{ background: "#FFF0F5" }}
+                >
+                  🥒
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="text-[13px] font-bold leading-tight"
+                    style={{ color: "#3D2C3E" }}
+                  >
+                    Dovlecel
+                  </p>
+                  <p
+                    className="mt-0.5 text-[11px] leading-snug"
+                    style={{ color: "#8B7A8E" }}
+                  >
+                    😊 Ok • Puțin
+                  </p>
+                </div>
+                <span
+                  className="shrink-0 text-[11px] whitespace-nowrap"
+                  style={{ color: "#B0A0B8" }}
+                >
+                  Ieri
+                </span>
               </Link>
             </div>
           ) : recent.length === 0 ? (

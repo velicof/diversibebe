@@ -1,20 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import {
+  addManualAllergy,
+  getAllergies,
   getAllFoods,
+  removeAllergy,
   type AllergyRecord,
 } from "../lib/store";
 import type { FoodCatalogItem } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
-import {
-  addAllergyRecord,
-  deleteAllergyRecord,
-  getCurrentUserId,
-  listAllergyRecords,
-} from "../lib/supabaseData";
 
 const MANUAL_SYMPTOMS = [
   "Roșeață",
@@ -39,8 +36,7 @@ function severityFromSymptoms(symptoms: string[]): AllergyRecord["severity"] {
 export default function AlergiiPage() {
   const router = useRouter();
   const storeVersion = useStoreRefresh();
-  const [allergies, setAllergies] = useState<Array<AllergyRecord & { id: string; notes?: string }>>([]);
-  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+  const allergies = useMemo(() => getAllergies(), [storeVersion]);
   const foods = useMemo(() => getAllFoods(), []);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -67,53 +63,21 @@ export default function AlergiiPage() {
     );
   };
 
-  useEffect(() => {
-    void (async () => {
-      const uid = await getCurrentUserId();
-      if (!uid) {
-        setIsAuthed(false);
-        setAllergies([]);
-        return;
-      }
-      setIsAuthed(true);
-      const rows = await listAllergyRecords();
-      setAllergies(
-        rows.map((r) => ({
-          id: r.id,
-          foodId: r.food_id,
-          foodName: r.food_name,
-          emoji: "⚠️",
-          symptoms: r.notes ? [r.notes] : [],
-          firstDate: r.recorded_at.slice(0, 10),
-          severity: r.severity,
-          notes: r.notes ?? "",
-        }))
-      );
-    })();
-  }, [storeVersion]);
-
-  const saveManual = async () => {
+  const saveManual = () => {
     if (!picked || symSel.length === 0) return;
-    await addAllergyRecord({
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    addManualAllergy({
       foodId: picked.id,
       foodName: picked.name,
+      emoji: picked.emoji,
+      symptoms: symSel,
+      firstDate: `${y}-${m}-${d}`,
       severity: severityFromSymptoms(symSel),
-      notes: symSel.join(", "),
     });
     setModalOpen(false);
-    const rows = await listAllergyRecords();
-    setAllergies(
-      rows.map((r) => ({
-        id: r.id,
-        foodId: r.food_id,
-        foodName: r.food_name,
-        emoji: "⚠️",
-        symptoms: r.notes ? [r.notes] : [],
-        firstDate: r.recorded_at.slice(0, 10),
-        severity: r.severity,
-        notes: r.notes ?? "",
-      }))
-    );
   };
 
   return (
@@ -155,18 +119,7 @@ export default function AlergiiPage() {
           + Adaugă alergie manual
         </button>
 
-        {isAuthed === false ? (
-          <div className="mt-10 text-center">
-            <p className="text-[15px] text-[#8B7A8E]">Autentifică-te pentru a vedea alergiile</p>
-            <button
-              type="button"
-              className="mt-4 rounded-full bg-[#D4849A] px-5 py-2 text-[13px] font-bold text-white"
-              onClick={() => router.push("/login")}
-            >
-              Conectează-te
-            </button>
-          </div>
-        ) : allergies.length === 0 ? (
+        {allergies.length === 0 ? (
           <div className="mt-10 text-center">
             <p className="text-[18px] font-bold text-[#3D2C3E]">
               ✅ Nu au fost detectate alergii
@@ -212,10 +165,7 @@ export default function AlergiiPage() {
                     type="button"
                     className="shrink-0 self-start text-[18px] cursor-pointer"
                     aria-label="Elimină"
-                    onClick={async () => {
-                      await deleteAllergyRecord(a.id);
-                      setAllergies((prev) => prev.filter((x) => x.id !== a.id));
-                    }}
+                    onClick={() => removeAllergy(a.foodId)}
                   >
                     🗑️
                   </button>

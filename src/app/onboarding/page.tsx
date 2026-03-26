@@ -8,7 +8,6 @@ import {
   saveOnboardingBabyProfile,
   syncGoogleSessionToLocalUser,
 } from "../lib/store";
-import { getCurrentBaby, upsertCurrentBaby } from "../lib/supabaseData";
 
 type Gender = "boy" | "girl" | null;
 
@@ -19,7 +18,6 @@ export default function OnboardingPage() {
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState<Gender>(null);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     if (status === "loading") return;
@@ -32,14 +30,6 @@ export default function OnboardingPage() {
       email,
       name: session.user?.name ?? null,
     });
-    void (async () => {
-      const baby = await getCurrentBaby();
-      if (baby) {
-        setBabyName(baby.name || "");
-        setBirthDate(baby.birthdate || "");
-        setGender((baby.gender as Gender) ?? null);
-      }
-    })();
     const u = getCurrentUser();
     if (
       u?.email?.toLowerCase() === email.toLowerCase() &&
@@ -54,23 +44,13 @@ export default function OnboardingPage() {
   const canSubmit =
     babyName.trim().length >= 2 && birthDate.trim().length > 0;
 
-  async function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError("");
     if (!canSubmit) return;
-    const saved = await upsertCurrentBaby({
-      name: babyName.trim(),
-      birthdate: birthDate.trim(),
-      gender,
-    });
-    if (!saved) {
-      setError("Nu am putut salva profilul bebelușului. Încearcă din nou.");
-      return;
-    }
     saveOnboardingBabyProfile({
-      name: saved.name,
-      birthDate: saved.birthdate,
-      gender: (saved.gender as Gender) ?? null,
+      name: babyName.trim(),
+      birthDate: birthDate.trim(),
+      gender,
     });
     router.push("/dashboard");
   }
@@ -152,9 +132,6 @@ export default function OnboardingPage() {
           >
             Hai să începem! 🚀
           </button>
-          {error ? (
-            <p className="text-[12px] text-[#E74C3C] text-center">{error}</p>
-          ) : null}
         </form>
       </main>
     </div>

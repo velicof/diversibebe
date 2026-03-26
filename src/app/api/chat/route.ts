@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       ? body.babyContext.trim()
       : "Nu există profil de bebeluș creat încă.";
 
-  const systemPrompt = `Ești BebeAsist, asistentul AI personal al aplicației DiversiBebe.
+  const systemPrompt = `Ești NutriBot, asistentul AI personal al aplicației DiversiBebe.
 
 CONTEXT BEBELUȘ:
 ${babyContext}

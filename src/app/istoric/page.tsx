@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
-import type { FoodEntry } from "../lib/store";
-import { getCurrentUserId, listFoodJournal } from "../lib/supabaseData";
+import { getFoodEntries, type FoodEntry } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 
 const RO_MONTHS_LONG = [
@@ -254,50 +253,10 @@ export default function IstoricPage() {
   const storeVersion = useStoreRefresh();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sheetEntry, setSheetEntry] = useState<FoodEntry | null>(null);
-  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
-  const [allEntries, setAllEntries] = useState<FoodEntry[]>([]);
 
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      const uid = await getCurrentUserId();
-      if (!active) return;
-      if (!uid) {
-        setIsAuthed(false);
-        setAllEntries([]);
-        return;
-      }
-      setIsAuthed(true);
-      const rows = await listFoodJournal();
-      if (!active) return;
-      const mapped: FoodEntry[] = rows.map((r) => {
-        const dt = new Date(r.logged_at);
-        return {
-          id: r.id,
-          type: "food",
-          foodId: r.food_id,
-          foodName: r.food_name,
-          emoji: "🍽️",
-          date: dt.toISOString().slice(0, 10),
-          time: dt.toTimeString().slice(0, 5),
-          reaction:
-            r.reaction === "loved" ||
-            r.reaction === "ok" ||
-            r.reaction === "disliked" ||
-            r.reaction === "refused"
-              ? r.reaction
-              : null,
-          portion: null,
-          symptoms: [],
-          notes: r.notes ?? "",
-          babyMood: null,
-        };
-      });
-      setAllEntries(mapped);
-    })();
-    return () => {
-      active = false;
-    };
+  const allEntries = useMemo(() => {
+    void storeVersion;
+    return getFoodEntries();
   }, [storeVersion]);
 
   const last30 = useMemo(() => {
@@ -454,21 +413,7 @@ export default function IstoricPage() {
           </div>
         </div>
 
-        {isAuthed === false ? (
-          <div className="mt-10 flex flex-col items-center text-center px-4">
-            <span className="text-[40px]">🔒</span>
-            <p className="mt-3 text-[14px] text-[#8B7A8E]">
-              Autentifică-te pentru a vedea istoricul
-            </p>
-            <button
-              type="button"
-              className="mt-4 rounded-full bg-[#D4849A] px-6 py-2.5 text-[13px] font-bold text-white"
-              onClick={() => router.push("/login")}
-            >
-              Conectează-te
-            </button>
-          </div>
-        ) : totallyEmpty ? (
+        {totallyEmpty ? (
           <div className="mt-10 flex flex-col items-center text-center px-4">
             <span className="text-[40px]">📭</span>
             <p className="mt-3 text-[14px] text-[#8B7A8E]">

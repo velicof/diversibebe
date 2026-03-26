@@ -160,7 +160,7 @@ export default function ProfilPage() {
             {parentName}
           </h1>
           <p className="mt-1 text-[13px] font-normal text-[#8B7A8E]">
-            {`Părintele lui ${babyName} · ${age.display}`}
+            {`mama lui ${babyName} · ${age.display}`}
           </p>
 
           {premium ? (

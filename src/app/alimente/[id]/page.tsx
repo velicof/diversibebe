@@ -3,17 +3,18 @@
 import Link from "next/link";
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import Navbar from "../../components/Navbar";
 import type { RecipeCatalogItem } from "../../lib/recipesDatabase";
 import { RECIPES } from "../../lib/recipesDatabase";
 import type { FoodEntry } from "../../lib/store";
 import {
+  getEntriesForFood,
   getFoodById,
+  getFoodStatus,
   getFoodStatusMeta,
+  isLoggedIn as storeIsLoggedIn,
 } from "../../lib/store";
 import { useStoreRefresh } from "../../lib/useStoreRefresh";
-import { getCurrentUserId, listFoodJournal, upsertTriedFood } from "../../lib/supabaseData";
 
 function recipeRelatesToFood(
   recipe: RecipeCatalogItem,
@@ -45,8 +46,6 @@ export default function FoodDetailPage({
   const [showGuestPopup, setShowGuestPopup] = useState(false);
   const storeVersion = useStoreRefresh();
   const { id } = use(params);
-  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
-  const [journalForFood, setJournalForFood] = useState<FoodEntry[]>([]);
   const food = useMemo(() => {
     const fromCatalog = getFoodById(id);
     if (!fromCatalog) return undefined;
@@ -104,8 +103,9 @@ export default function FoodDetailPage({
     );
   }
 
-  const triedEntry = journalForFood.length > 0 ? journalForFood[0] : null;
-  const s = getFoodStatusMeta(triedEntry ? "Încercat" : "De încercat");
+  const statusFromStore = getFoodStatus(food.id);
+  const s = getFoodStatusMeta(statusFromStore.status);
+  const triedEntry = statusFromStore.entry;
   const reactionDisplay = triedEntry
     ? triedEntry.reaction === "loved"
       ? "😋 A adorat"
@@ -126,6 +126,7 @@ export default function FoodDetailPage({
       })()
     : "";
 
+  const journalForFood = getEntriesForFood(food.id);
   const journalLast3 = journalForFood.slice(0, 3);
   const journalCount = journalForFood.length;
   const firstJournal = journalCount
@@ -157,50 +158,6 @@ export default function FoodDetailPage({
 
   const previewRecipes = relatedRecipes.slice(0, 3);
   const hasMoreRecipes = relatedRecipes.length > 3;
-
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      const uid = await getCurrentUserId();
-      if (!active) return;
-      setIsAuthed(Boolean(uid));
-      if (!uid) {
-        setJournalForFood([]);
-        return;
-      }
-      const rows = await listFoodJournal();
-      if (!active) return;
-      const mapped: FoodEntry[] = rows
-        .filter((r) => r.food_id === food.id)
-        .map((r) => {
-          const dt = new Date(r.logged_at);
-          return {
-            id: r.id,
-            type: "food",
-            foodId: r.food_id,
-            foodName: r.food_name,
-            emoji: food.emoji,
-            date: dt.toISOString().slice(0, 10),
-            time: dt.toTimeString().slice(0, 5),
-            reaction:
-              r.reaction === "loved" ||
-              r.reaction === "ok" ||
-              r.reaction === "disliked" ||
-              r.reaction === "refused"
-                ? r.reaction
-                : null,
-            portion: null,
-            symptoms: [],
-            notes: r.notes ?? "",
-            babyMood: null,
-          };
-        });
-      setJournalForFood(mapped);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [storeVersion, food.id, food.emoji]);
 
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
@@ -316,12 +273,11 @@ export default function FoodDetailPage({
             <button
               type="button"
               className="h-12 w-full rounded-full bg-[#D4849A] text-white font-bold text-[16px] flex items-center justify-center cursor-pointer"
-              onClick={async () => {
-                if (!isAuthed) {
+              onClick={() => {
+                if (!storeIsLoggedIn()) {
                   setShowGuestPopup(true);
                   return;
                 }
-                await upsertTriedFood({ foodId: food.id, foodName: food.name });
                 router.push(jurnalHref);
               }}
             >
@@ -381,7 +337,7 @@ export default function FoodDetailPage({
             type="button"
             className="mt-4 h-11 w-full rounded-full border border-[#D4849A] bg-white text-[14px] font-bold text-[#D4849A] cursor-pointer"
             onClick={() => {
-              if (!isAuthed) {
+              if (!storeIsLoggedIn()) {
                 setShowGuestPopup(true);
                 return;
               }
