@@ -249,9 +249,14 @@ export function generateSmartWeekPlan(
   const days = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică']
   const plan: Record<string, Record<string, any>> = {}
 
-  // Filter recipes by age
-  const ageNum = parseInt(ageGroup)
-  const eligible = recipes.filter(r => parseInt(r.ageGroup) <= ageNum)
+  // Filter recipes by age (ex: "4+", "8+" → număr corect)
+  const ageMatch = String(ageGroup).match(/(\d+)/)
+  const ageNum = ageMatch ? Number(ageMatch[1]) : 12
+  const eligible = recipes.filter(r => {
+    const m = String(r.ageGroup).match(/(\d+)/)
+    const rAge = m ? Number(m[1]) : 99
+    return rAge <= ageNum
+  })
 
   // Track used ingredients per week to avoid repetition
   const usedIngredients: string[] = []

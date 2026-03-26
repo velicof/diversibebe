@@ -1,13 +1,15 @@
 import { parseDate } from "./store";
 import type { AgeBandId, RecipeCatalogItem } from "./recipesDatabase";
 
-/** Porții implicite (g preparat) când rețeta nu are `babyPortionGramsByAgeBand`. */
-/** Porții mici, realiste pentru o porție de bebeluș (g preparat). */
+/** Porție fixă pentru bebeluș (g preparat) — simplu, fără formule pe vârstă. */
+export const FIXED_BABY_PORTION_GRAMS = 38;
+
+/** @deprecated Păstrat pentru compatibilitate tipuri; toate benzile folosesc aceeași porție. */
 export const DEFAULT_BABY_PORTION_GRAMS: Record<AgeBandId, number> = {
-  "4-6": 38,
-  "6-8": 60,
-  "8-10": 85,
-  "10-12": 110,
+  "4-6": FIXED_BABY_PORTION_GRAMS,
+  "6-8": FIXED_BABY_PORTION_GRAMS,
+  "8-10": FIXED_BABY_PORTION_GRAMS,
+  "10-12": FIXED_BABY_PORTION_GRAMS,
 };
 
 export function ageMonthsToAgeBand(ageMonths: number): AgeBandId {
@@ -77,43 +79,30 @@ export function inferTotalYieldGrams(recipe: RecipeCatalogItem): number {
   }
 }
 
+/** Porție bebeluș fixă ~38 g (parametrul de vârstă e ignorat pentru afișare). */
 export function getBabyPortionGrams(
-  recipe: RecipeCatalogItem,
-  ageMonths: number
+  _recipe: RecipeCatalogItem,
+  _ageMonths?: number
 ): number {
-  const band = ageMonthsToAgeBand(ageMonths);
-  const custom = recipe.babyPortionGramsByAgeBand?.[band];
-  if (typeof custom === "number" && custom > 0) return custom;
-  return DEFAULT_BABY_PORTION_GRAMS[band];
+  return FIXED_BABY_PORTION_GRAMS;
 }
 
-/**
- * Raport între cantitatea totală și porția pentru vârstă (~ câte porții bebe).
- */
-export function getApproxBabyServingsRatio(
-  recipe: RecipeCatalogItem,
-  ageMonths: number
-): number {
+/** Câte porții de ~38 g ies din preparatul total. */
+export function getApproxBabyServingsRatio(recipe: RecipeCatalogItem): number {
   const total = inferTotalYieldGrams(recipe);
-  const portion = getBabyPortionGrams(recipe, ageMonths);
+  const portion = FIXED_BABY_PORTION_GRAMS;
   if (portion <= 0) return 1;
   return total / portion;
 }
 
 /** Porții bebe rotunjite (număr întreg, minim 1). */
-export function getApproxBabyServingsRounded(
-  recipe: RecipeCatalogItem,
-  ageMonths: number
-): number {
-  const ratio = getApproxBabyServingsRatio(recipe, ageMonths);
+export function getApproxBabyServingsRounded(recipe: RecipeCatalogItem): number {
+  const ratio = getApproxBabyServingsRatio(recipe);
   return Math.max(1, Math.round(ratio));
 }
 
-export function formatApproxBabyServingsRo(
-  recipe: RecipeCatalogItem,
-  ageMonths: number
-): string {
-  const n = getApproxBabyServingsRounded(recipe, ageMonths);
+export function formatApproxBabyServingsRo(recipe: RecipeCatalogItem): string {
+  const n = getApproxBabyServingsRounded(recipe);
   return `~${n} porții pentru bebe din această rețetă`;
 }
 
@@ -128,19 +117,13 @@ export function nutritionAgeKeyFromMonths(ageMonths: number): string {
 }
 
 export function formatRecipePortionLineRo(
-  recipe: RecipeCatalogItem,
-  ageMonths: number
+  _recipe: RecipeCatalogItem,
+  _ageMonths?: number
 ): string {
-  const g = getBabyPortionGrams(recipe, ageMonths);
-  const band = ageMonthsToAgeBand(ageMonths);
-  return `Porție ~${g} g (${ageBandLabelRo(band)})`;
+  return `Porție ~${FIXED_BABY_PORTION_GRAMS} g`;
 }
 
-export function formatRecipeCardHintRo(
-  recipe: RecipeCatalogItem,
-  ageMonths: number
-): string {
-  const g = getBabyPortionGrams(recipe, ageMonths);
-  const n = getApproxBabyServingsRounded(recipe, ageMonths);
-  return `~${g} g · ~${n} porții`;
+export function formatRecipeCardHintRo(recipe: RecipeCatalogItem): string {
+  const n = getApproxBabyServingsRounded(recipe);
+  return `~${FIXED_BABY_PORTION_GRAMS} g · ~${n} porții`;
 }

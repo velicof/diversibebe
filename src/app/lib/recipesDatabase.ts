@@ -8,6 +8,11 @@ import {
   MIC_DEJUN_12PLUS_EXTRA,
   MIC_DEJUN_8PLUS_EXTRA,
 } from "./micDejunExtraRecipes";
+import {
+  PRANZ_6_8_RECIPES,
+  PRANZ_8_10_RECIPES,
+  GUSTARE_RECIPES,
+} from "./pranzSiGustariNoi";
 
 export type MealType = "mic-dejun" | "pranz" | "cina" | "gustare";
 
@@ -311,7 +316,7 @@ const MIC_DEJUN_RECIPES: RecipeCatalogItem[] = [
   },
   {
     id: "polenta-afine",
-    name: "Polenta cu afine",
+    name: "Mămăligă cu afine",
     emoji: "🫐",
     mealType: "mic-dejun",
     time: "15 min",
@@ -1041,7 +1046,7 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
   },
   {
     id: "polenta-rosii-ricotta",
-    name: "Polenta cu roșii și ricotta",
+    name: "Mămăligă cu roșii și ricotta",
     emoji: "🌽",
     mealType: "pranz",
     time: "10 min",
@@ -2705,4 +2710,7 @@ export const RECIPES: RecipeCatalogItem[] = [
   ...CINA_8PLUS_RECIPES,
   ...CINA_10PLUS_DINNER_RECIPES,
   ...CINA_12PLUS_DINNER_RECIPES,
+  ...PRANZ_6_8_RECIPES,
+  ...PRANZ_8_10_RECIPES,
+  ...GUSTARE_RECIPES,
 ];

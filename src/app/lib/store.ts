@@ -48,8 +48,7 @@ export function getUserKey(email: string): string {
 }
 
 type UserPersistedSlice = {
-  foodEntries?: unknown[];
-  allergies?: unknown[];
+  // Supabase-first: keep empty
 };
 
 export interface Notification {
@@ -88,8 +87,7 @@ export type FoodStatus =
 
 export const STORE_UPDATED_EVENT = "diversibebe_store_updated";
 
-let applyingRemoteSync = false;
-let cloudSyncTimer: ReturnType<typeof setTimeout> | null = null;
+// Supabase-first: legacy cloud sync disabled.
 
 type PersistedData = { appState: AppState; accounts: UserAccount[] };
 
@@ -240,90 +238,42 @@ function mergeFoodEntriesById(local: FoodEntry[], remote: FoodEntry[]): FoodEntr
 }
 
 function readUserPersistedSlice(email: string): UserPersistedSlice {
-  return safeParse<UserPersistedSlice>(
-    localStorage.getItem(getUserKey(email)),
-    {}
-  );
+  void email;
+  return {};
 }
 
 function writeUserPersistedSlice(email: string, slice: UserPersistedSlice): void {
-  localStorage.setItem(getUserKey(email), JSON.stringify(slice));
+  void email;
+  void slice;
 }
 
 /** Move legacy appState.foodEntries from main blob into the logged-in user's key. */
 function migrateLegacyMainFoodEntries(): void {
-  if (!isBrowser()) return;
-  const raw = safeParse<PersistedData>(
-    localStorage.getItem(STORAGE_KEY),
-    defaultData
-  );
-  const email = raw.appState?.currentUser?.email?.trim();
-  const legacy = raw.appState?.foodEntries;
-  if (!email || !Array.isArray(legacy) || legacy.length === 0) return;
-  const ud = readUserPersistedSlice(email);
-  const prev = Array.isArray(ud.foodEntries) ? ud.foodEntries : [];
-  writeUserPersistedSlice(email, { ...ud, foodEntries: [...prev, ...legacy] });
-  raw.appState.foodEntries = [];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(raw));
+  // disabled
 }
 
 /** Move legacy global allergy list into the user's slice once. */
 function migrateLegacyGlobalAllergies(email: string): void {
-  if (!isBrowser()) return;
-  const ud = readUserPersistedSlice(email);
-  const existing = Array.isArray(ud.allergies) ? ud.allergies : [];
-  if (existing.length > 0) return;
-  const global = safeParse<unknown[]>(
-    localStorage.getItem(ALLERGY_STORAGE_KEY),
-    []
-  );
-  if (!Array.isArray(global) || global.length === 0) return;
-  writeUserPersistedSlice(email, { ...ud, allergies: global });
-  try {
-    localStorage.removeItem(ALLERGY_STORAGE_KEY);
-  } catch {
-    /* ignore */
-  }
+  void email;
 }
 
 function loadMigratedFoodEntriesForEmail(email: string): FoodEntry[] {
-  migrateLegacyGlobalAllergies(email);
-  const ud = readUserPersistedSlice(email);
-  const rawEntries = Array.isArray(ud.foodEntries) ? ud.foodEntries : [];
-  let needsUserPersist = false;
-  const foodEntries: FoodEntry[] = [];
-  for (const item of rawEntries) {
-    const rec = item as Record<string, unknown>;
-    const hadStoredId = typeof rec.id === "string" && rec.id.length > 0;
-    const migrated = migrateFoodEntry(rec);
-    if (!migrated) continue;
-    if (!hadStoredId) needsUserPersist = true;
-    foodEntries.push(migrated);
-  }
-  if (needsUserPersist) {
-    writeUserPersistedSlice(email, { ...ud, foodEntries });
-  }
-  return foodEntries;
+  void email;
+  return [];
 }
 
 /** After changing `currentUser`, reload journal entries so we never persist the wrong user's food log. */
 function syncSessionFoodEntries(data: PersistedData): void {
-  const email = data.appState.currentUser?.email?.trim();
-  data.appState.foodEntries = email
-    ? loadMigratedFoodEntriesForEmail(email)
-    : [];
+  void data;
 }
 
 function readData(): PersistedData {
   if (!isBrowser()) return defaultData;
-  migrateLegacyMainFoodEntries();
   const data = safeParse<PersistedData>(
     localStorage.getItem(STORAGE_KEY),
     defaultData
   );
-  const email = data.appState?.currentUser?.email?.trim() || null;
-
-  const foodEntries = email ? loadMigratedFoodEntriesForEmail(email) : [];
+  const foodEntries: FoodEntry[] = [];
 
   const out: PersistedData = {
     appState: {
@@ -342,17 +292,11 @@ function readData(): PersistedData {
 }
 
 function scheduleCloudSync(): void {
-  if (!isBrowser() || applyingRemoteSync) return;
-  if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
-  cloudSyncTimer = setTimeout(() => {
-    cloudSyncTimer = null;
-    void import("@/lib/supabaseDataSync").then((m) => m.pushLocalToCloud());
-  }, 2500);
+  // disabled
 }
 
 function writeData(data: PersistedData) {
   if (!isBrowser()) return;
-  const email = data.appState.currentUser?.email?.trim() || null;
   const toPersist: PersistedData = {
     ...data,
     appState: {
@@ -360,18 +304,8 @@ function writeData(data: PersistedData) {
       foodEntries: [],
     },
   };
-  if (email) {
-    const ud = readUserPersistedSlice(email);
-    writeUserPersistedSlice(email, {
-      ...ud,
-      foodEntries: data.appState.foodEntries,
-    });
-  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(toPersist));
   window.dispatchEvent(new CustomEvent(STORE_UPDATED_EVENT));
-  if (!applyingRemoteSync) {
-    scheduleCloudSync();
-  }
 }
 
 function entryDateKey(e: FoodEntry) {
@@ -573,118 +507,12 @@ export function isLoggedIn(): boolean {
 }
 
 export function addFoodEntry(entry: FoodEntry): void {
-  if (!isBrowser()) return;
-  const shell = safeParse<PersistedData>(
-    localStorage.getItem(STORAGE_KEY),
-    defaultData
-  );
-  const userEmail = shell.appState?.currentUser?.email?.trim();
-  if (!userEmail) return;
-
-  const withId: FoodEntry = {
-    ...entry,
-    id: entry.id || `${Date.now().toString()}-${Math.random().toString(36).slice(2, 9)}`,
-  };
-
-  if (
-    withId.symptoms.length > 0 &&
-    !withId.symptoms.includes("Nicio reacție")
-  ) {
-    try {
-      const userData = readUserPersistedSlice(userEmail);
-      const allergies = Array.isArray(userData.allergies)
-        ? [...userData.allergies]
-        : [];
-      const exists = allergies.find(
-        (a) =>
-          a &&
-          typeof a === "object" &&
-          (a as AllergyRecord).foodId === withId.foodId
-      );
-      if (!exists) {
-        allergies.push({
-          foodId: withId.foodId,
-          foodName: withId.foodName,
-          emoji: withId.emoji,
-          symptoms: withId.symptoms,
-          firstDate: withId.date,
-          severity:
-            withId.symptoms.includes("Erupție") ||
-            withId.symptoms.includes("Vărsături")
-              ? "sever"
-              : "usor",
-        });
-        writeUserPersistedSlice(userEmail, {
-          ...userData,
-          allergies,
-        });
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-
-  const data = readData();
-  data.appState.foodEntries = [...data.appState.foodEntries, withId];
-  const next = recalcState(data);
-  const babyName = next.appState.currentUser?.baby.name || "bebe";
-  const totalUnique = new Set(next.appState.foodEntries.map((e) => e.foodId)).size;
-  if (totalUnique === 1) {
-    pushNotification(next, {
-      title: "Prima încercare! 🥄",
-      body: `Felicitări! Ai jurnalizat primul aliment pentru ${babyName}!`,
-      icon: "🥄",
-      iconBg: "#E0F5F0",
-      read: false,
-      type: "milestone",
-    });
-  }
-  if (next.appState.streak === 3) {
-    pushNotification(next, {
-      title: "3 zile consecutive! 🔥",
-      body: "Continuă tot așa! Consistența e cheia.",
-      icon: "🔥",
-      iconBg: "#E0F5F0",
-      read: false,
-      type: "streak",
-    });
-  }
-  if (next.appState.streak === 7) {
-    pushNotification(next, {
-      title: "O săptămână! 🎯",
-      body: "Bravo! 7 zile consecutive de diversificare!",
-      icon: "🎯",
-      iconBg: "#EDE7F6",
-      read: false,
-      type: "streak",
-    });
-  }
-  if (
-    withId.symptoms.length > 0 &&
-    !withId.symptoms.includes("Nicio reacție")
-  ) {
-    pushNotification(next, {
-      title: "Monitorizare reacție ⚠️",
-      body: `Urmărește-l pe ${babyName} în următoarele 48 de ore după ${withId.foodName}.`,
-      icon: "⚠️",
-      iconBg: "#FAEEDA",
-      read: false,
-      type: "reaction_followup",
-    });
-  }
-  writeData(next);
+  // Supabase-first: journal is persisted in Supabase now.
+  void entry;
 }
 
 export function getFoodEntries(): FoodEntry[] {
-  if (!isBrowser()) return [];
-  migrateLegacyMainFoodEntries();
-  const data = safeParse<PersistedData>(
-    localStorage.getItem(STORAGE_KEY),
-    defaultData
-  );
-  const userEmail = data.appState?.currentUser?.email?.trim();
-  if (!userEmail) return [];
-  return sortFoodEntries(loadMigratedFoodEntriesForEmail(userEmail));
+  return [];
 }
 
 export function getEntriesForFood(foodId: string): FoodEntry[] {
@@ -776,133 +604,22 @@ function mergeAccountFromRemote(
  * Merge server snapshot into local store (Google session). Idempotent-friendly.
  */
 export function applyRemoteSyncFromServer(payload: RemoteSyncPayload): void {
-  if (!isBrowser()) return;
-  const data = readData();
-  const email = data.appState.currentUser?.email?.trim();
-  if (!email) return;
-
-  const account = data.accounts.find(
-    (a) => a.email.toLowerCase() === email.toLowerCase()
-  );
-  if (!account) return;
-
-  applyingRemoteSync = true;
-  try {
-    if (payload.profile) {
-      const nextAccount = mergeAccountFromRemote(account, payload.profile);
-      const idx = data.accounts.findIndex((a) => a.email === nextAccount.email);
-      if (idx >= 0) data.accounts[idx] = nextAccount;
-      data.appState.currentUser = nextAccount;
-    }
-
-    const localFood = loadMigratedFoodEntriesForEmail(email);
-    const remoteRaw = Array.isArray(payload.foodEntries) ? payload.foodEntries : [];
-    const remoteFood: FoodEntry[] = [];
-    for (const raw of remoteRaw) {
-      const m = migrateFoodEntry(raw as Record<string, unknown>);
-      if (m) remoteFood.push(m);
-    }
-    const mergedFood = mergeFoodEntriesById(localFood, remoteFood);
-
-    const localUd = readUserPersistedSlice(email);
-    const localAllergies = (
-      Array.isArray(localUd.allergies) ? localUd.allergies : []
-    )
-      .map((a) => parseAllergyPayload(a))
-      .filter((a): a is AllergyRecord => a !== null);
-
-    const remoteAllergies = (Array.isArray(payload.allergies) ? payload.allergies : [])
-      .map((a) => parseAllergyPayload(a))
-      .filter((a): a is AllergyRecord => a !== null);
-
-    const mergedAllergies = mergeAllergyLists(localAllergies, remoteAllergies);
-
-    writeUserPersistedSlice(email, {
-      ...localUd,
-      foodEntries: mergedFood,
-      allergies: mergedAllergies,
-    });
-
-    syncSessionFoodEntries(data);
-    writeData(recalcState(data));
-  } finally {
-    applyingRemoteSync = false;
-  }
+  // Supabase-first: legacy sync disabled.
+  void payload;
 }
 
 export function getAllergies(): AllergyRecord[] {
-  if (!isBrowser()) return [];
-  try {
-    const data = safeParse<PersistedData>(
-      localStorage.getItem(STORAGE_KEY),
-      defaultData
-    );
-    const userEmail = data.appState?.currentUser?.email?.trim();
-    if (!userEmail) return [];
-    migrateLegacyGlobalAllergies(userEmail);
-    const ud = readUserPersistedSlice(userEmail);
-    const parsed = Array.isArray(ud.allergies) ? ud.allergies : [];
-    return parsed.filter(
-      (a): a is AllergyRecord =>
-        !!a &&
-        typeof a === "object" &&
-        typeof (a as AllergyRecord).foodId === "string"
-    );
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 export function removeAllergy(foodId: string): void {
-  if (!isBrowser()) return;
-  const data = safeParse<PersistedData>(
-    localStorage.getItem(STORAGE_KEY),
-    defaultData
-  );
-  const userEmail = data.appState?.currentUser?.email?.trim();
-  if (!userEmail) return;
-  const ud = readUserPersistedSlice(userEmail);
-  const allergies = (
-    Array.isArray(ud.allergies)
-      ? ud.allergies.filter(
-          (a): a is AllergyRecord =>
-            !!a &&
-            typeof a === "object" &&
-            typeof (a as AllergyRecord).foodId === "string"
-        )
-      : []
-  ).filter((a) => a.foodId !== foodId);
-  writeUserPersistedSlice(userEmail, { ...ud, allergies });
-  window.dispatchEvent(new CustomEvent(STORE_UPDATED_EVENT));
-  writeData(recalcState(readData()));
+  // Supabase-first: allergies are persisted in Supabase now.
+  void foodId;
 }
 
 export function addManualAllergy(record: AllergyRecord): void {
-  if (!isBrowser()) return;
-  const data = safeParse<PersistedData>(
-    localStorage.getItem(STORAGE_KEY),
-    defaultData
-  );
-  const userEmail = data.appState?.currentUser?.email?.trim();
-  if (!userEmail) return;
-  const ud = readUserPersistedSlice(userEmail);
-  const list = (
-    Array.isArray(ud.allergies)
-      ? ud.allergies.filter(
-          (a): a is AllergyRecord =>
-            !!a &&
-            typeof a === "object" &&
-            typeof (a as AllergyRecord).foodId === "string"
-        )
-      : []
-  ) as AllergyRecord[];
-  if (list.some((a) => a.foodId === record.foodId)) return;
-  writeUserPersistedSlice(userEmail, {
-    ...ud,
-    allergies: [...list, record],
-  });
-  window.dispatchEvent(new CustomEvent(STORE_UPDATED_EVENT));
-  writeData(recalcState(readData()));
+  // Supabase-first: allergies are persisted in Supabase now.
+  void record;
 }
 
 export function getTriedFoodsCount(): number {
