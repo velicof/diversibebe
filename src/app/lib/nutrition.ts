@@ -194,16 +194,16 @@ export function getServingSuggestion(ageGroup: string, mealType: string): { text
   return suggestions[ageGroup] || suggestions['8+']
 }
 
-export type RecipeTag = 'anticonstipatie' | 'dulce' | 'low-budget' | 'proteic' | 'legume' | 'cereale' | 'fructe' | 'peste' | 'fibre-mari'
+export type RecipeTag = 'cu-fibre' | 'dulce' | 'low-budget' | 'proteic' | 'legume' | 'cereale' | 'fructe' | 'peste' | 'fibre-mari'
 
 export function getRecipeTags(recipe: { id: string; name: string; ingredients: string[]; mealType: string }): RecipeTag[] {
   const tags: RecipeTag[] = []
   const ingredientsStr = recipe.ingredients.join(' ').toLowerCase()
   const nameStr = recipe.name.toLowerCase()
 
-  // Anticonstipatie - alimente bogate in fibre
+  // Fibre (cu-fibre) - alimente bogate în fibre
   const antiConst = ['pruna', 'para', 'broccoli', 'ovaz', 'fulgi', 'linte', 'fasole', 'sfecla', 'piersica', 'zmeura', 'afine', 'seminte chia', 'quinoa', 'spanac']
-  if (antiConst.some(a => ingredientsStr.includes(a))) tags.push('anticonstipatie')
+  if (antiConst.some(a => ingredientsStr.includes(a))) tags.push('cu-fibre')
 
   // Dulce
   const dulce = ['banana', 'mar', 'para', 'mango', 'capsuni', 'afine', 'zmeura', 'curmale', 'miere', 'vanilie']
@@ -234,7 +234,7 @@ export function getRecipeTags(recipe: { id: string; name: string; ingredients: s
   if (['somon', 'cod', 'biban', 'merlucius', 'pangasius'].some(p => ingredientsStr.includes(p))) tags.push('peste')
 
   // Fibre mari
-  if (tags.includes('anticonstipatie') && (ingredientsStr.includes('linte') || ingredientsStr.includes('fasole') || ingredientsStr.includes('pruna') || ingredientsStr.includes('seminte chia'))) tags.push('fibre-mari')
+  if (tags.includes('cu-fibre') && (ingredientsStr.includes('linte') || ingredientsStr.includes('fasole') || ingredientsStr.includes('pruna') || ingredientsStr.includes('seminte chia'))) tags.push('fibre-mari')
 
   return tags
 }
@@ -244,7 +244,7 @@ export function generateSmartWeekPlan(
   ageGroup: string,
   meals: string[],
   weekSeed: number,
-  mode: 'normal' | 'anticonstipatie' = 'normal'
+  mode: 'normal' | 'cu-fibre' = 'normal'
 ): Record<string, Record<string, any>> {
   const days = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică']
   const plan: Record<string, Record<string, any>> = {}
@@ -271,11 +271,11 @@ export function generateSmartWeekPlan(
 
       let candidates = mealRecipes
 
-      if (mode === 'anticonstipatie') {
-        // Prefer anticonstipatie recipes
+      if (mode === 'cu-fibre') {
+        // Prefer cu-fibre recipes
         const antiCandidates = mealRecipes.filter(r => {
           const tags = getRecipeTags(r)
-          return tags.includes('anticonstipatie') || tags.includes('fibre-mari')
+          return tags.includes('cu-fibre') || tags.includes('fibre-mari')
         })
         if (antiCandidates.length >= 2) candidates = antiCandidates
       }

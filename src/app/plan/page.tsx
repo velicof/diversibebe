@@ -245,7 +245,7 @@ export default function PlanPage() {
   const router = useRouter();
   const storeVersion = useStoreRefresh();
   const [currentWeek, setCurrentWeek] = useState(0);
-  const [mode, setMode] = useState<"normal" | "anticonstipatie">("normal");
+  const [mode, setMode] = useState<"normal" | "cu-fibre">("normal");
   const [weekSeedOffset, setWeekSeedOffset] = useState(0);
   const [birthDate, setBirthDate] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -484,7 +484,7 @@ export default function PlanPage() {
           <p className="mt-1 text-[12px] text-[#8B7A8E] leading-relaxed">
             {mode === "normal"
               ? "Plan echilibrat: mic dejun → gustare → prânz → cină (după vârstă)."
-              : "Plan anticonstipație: mai multe fibre & rețete ușoare, adaptate vârstei."}
+              : "Plan cu Fibre: mai multe fibre & rețete ușoare, adaptate vârstei."}
           </p>
           <div className="mt-3 flex items-center justify-between gap-2">
             <button
@@ -533,15 +533,15 @@ export default function PlanPage() {
             </button>
             <button
               type="button"
-              onClick={() => setMode("anticonstipatie")}
+              onClick={() => setMode("cu-fibre")}
               className="rounded-[20px] border px-4 py-1.5 text-[13px] font-semibold"
               style={{
-                backgroundColor: mode === "anticonstipatie" ? "#A8DCD1" : "#FFFFFF",
+                backgroundColor: mode === "cu-fibre" ? "#A8DCD1" : "#FFFFFF",
                 color: "#0F6E56",
                 borderColor: "#A8DCD1",
               }}
             >
-              🥦 Plan Anticonstipație
+              🥦 Plan cu Fibre
             </button>
           </div>
 
@@ -672,7 +672,7 @@ export default function PlanPage() {
                                           {tags.includes("low-budget") && (
                                             <span style={{ fontSize: 10 }}>💰</span>
                                           )}
-                                          {tags.includes("anticonstipatie") && (
+                                          {tags.includes("cu-fibre") && (
                                             <span style={{ fontSize: 10 }}>🥦</span>
                                           )}
                                           {tags.includes("dulce") && (

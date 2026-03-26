@@ -239,6 +239,95 @@ export default function RecipeDetailPage({
               </p>
             </div>
 
+            <section className="mt-5 space-y-4">
+              <div className="bg-white border border-[#EDE7F6] rounded-[16px] p-4">
+                <p className="text-[14px] font-bold text-[#3D2C3E]">
+                  Ingrediente
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {recipe.ingredients.map((ing) => (
+                    <li key={ing} className="flex items-start gap-2">
+                      <span
+                        className="mt-[6px] w-[6px] h-[6px] rounded-full flex-shrink-0"
+                        style={{ backgroundColor: "#A8DCD1" }}
+                      />
+                      <span className="text-[13px] text-[#3D2C3E]">
+                        {ing}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="bg-white border border-[#EDE7F6] rounded-[16px] p-4">
+                <p className="text-[14px] font-bold text-[#3D2C3E]">
+                  Pași de preparare
+                </p>
+
+                <div className="mt-3 overflow-hidden rounded-[12px]">
+                  {recipe.steps.map((step, idx) => (
+                    <div
+                      key={`${idx}-${step.slice(0, 24)}`}
+                      className={`flex gap-3 px-3 py-3 ${
+                        idx === recipe.steps.length - 1
+                          ? ""
+                          : "border-b border-[#FDE8EE]"
+                      }`}
+                    >
+                      <div
+                        className="w-[24px] h-[24px] rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[12px]"
+                        style={{ backgroundColor: "#FDE8EE", color: "#D4849A" }}
+                      >
+                        {idx + 1}
+                      </div>
+                      <p
+                        className="text-[13px] text-[#3D2C3E]"
+                        style={{ lineHeight: 1.5 }}
+                      >
+                        {step}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white border border-[#EDE7F6] rounded-[16px] p-4">
+                <p className="text-[14px] font-bold text-[#3D2C3E]">
+                  Alergeni
+                </p>
+                {recipe.allergens.length === 0 ? (
+                  <p className="mt-2 text-[13px] text-[#8B7A8E]">
+                    Niciun alergen listat în mod explicit — verifică totuși
+                    ingredientele.
+                  </p>
+                ) : (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {recipe.allergens.map((a) => (
+                      <span
+                        key={a}
+                        className="px-3 py-1.5 rounded-[12px] text-[12px] font-semibold"
+                        style={{ backgroundColor: "#FAEEDA", color: "#854F0B" }}
+                      >
+                        {a}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white border border-[#EDE7F6] rounded-[16px] p-4">
+                <p className="text-[14px] font-bold text-[#3D2C3E]">
+                  Păstrare
+                </p>
+                <p
+                  className="mt-2 text-[14px] text-[#3D2C3E] leading-relaxed"
+                  style={{ lineHeight: 1.7 }}
+                >
+                  {recipe.storage}
+                </p>
+              </div>
+            </section>
+
             <div
               style={{
                 background: "white",
@@ -388,95 +477,6 @@ export default function RecipeDetailPage({
                 + ~{needs?.milkMl ?? 0}ml lapte.
               </div>
             </div>
-
-            <section className="mt-5 space-y-4">
-              <div className="bg-white border border-[#EDE7F6] rounded-[16px] p-4">
-                <p className="text-[14px] font-bold text-[#3D2C3E]">
-                  Ingrediente
-                </p>
-                <ul className="mt-3 space-y-2">
-                  {recipe.ingredients.map((ing) => (
-                    <li key={ing} className="flex items-start gap-2">
-                      <span
-                        className="mt-[6px] w-[6px] h-[6px] rounded-full flex-shrink-0"
-                        style={{ backgroundColor: "#A8DCD1" }}
-                      />
-                      <span className="text-[13px] text-[#3D2C3E]">
-                        {ing}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="bg-white border border-[#EDE7F6] rounded-[16px] p-4">
-                <p className="text-[14px] font-bold text-[#3D2C3E]">
-                  Pași de preparare
-                </p>
-
-                <div className="mt-3 overflow-hidden rounded-[12px]">
-                  {recipe.steps.map((step, idx) => (
-                    <div
-                      key={`${idx}-${step.slice(0, 24)}`}
-                      className={`flex gap-3 px-3 py-3 ${
-                        idx === recipe.steps.length - 1
-                          ? ""
-                          : "border-b border-[#FDE8EE]"
-                      }`}
-                    >
-                      <div
-                        className="w-[24px] h-[24px] rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[12px]"
-                        style={{ backgroundColor: "#FDE8EE", color: "#D4849A" }}
-                      >
-                        {idx + 1}
-                      </div>
-                      <p
-                        className="text-[13px] text-[#3D2C3E]"
-                        style={{ lineHeight: 1.5 }}
-                      >
-                        {step}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white border border-[#EDE7F6] rounded-[16px] p-4">
-                <p className="text-[14px] font-bold text-[#3D2C3E]">
-                  Alergeni
-                </p>
-                {recipe.allergens.length === 0 ? (
-                  <p className="mt-2 text-[13px] text-[#8B7A8E]">
-                    Niciun alergen listat în mod explicit — verifică totuși
-                    ingredientele.
-                  </p>
-                ) : (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {recipe.allergens.map((a) => (
-                      <span
-                        key={a}
-                        className="px-3 py-1.5 rounded-[12px] text-[12px] font-semibold"
-                        style={{ backgroundColor: "#FAEEDA", color: "#854F0B" }}
-                      >
-                        {a}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-white border border-[#EDE7F6] rounded-[16px] p-4">
-                <p className="text-[14px] font-bold text-[#3D2C3E]">
-                  Păstrare
-                </p>
-                <p
-                  className="mt-2 text-[14px] text-[#3D2C3E] leading-relaxed"
-                  style={{ lineHeight: 1.7 }}
-                >
-                  {recipe.storage}
-                </p>
-              </div>
-            </section>
 
             <section className="mt-6 flex gap-[10px]">
               <button
