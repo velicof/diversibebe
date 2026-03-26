@@ -92,13 +92,6 @@ function ageMonthsFromBirth(birthDate: string): number {
   );
 }
 
-function mealTypesForAge(ageMonths: number): MealType[] {
-  if (ageMonths < 6) return ["mic-dejun"];
-  if (ageMonths < 8) return ["mic-dejun", "pranz"];
-  if (ageMonths < 10) return ["mic-dejun", "gustare", "pranz"];
-  return ["mic-dejun", "gustare", "pranz", "cina"];
-}
-
 function recipeMinAgeTier(age: string): number {
   const s = age.trim();
   const plus = s.match(/^(\d+)\s*\+/);
@@ -270,7 +263,20 @@ export default function PlanPage() {
     return Math.max(0, ageMonthsFromBirth(birthDate));
   }, [birthDate]);
 
-  const mealTypes = useMemo(() => mealTypesForAge(ageMonths), [ageMonths]);
+  const meals = useMemo(
+    () =>
+      (ageMonths < 7
+        ? ["pranz"]
+        : ageMonths === 7
+          ? ["mic-dejun", "pranz"]
+          : ["mic-dejun", "pranz", "cina"]) as MealType[],
+    [ageMonths]
+  );
+
+  const headerText = useMemo(
+    () => meals.map((m) => m.toUpperCase()).join(" → "),
+    [meals]
+  );
 
   const ageFilteredRecipes = useMemo(
     () => filterRecipesByBabyAge(RECIPES, ageMonths),
@@ -296,11 +302,11 @@ export default function PlanPage() {
       generateSmartWeekPlan(
         smartRecipes,
         ageGroupFromMonths(ageMonths),
-        mealTypes,
+        meals,
         weekNumber + weekSeedOffset,
         mode
       ),
-    [smartRecipes, ageMonths, mealTypes, weekNumber, weekSeedOffset, mode]
+    [smartRecipes, ageMonths, meals, weekNumber, weekSeedOffset, mode]
   );
 
   const weekPlan = useMemo(() => {
@@ -308,7 +314,7 @@ export default function PlanPage() {
     for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
       const dayName = DAY_NAMES[dayIndex];
       const dayMeals: PlannedMeal[] = [];
-      mealTypes.forEach((mealType, mealIndex) => {
+      meals.forEach((mealType, mealIndex) => {
         const pool = recipesForMealType(ageFilteredRecipes, mealType);
         let recipe = (smartPlan[dayName]?.[mealType] ?? null) as RecipeCatalogItem | null;
         const overrideId = readPlanOverride(weekKey, dayIndex, mealIndex);
@@ -321,7 +327,7 @@ export default function PlanPage() {
       days.push(dayMeals);
     }
     return days;
-  }, [smartPlan, mealTypes, ageFilteredRecipes, weekKey, overrideTick]);
+  }, [smartPlan, meals, ageFilteredRecipes, weekKey, overrideTick]);
 
   const balance = useMemo(() => analyzeWeekBalance(smartPlan), [smartPlan]);
 
@@ -473,8 +479,8 @@ export default function PlanPage() {
           </h1>
           <p className="mt-2 text-[13px] font-semibold leading-snug text-[#534AB7]">
             {ageMonths} luni · {ageBandLabelRo(ageMonthsToAgeBand(ageMonths))} ·{" "}
-            {mealTypes.length}{" "}
-            {mealTypes.length === 1
+            {meals.length}{" "}
+            {meals.length === 1
               ? "masă planificată/zi"
               : "mese planificate/zi"}
           </p>
@@ -605,7 +611,7 @@ export default function PlanPage() {
             const dayDate = new Date(monday);
             dayDate.setDate(monday.getDate() + dayIndex);
             const isToday = isSameDay(dayDate, todayStart);
-            const meals = weekPlan[dayIndex] ?? [];
+            const dayMeals = weekPlan[dayIndex] ?? [];
 
             return (
               <div
@@ -645,11 +651,11 @@ export default function PlanPage() {
                 </div>
 
                 <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-[#B8A9BB]">
-                  Pe feluri (mic dejun → gustare → prânz → cină)
+                  Pe feluri ({headerText})
                 </p>
                 <div className="mt-1">
-                  {meals.map((slot, rowIdx) => {
-                    const isLast = rowIdx === meals.length - 1;
+                  {dayMeals.map((slot, rowIdx) => {
+                    const isLast = rowIdx === dayMeals.length - 1;
                     const recipe = slot.recipe;
                     const recipeName = recipe?.name ?? "Nicio rețetă disponibilă";
 
