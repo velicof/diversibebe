@@ -2,8 +2,9 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Navbar from "../components/Navbar";
-import { createBrowserClient } from "@supabase/auth-helpers-nextjs";
+import { supabaseClient } from "@/lib/supabaseClient";
 import {
   getAllFoods,
   getCurrentUser,
@@ -81,6 +82,7 @@ function nowTime() {
 function JurnalInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
 
   const paramFoodId = searchParams.get("foodId");
   const paramFoodName = searchParams.get("foodName");
@@ -211,65 +213,54 @@ function JurnalInner() {
             notes: notes.trim(),
             babyMood,
           };
-    try {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
-      );
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        setToast("auth");
-        return;
-      }
+    const userId = (session?.user as any)?.id;
+    if (!userId) {
+      alert("Autentifică-te pentru a salva jurnalul");
+      return;
+    }
 
-      const userId = session.user.id;
-      const loggedAt = new Date(`${entry.date}T${entry.time}`).toISOString();
+    const loggedAt = new Date(`${entry.date}T${entry.time}`).toISOString();
 
-      // 1) Insert into food_journal
-      await supabase.from("food_journal").insert({
+    // 1) Insert into food_journal
+    await supabaseClient.from("food_journal").insert({
+      user_id: userId,
+      baby_id: null,
+      food_id: entry.foodId,
+      food_name: entry.foodName,
+      meal_type: null,
+      reaction: entry.reaction,
+      notes: entry.notes,
+      logged_at: loggedAt,
+    });
+
+    // 2) Upsert into tried_foods (increment try_count)
+    const { data: existing } = await supabaseClient
+      .from("tried_foods")
+      .select("id, try_count")
+      .eq("user_id", userId)
+      .eq("food_id", entry.foodId)
+      .maybeSingle();
+
+    if (existing) {
+      await supabaseClient
+        .from("tried_foods")
+        .update({ try_count: Number(existing.try_count ?? 0) + 1 })
+        .eq("id", existing.id);
+    } else {
+      await supabaseClient.from("tried_foods").insert({
         user_id: userId,
         baby_id: null,
         food_id: entry.foodId,
         food_name: entry.foodName,
-        meal_type: null,
-        reaction: entry.reaction,
-        notes: entry.notes,
-        logged_at: loggedAt,
+        first_tried_at: new Date().toISOString(),
+        try_count: 1,
       });
-
-      // 2) Upsert into tried_foods (increment try_count)
-      const { data: existing } = await supabase
-        .from("tried_foods")
-        .select("id, try_count")
-        .eq("user_id", userId)
-        .eq("food_id", entry.foodId)
-        .maybeSingle();
-
-      if (existing) {
-        await supabase
-          .from("tried_foods")
-          .update({ try_count: Number(existing.try_count ?? 0) + 1 })
-          .eq("id", existing.id);
-      } else {
-        await supabase.from("tried_foods").insert({
-          user_id: userId,
-          baby_id: null,
-          food_id: entry.foodId,
-          food_name: entry.foodName,
-          first_tried_at: new Date().toISOString(),
-          try_count: 1,
-        });
-      }
-
-      setToast("success");
-      window.setTimeout(() => {
-        router.back();
-      }, 1500);
-    } catch {
-      // ignoră — UI va rămâne neschimbat
     }
+
+    setToast("success");
+    window.setTimeout(() => {
+      router.back();
+    }, 1500);
   };
 
   const showPicker = !fromParams;

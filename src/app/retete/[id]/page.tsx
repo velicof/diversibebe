@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import { estimateRecipeNutrition, getServingSuggestion } from "@/app/lib/nutrition";
-import { createBrowserClient } from "@supabase/auth-helpers-nextjs";
+import { supabaseClient } from "@/lib/supabaseClient";
 import {
   ageBandLabelRo,
   ageMonthsToAgeBand,
@@ -98,6 +99,7 @@ export default function RecipeDetailPage({
   const [cookedState, setCookedState] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [authSaveMessage, setAuthSaveMessage] = useState<string | null>(null);
+  const { data: session } = useSession();
 
   useEffect(() => {
     setBabyAgeMonths(readBabyAgeMonthsFromStorage());
@@ -106,20 +108,13 @@ export default function RecipeDetailPage({
   useEffect(() => {
     let active = true;
     void (async () => {
-      if (!recipe) return;
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
-      );
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) return;
+      const userId = (session?.user as any)?.id;
+      if (!recipe || !userId) return;
 
-      const { data } = await supabase
+      const { data } = await supabaseClient
         .from("favorite_recipes")
         .select("id")
-        .eq("user_id", session.user.id)
+        .eq("user_id", userId)
         .eq("recipe_id", recipe.id)
         .maybeSingle();
 
@@ -130,7 +125,7 @@ export default function RecipeDetailPage({
     return () => {
       active = false;
     };
-  }, [recipe?.id]);
+  }, [recipe?.id, (session as any)?.user?.id]);
 
   const effectiveMonths = babyAgeMonths ?? 8;
   const nutAgeKey = nutritionAgeKeyFromMonths(effectiveMonths);
@@ -515,20 +510,14 @@ export default function RecipeDetailPage({
                 onClick={async () => {
                   setAuthSaveMessage(null);
                   if (!recipe) return;
-                  const supabase = createBrowserClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
-                  );
-                  const {
-                    data: { session },
-                  } = await supabase.auth.getSession();
-                  if (!session) {
+                  const userId = (session?.user as any)?.id;
+                  if (!userId) {
                     setAuthSaveMessage("Autentifică-te pentru a salva");
                     return;
                   }
 
-                  await supabase.from("cooked_recipes").insert({
-                    user_id: session.user.id,
+                  await supabaseClient.from("cooked_recipes").insert({
+                    user_id: userId,
                     recipe_id: recipe.id,
                     cooked_at: new Date().toISOString(),
                   });
@@ -548,28 +537,22 @@ export default function RecipeDetailPage({
                 onClick={async () => {
                   setAuthSaveMessage(null);
                   if (!recipe) return;
-                  const supabase = createBrowserClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
-                  );
-                  const {
-                    data: { session },
-                  } = await supabase.auth.getSession();
-                  if (!session) {
+                  const userId = (session?.user as any)?.id;
+                  if (!userId) {
                     setAuthSaveMessage("Autentifică-te pentru a salva");
                     return;
                   }
 
                   if (isFavorite) {
-                    await supabase
+                    await supabaseClient
                       .from("favorite_recipes")
                       .delete()
-                      .eq("user_id", session.user.id)
+                      .eq("user_id", userId)
                       .eq("recipe_id", recipe.id);
                     setIsFavorite(false);
                   } else {
-                    await supabase.from("favorite_recipes").insert({
-                      user_id: session.user.id,
+                    await supabaseClient.from("favorite_recipes").insert({
+                      user_id: userId,
                       recipe_id: recipe.id,
                       saved_at: new Date().toISOString(),
                     });

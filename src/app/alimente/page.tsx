@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
-import { createBrowserClient } from "@supabase/auth-helpers-nextjs";
+import { useSession } from "next-auth/react";
+import { supabaseClient } from "@/lib/supabaseClient";
 import {
   getAllFoods,
   getFoodStatus,
@@ -68,6 +69,7 @@ type TriedFoodRow = {
 function AlimentePageInner() {
   const storeVersion = useStoreRefresh();
   const searchParams = useSearchParams();
+  const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState<AgeTabId>("6-8");
   const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -117,30 +119,29 @@ function AlimentePageInner() {
   useEffect(() => {
     if (!triedOnly) return;
     let active = true;
-    void (async () => {
+    if (status === "loading") {
       setTriedLoading(true);
       setTriedAuthMissing(false);
+      return;
+    }
 
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
-      );
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+    void (async () => {
+      const userId = (session?.user as any)?.id;
       if (!active) return;
-      if (!session) {
+      if (!userId) {
         setTriedAuthMissing(true);
         setTriedFoods([]);
         setTriedLoading(false);
         return;
       }
 
-      const { data, error } = await supabase
+      setTriedAuthMissing(false);
+      setTriedLoading(true);
+
+      const { data, error } = await supabaseClient
         .from("tried_foods")
         .select("food_id, food_name, try_count, first_tried_at")
-        .eq("user_id", session.user.id)
+        .eq("user_id", userId)
         .order("first_tried_at", { ascending: false });
 
       if (!active) return;
@@ -155,7 +156,7 @@ function AlimentePageInner() {
     return () => {
       active = false;
     };
-  }, [triedOnly]);
+  }, [triedOnly, status, (session as any)?.user?.id]);
 
   const triedIdSet = useMemo(
     () => new Set(triedFoods.map((t) => t.food_id)),
@@ -209,14 +210,15 @@ function AlimentePageInner() {
   }
 
   const foodsInAgeGroup = useMemo(() => {
+    if (triedOnly) return getAllFoods();
     if (activeTab === "all") return getAllFoods();
     if (activeTab === "12+") return getFoodsByAgeGroup("10-12");
     return getFoodsByAgeGroup(activeTab);
-  }, [activeTab]);
+  }, [activeTab, triedOnly]);
   const foodsByCategory = useMemo(() => {
-    if (activeCategory === "all") return foodsInAgeGroup;
+    if (triedOnly || activeCategory === "all") return foodsInAgeGroup;
     return foodsInAgeGroup.filter((f) => f.category === activeCategory);
-  }, [activeCategory, foodsInAgeGroup]);
+  }, [activeCategory, foodsInAgeGroup, triedOnly]);
 
   const searchTrim = searchQuery.trim();
   const foods = useMemo(() => {

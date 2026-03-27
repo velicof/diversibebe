@@ -1,3 +1,14 @@
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id?: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+    };
+  }
+}
+
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { supabase } from "@/lib/supabase";
@@ -53,13 +64,35 @@ export const authOptions: NextAuthOptions = {
 
       return true;
     },
-    async jwt({ token, account }) {
+    async jwt({ token, account, user }) {
       if (account) {
         token.provider = account.provider;
       }
+
+      if (account?.provider === "google" && user?.email) {
+        const email = user.email.trim();
+        try {
+          const { data } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("email", email)
+            .maybeSingle();
+
+          if (data?.id) {
+            (token as any).supabaseId = data.id;
+          }
+        } catch (e) {
+          console.error("[supabase] jwt callback profiles select", e);
+        }
+      }
+
       return token;
     },
-    async session({ session }) {
+    async session({ session, token }) {
+      const supabaseId = (token as any)?.supabaseId;
+      if (supabaseId && session.user) {
+        (session.user as any).id = supabaseId as string;
+      }
       return session;
     },
     async redirect({ baseUrl }) {
