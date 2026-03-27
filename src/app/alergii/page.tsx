@@ -1,17 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import Navbar from "../components/Navbar";
-import {
-  addManualAllergy,
-  getAllergies,
-  getAllFoods,
-  removeAllergy,
-  type AllergyRecord,
-} from "../lib/store";
+import { supabaseClient } from "@/lib/supabaseClient";
+import { getAllFoods } from "../lib/store";
 import type { FoodCatalogItem } from "../lib/store";
-import { useStoreRefresh } from "../lib/useStoreRefresh";
 
 const MANUAL_SYMPTOMS = [
   "Roșeață",
@@ -22,21 +17,21 @@ const MANUAL_SYMPTOMS = [
 ];
 
 function formatAllergyDate(iso: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("ro-RO");
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("ro-RO");
 }
 
-function severityFromSymptoms(symptoms: string[]): AllergyRecord["severity"] {
+function severityFromSymptoms(symptoms: string[]): "severa" | "usoara" {
   return symptoms.includes("Erupție") || symptoms.includes("Vărsături")
-    ? "sever"
-    : "usor";
+    ? "severa"
+    : "usoara";
 }
 
 export default function AlergiiPage() {
   const router = useRouter();
-  const storeVersion = useStoreRefresh();
-  const allergies = useMemo(() => getAllergies(), [storeVersion]);
+  const { data: session } = useSession();
+  const [allergies, setAllergies] = useState<any[]>([]);
   const foods = useMemo(() => getAllFoods(), []);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -63,30 +58,48 @@ export default function AlergiiPage() {
     );
   };
 
-  const saveManual = () => {
+  useEffect(() => {
+    const userId = (session?.user as any)?.id;
+    if (!userId) return;
+    supabaseClient
+      .from("allergy_records")
+      .select("id, food_id, food_name, severity, notes, recorded_at")
+      .eq("user_id", userId)
+      .order("recorded_at", { ascending: false })
+      .then(({ data }) => setAllergies(data || []));
+  }, [session]);
+
+  const saveManual = async () => {
     if (!picked || symSel.length === 0) return;
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = String(today.getMonth() + 1).padStart(2, "0");
-    const d = String(today.getDate()).padStart(2, "0");
-    addManualAllergy({
-      foodId: picked.id,
-      foodName: picked.name,
-      emoji: picked.emoji,
-      symptoms: symSel,
-      firstDate: `${y}-${m}-${d}`,
-      severity: severityFromSymptoms(symSel),
-    });
+    const userId = (session?.user as any)?.id;
+    if (!userId) {
+      alert("Autentifică-te pentru a salva");
+      return;
+    }
+
+    const severity = severityFromSymptoms(symSel);
+
+    const { data } = await supabaseClient
+      .from("allergy_records")
+      .insert({
+        user_id: userId,
+        baby_id: null,
+        food_id: picked.id,
+        food_name: picked.name,
+        severity,
+        notes: symSel.join(", "),
+        recorded_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (data) setAllergies((prev) => [data, ...prev]);
     setModalOpen(false);
   };
 
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
-      <main
-        key={storeVersion}
-        className="w-full max-w-[393px] px-6 pb-[128px]"
-        style={{ fontFamily: '"Nunito", sans-serif' }}
-      >
+      <main className="w-full max-w-[393px] px-6 pb-[128px]" style={{ fontFamily: '"Nunito", sans-serif' }}>
         <header className="pt-6">
           <button
             type="button"
@@ -131,18 +144,18 @@ export default function AlergiiPage() {
         ) : (
           <section className="mt-6 flex flex-col gap-3">
             {allergies.map((a) => {
-              const sev = a.severity === "sever";
+              const sev = a.severity === "severa";
               return (
                 <div
-                  key={a.foodId}
+                  key={a.id}
                   className="flex gap-3 rounded-[16px] border border-[#EDE7F6] bg-white p-4"
                   style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
                 >
-                  <div className="text-[32px] leading-none">{a.emoji}</div>
+                  <div className="text-[32px] leading-none">🛡️</div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <p className="text-[15px] font-bold text-[#3D2C3E]">
-                        {a.foodName}
+                        {a.food_name}
                       </p>
                       <span
                         className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold"
@@ -155,17 +168,23 @@ export default function AlergiiPage() {
                       </span>
                     </div>
                     <p className="mt-1 text-[11px] text-[#8B7A8E]">
-                      Prima dată: {formatAllergyDate(a.firstDate)}
+                      Prima dată: {formatAllergyDate(a.recorded_at)}
                     </p>
                     <p className="mt-2 text-[12px] text-[#3D2C3E]">
-                      {a.symptoms.join(", ")}
+                      {a.notes}
                     </p>
                   </div>
                   <button
                     type="button"
                     className="shrink-0 self-start text-[18px] cursor-pointer"
                     aria-label="Elimină"
-                    onClick={() => removeAllergy(a.foodId)}
+                    onClick={async () => {
+                      await supabaseClient
+                        .from("allergy_records")
+                        .delete()
+                        .eq("id", a.id);
+                      setAllergies((prev) => prev.filter((x) => x.id !== a.id));
+                    }}
                   >
                     🗑️
                   </button>

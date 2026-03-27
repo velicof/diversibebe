@@ -3,21 +3,17 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Navbar from "../components/Navbar";
 import type { FoodCatalogItem, FoodEntry, UserAccount } from "../lib/store";
+import { supabaseClient } from "@/lib/supabaseClient";
 import {
   calculateBabyAge,
   getCurrentAgeGroup,
   getCurrentUser,
   getDiversificationInfo,
-  getFoodEntries,
   getFoodsByAgeGroup,
-  getMildReactionsCount,
   getNextSuggestedFood,
-  getRecentActivity,
-  getStreak,
-  getTriedFoodsCount,
   getUnreadNotificationsCount,
   isLoggedIn as storeIsLoggedIn,
   parseDate,
@@ -35,6 +31,21 @@ function formatActivityRelative(entry: FoodEntry): string {
   const [y, m, d] = entry.date.split("-").map(Number);
   if (!y || !m || !d) return "";
   const dt = new Date(y, m - 1, d);
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startEntry = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  const diff = Math.round(
+    (startToday.getTime() - startEntry.getTime()) / 86400000
+  );
+  if (diff === 0) return "Azi";
+  if (diff === 1) return "Ieri";
+  if (diff >= 2 && diff <= 14) return `Acum ${diff} zile`;
+  return dt.toLocaleDateString("ro-RO");
+}
+
+function formatJournalRelative(iso: string): string {
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return "";
   const now = new Date();
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startEntry = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
@@ -105,13 +116,18 @@ function greetingForLocalHour(d = new Date()): string {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const storeVersion = useStoreRefresh();
   const [visitorBannerVisible, setVisitorBannerVisible] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<UserAccount | null>(null);
-  const [entries, setEntries] = useState<FoodEntry[]>([]);
   const [targetFoods, setTargetFoods] = useState(40);
   const [dayOfMonth, setDayOfMonth] = useState(1);
+  const [triedCount, setTriedCount] = useState(0);
+  const [recentJournal, setRecentJournal] = useState<any[]>([]);
+  const [reactionsCount, setReactionsCount] = useState(0);
+  const [triedFoodIds, setTriedFoodIds] = useState<string[]>([]);
+  const [streakCount, setStreakCount] = useState(0);
 
   useEffect(() => {
     try {
@@ -120,7 +136,6 @@ export default function DashboardPage() {
       ) as PersistedSlice;
       const u = data.appState?.currentUser ?? data.currentUser ?? null;
       setUser(u);
-      setEntries(getRecentActivity());
       setDayOfMonth(new Date().getDate());
       const birthDate = u?.baby?.birthDate ?? "";
       const parsed = birthDate ? parseDate(birthDate) : null;
@@ -144,36 +159,79 @@ export default function DashboardPage() {
       setTargetFoods(target);
     } catch {
       setUser(null);
-      setEntries([]);
       setTargetFoods(40);
     }
     setMounted(true);
   }, [storeVersion]);
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const session = await getSession();
-      if (cancelled || !session?.user) return;
-      const email = session.user.email;
-      if (!email) return;
-      syncGoogleSessionToLocalUser({
-        email,
-        name: session.user.name ?? null,
+    const email = session?.user?.email;
+    if (!email) return;
+    syncGoogleSessionToLocalUser({
+      email,
+      name: session.user?.name ?? null,
+    });
+    const u = getCurrentUser();
+    if (u?.email?.toLowerCase() === email.toLowerCase() && !u.baby?.name?.trim()) {
+      router.replace("/onboarding");
+    }
+  }, [router, storeVersion, session?.user?.email, session?.user?.name]);
+
+  useEffect(() => {
+    const userId = (session?.user as any)?.id;
+    if (!userId) return;
+
+    supabaseClient
+      .from("tried_foods")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .then(({ count }) => setTriedCount(count || 0));
+
+    supabaseClient
+      .from("food_journal")
+      .select("id, food_id, food_name, reaction, notes, logged_at")
+      .eq("user_id", userId)
+      .order("logged_at", { ascending: false })
+      .limit(5)
+      .then(({ data }) => setRecentJournal(data || []));
+
+    supabaseClient
+      .from("food_journal")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .not("reaction", "is", null)
+      .not("reaction", "eq", "ok")
+      .then(({ count }) => setReactionsCount(count || 0));
+
+    supabaseClient
+      .from("tried_foods")
+      .select("food_id")
+      .eq("user_id", userId)
+      .then(({ data }) => setTriedFoodIds((data || []).map((r: any) => r.food_id)));
+
+    supabaseClient
+      .from("food_journal")
+      .select("logged_at")
+      .eq("user_id", userId)
+      .order("logged_at", { ascending: false })
+      .limit(60)
+      .then(({ data }) => {
+        const days = new Set<string>();
+        (data || []).forEach((r: any) => {
+          const d = new Date(r.logged_at);
+          if (!Number.isNaN(d.getTime())) days.add(d.toISOString().slice(0, 10));
+        });
+        const today = new Date();
+        let streak = 0;
+        for (let i = 0; i < 365; i++) {
+          const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+          const key = d.toISOString().slice(0, 10);
+          if (days.has(key)) streak += 1;
+          else break;
+        }
+        setStreakCount(streak);
       });
-      if (cancelled) return;
-      const u = getCurrentUser();
-      if (
-        u?.email?.toLowerCase() === email.toLowerCase() &&
-        !u.baby?.name?.trim()
-      ) {
-        router.replace("/onboarding");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [router, storeVersion]);
+  }, [session]);
 
   if (!mounted) {
     return null;
@@ -186,10 +244,9 @@ export default function DashboardPage() {
 
   const isVisitor = !isLoggedIn || userName.trim().length === 0;
 
-  const triedFoods = isVisitor ? 0 : getTriedFoodsCount();
-  const mildReactions = isVisitor ? 0 : getMildReactionsCount();
-  const streak = isVisitor ? 0 : getStreak();
-  const recent = isVisitor ? [] : entries;
+  const triedFoods = isVisitor ? 0 : triedCount;
+  const mildReactions = isVisitor ? 0 : reactionsCount;
+  const streak = isVisitor ? 0 : streakCount;
   const div = isVisitor
     ? { startDate: null, week: 0, expectedFoods: 0 }
     : getDiversificationInfo();
@@ -202,11 +259,7 @@ export default function DashboardPage() {
   const unreadCount = getUnreadNotificationsCount();
   const ageGroup = getCurrentAgeGroup();
 
-  const triedFoodIdSet = new Set(
-    getFoodEntries()
-      .filter((e) => e.type === "food")
-      .map((e) => e.foodId)
-  );
+  const triedFoodIdSet = new Set(triedFoodIds);
   const eligibleFoods = getFoodsByAgeGroup(ageGroup);
   const untriedFoods = eligibleFoods.filter((f) => !triedFoodIdSet.has(f.id));
 
@@ -305,7 +358,7 @@ export default function DashboardPage() {
             {isVisitor
               ? "3 din 5 alimente noi"
               : div.startDate
-                ? `${triedFoods} din ${targetFoods} alimente noi`
+                ? `${userName?.trim() ? userName : "Bebelușul tău"} a încercat ${triedFoods} alimente`
                 : "Începe diversificarea când ești gata"}
           </p>
 
@@ -582,7 +635,7 @@ export default function DashboardPage() {
                 </span>
               </Link>
             </div>
-          ) : recent.length === 0 ? (
+          ) : recentJournal.length === 0 ? (
             <div className="mt-3 text-center">
               <p className="text-[14px] text-[#8B7A8E]">
                 📝 Nicio masă jurnalizată încă
@@ -598,44 +651,45 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="mt-3 flex flex-col">
-              {recent.map((entry) => {
-                const bad = hasNonTrivialSymptoms(entry);
+              {recentJournal.map((j: any) => {
+                const rx = reactionLineDashboard(j.reaction ?? null);
                 return (
                   <Link
-                    key={entry.id}
-                    href={activityEntryHref(entry)}
+                    key={j.id}
+                    href={j.food_id ? `/alimente/${j.food_id}` : "/alimente"}
                     className="flex flex-row items-center gap-3 rounded-[12px] bg-white py-[10px] pl-[14px] pr-[10px] cursor-pointer"
                     style={{
                       marginBottom: 8,
                       boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                      borderLeft: bad ? "3px solid #E74C3C" : undefined,
                     }}
                   >
                     <div
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[18px]"
                       style={{ background: "#FFF0F5" }}
                     >
-                      {entry.emoji}
+                      🍽️
                     </div>
                     <div className="min-w-0 flex-1">
                       <p
                         className="text-[13px] font-bold leading-tight truncate"
                         style={{ color: "#3D2C3E" }}
                       >
-                        {activityEntryName(entry)}
+                        {j.food_name}
                       </p>
-                      <p
-                        className="mt-0.5 text-[11px] leading-snug line-clamp-2"
-                        style={{ color: "#8B7A8E" }}
-                      >
-                        {activityMetaLine(entry)}
-                      </p>
+                      {rx ? (
+                        <p
+                          className="mt-0.5 text-[11px] leading-snug line-clamp-2"
+                          style={{ color: "#8B7A8E" }}
+                        >
+                          {rx}
+                        </p>
+                      ) : null}
                     </div>
                     <span
                       className="shrink-0 text-[11px] whitespace-nowrap self-start pt-0.5"
                       style={{ color: "#B0A0B8" }}
                     >
-                      {formatActivityRelative(entry)}
+                      {formatJournalRelative(j.logged_at)}
                     </span>
                   </Link>
                 );
