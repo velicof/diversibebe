@@ -233,28 +233,30 @@ function JurnalInner() {
       logged_at: loggedAt,
     });
 
-    // 2) Upsert into tried_foods (increment try_count)
-    const { data: existing } = await supabaseClient
-      .from("tried_foods")
-      .select("id, try_count")
-      .eq("user_id", userId)
-      .eq("food_id", entry.foodId)
-      .maybeSingle();
-
-    if (existing) {
-      await supabaseClient
+    if (entry.type === "food") {
+      // 2) Upsert into tried_foods (increment try_count)
+      const { data: existing } = await supabaseClient
         .from("tried_foods")
-        .update({ try_count: Number(existing.try_count ?? 0) + 1 })
-        .eq("id", existing.id);
-    } else {
-      await supabaseClient.from("tried_foods").insert({
-        user_id: userId,
-        baby_id: null,
-        food_id: entry.foodId,
-        food_name: entry.foodName,
-        first_tried_at: new Date().toISOString(),
-        try_count: 1,
-      });
+        .select("id, try_count")
+        .eq("user_id", userId)
+        .eq("food_id", entry.foodId)
+        .maybeSingle();
+
+      if (existing) {
+        await supabaseClient
+          .from("tried_foods")
+          .update({ try_count: Number(existing.try_count ?? 0) + 1 })
+          .eq("id", existing.id);
+      } else {
+        await supabaseClient.from("tried_foods").insert({
+          user_id: userId,
+          baby_id: null,
+          food_id: entry.foodId,
+          food_name: entry.foodName,
+          first_tried_at: new Date().toISOString(),
+          try_count: 1,
+        });
+      }
     }
 
     setToast("success");

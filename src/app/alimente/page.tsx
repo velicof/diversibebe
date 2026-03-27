@@ -70,6 +70,7 @@ function AlimentePageInner() {
   const storeVersion = useStoreRefresh();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
+  const userId = (session?.user as any)?.id ?? null;
   const [activeTab, setActiveTab] = useState<AgeTabId>("6-8");
   const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -126,7 +127,6 @@ function AlimentePageInner() {
     }
 
     void (async () => {
-      const userId = (session?.user as any)?.id;
       if (!active) return;
       if (!userId) {
         setTriedAuthMissing(true);
@@ -156,7 +156,7 @@ function AlimentePageInner() {
     return () => {
       active = false;
     };
-  }, [triedOnly, status, (session as any)?.user?.id]);
+  }, [triedOnly, status, userId]);
 
   const triedIdSet = useMemo(
     () => new Set(triedFoods.map((t) => t.food_id)),

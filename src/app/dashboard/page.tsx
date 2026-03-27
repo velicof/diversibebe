@@ -117,6 +117,7 @@ function greetingForLocalHour(d = new Date()): string {
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session } = useSession();
+  const userId = (session?.user as any)?.id ?? null;
   const storeVersion = useStoreRefresh();
   const [visitorBannerVisible, setVisitorBannerVisible] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -178,23 +179,24 @@ export default function DashboardPage() {
   }, [router, storeVersion, session?.user?.email, session?.user?.name]);
 
   useEffect(() => {
-    const userId = (session?.user as any)?.id;
     if (!userId) return;
+    supabaseClient
+      .from("food_journal")
+      .select("id, food_id, food_name, reaction, logged_at")
+      .eq("user_id", userId)
+      .order("logged_at", { ascending: false })
+      .limit(5)
+      .then(({ data }) => setRecentJournal(data || []));
 
     supabaseClient
       .from("tried_foods")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .then(({ count }) => setTriedCount(count || 0));
+  }, [userId]);
 
-    supabaseClient
-      .from("food_journal")
-      .select("id, food_id, food_name, reaction, notes, logged_at")
-      .eq("user_id", userId)
-      .order("logged_at", { ascending: false })
-      .limit(5)
-      .then(({ data }) => setRecentJournal(data || []));
-
+  useEffect(() => {
+    if (!userId) return;
     supabaseClient
       .from("food_journal")
       .select("id", { count: "exact", head: true })
@@ -231,7 +233,7 @@ export default function DashboardPage() {
         }
         setStreakCount(streak);
       });
-  }, [session]);
+  }, [userId]);
 
   if (!mounted) {
     return null;
@@ -358,7 +360,7 @@ export default function DashboardPage() {
             {isVisitor
               ? "3 din 5 alimente noi"
               : div.startDate
-                ? `${userName?.trim() ? userName : "Bebelușul tău"} a încercat ${triedFoods} alimente`
+                ? `${userName?.trim() ? userName : "Bebelușul tău"} a încercat ${triedCount} alimente`
                 : "Începe diversificarea când ești gata"}
           </p>
 
@@ -474,10 +476,10 @@ export default function DashboardPage() {
           >
             <div className="text-[22px]">🥄</div>
             <div className="mt-1 text-[22px] font-bold text-[#D4849A]">
-              {triedFoods}
+              {triedCount}
             </div>
             <p className="mt-1 text-[10px] font-semibold text-[#993556]">
-              {triedFoods === 0 ? "Niciun aliment încă" : "Alimente încercate"}
+              {triedCount === 0 ? "Niciun aliment încă" : "Alimente încercate"}
             </p>
           </Link>
 

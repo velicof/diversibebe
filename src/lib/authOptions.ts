@@ -29,11 +29,9 @@ export const authOptions: NextAuthOptions = {
     error: "/login",
   },
   callbacks: {
-    async signIn({ user, account }) {
-      if (account?.provider !== "google") return true;
-
+    async signIn({ user }) {
       const email = user.email?.trim();
-      if (!email) return false;
+      if (!email) return true;
 
       const name = user.name ?? null;
       const image = user.image ?? null;
