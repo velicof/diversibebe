@@ -213,12 +213,9 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!userId) return;
     supabaseClient
-      .from("food_journal")
+      .from("allergy_records")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
-      .not("reaction", "is", null)
-      .not("reaction", "eq", "ok")
-      .not("reaction", "eq", "neutru")
       .then(({ count }) => setReactionsCount(count || 0));
 
     supabaseClient
@@ -512,7 +509,10 @@ export default function DashboardPage() {
             </p>
           </Link>
 
-          <div className="rounded-[16px] bg-[#E0F5F0] py-[14px] px-2 text-center min-h-[96px] flex flex-col justify-center">
+          <Link
+            href="/istoric"
+            className="rounded-[16px] bg-[#E0F5F0] py-[14px] px-2 text-center min-h-[96px] flex flex-col justify-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-[0_10px_20px_rgba(212,132,154,0.12)]"
+          >
             <div className="text-[22px]">🔥</div>
             <div className="mt-1 text-[22px] font-bold text-[#0F6E56]">
               {streak}
@@ -520,7 +520,7 @@ export default function DashboardPage() {
             <p className="mt-1 text-[10px] font-semibold text-[#085041]">
               {streak === 0 ? "Începe azi!" : "Zile consecutive"}
             </p>
-          </div>
+          </Link>
         </div>
 
         <section className="mt-7">

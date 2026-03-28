@@ -51,6 +51,30 @@ export function readBabyAgeMonthsFromStorage(): number | null {
 /**
  * Estimează greutatea totală a preparatului (g) dacă nu e setată explicit.
  */
+function firstPositiveRecipeBandGrams(recipe: RecipeCatalogItem): number {
+  const m = recipe.babyPortionGramsByAgeBand;
+  if (!m) return 0;
+  const order: AgeBandId[] = ["6-8", "8-10", "10-12"];
+  for (const k of order) {
+    const v = m[k];
+    if (typeof v === "number" && v > 0) return v;
+  }
+  for (const v of Object.values(m)) {
+    if (typeof v === "number" && v > 0) return v;
+  }
+  return 0;
+}
+
+function maxPositiveFromPortionTable(bandKey: string): number {
+  const p = BABY_PORTIONS[bandKey];
+  if (!p) return 0;
+  let max = 0;
+  for (const v of Object.values(p)) {
+    if (typeof v === "number" && v > max) max = v;
+  }
+  return max;
+}
+
 export function inferTotalYieldGrams(recipe: RecipeCatalogItem): number {
   if (
     typeof recipe.totalYieldGrams === "number" &&
@@ -78,10 +102,39 @@ export function getBabyPortionGrams(
   ageMonths?: number
 ): number {
   const months = typeof ageMonths === "number" ? ageMonths : 8;
-  const band = months >= 10 ? "10-12" : months >= 8 ? "8-10" : months >= 7 ? "7-8" : "6-8";
-  const portions = BABY_PORTIONS[band];
-  const grams = portions?.[recipe.mealType] ?? 0;
-  return Math.max(0, grams);
+  const babyBand = ageMonthsToAgeBand(months);
+
+  const exact = recipe.babyPortionGramsByAgeBand?.[babyBand];
+  if (typeof exact === "number" && exact > 0) return exact;
+
+  const bandFallback: AgeBandId[] =
+    babyBand === "6-8"
+      ? ["6-8", "8-10", "10-12"]
+      : babyBand === "8-10"
+        ? ["8-10", "6-8", "10-12"]
+        : ["10-12", "8-10", "6-8"];
+  for (const b of bandFallback) {
+    const g = recipe.babyPortionGramsByAgeBand?.[b];
+    if (typeof g === "number" && g > 0) return g;
+  }
+
+  const tableBand =
+    months >= 10 ? "10-12" : months >= 8 ? "8-10" : months >= 7 ? "7-8" : "6-8";
+  const portions = BABY_PORTIONS[tableBand];
+  let grams = portions?.[recipe.mealType] ?? 0;
+  if (grams <= 0 && portions) {
+    grams = maxPositiveFromPortionTable(tableBand);
+  }
+
+  if (grams <= 0) {
+    grams = firstPositiveRecipeBandGrams(recipe);
+  }
+
+  if (grams <= 0) {
+    grams = 80;
+  }
+
+  return grams;
 }
 
 export function getApproxBabyServingsRatio(
@@ -125,7 +178,8 @@ export function formatRecipePortionLineRo(
   recipe: RecipeCatalogItem,
   ageMonths?: number
 ): string {
-  const grams = getBabyPortionGrams(recipe, ageMonths);
+  const raw = getBabyPortionGrams(recipe, ageMonths);
+  const grams = raw > 0 ? raw : 80;
   return `Porție ~${grams} g orientativ`;
 }
 

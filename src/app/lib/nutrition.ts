@@ -297,9 +297,15 @@ export function generateSmartWeekPlan(
       const notUsed = candidates.filter(r => !usedRecipeIds.includes(r.id))
       if (notUsed.length > 0) candidates = notUsed
 
-      // Seeded random selection
-      const seed = weekSeed * 100 + dayIndex * 10 + mealIndex
-      const selected = candidates[seed % candidates.length]
+      let selected: any
+      if (ageNum <= 5 && mealRecipes.length > 0) {
+        const idx =
+          (dayIndex + weekSeed * 13 + mealIndex * 3) % mealRecipes.length
+        selected = mealRecipes[idx]
+      } else {
+        const seed = weekSeed * 100 + dayIndex * 10 + mealIndex
+        selected = candidates[seed % candidates.length]
+      }
 
       plan[day][meal] = selected
       if (selected?.id) usedRecipeIds.push(selected.id)

@@ -2,7 +2,16 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useUser } from "@/lib/useUser";
 import { getUserKey } from "../lib/store";
+
+function stripSimpleMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/#{1,3}\s/g, "")
+    .replace(/\*(.*?)\*/g, "$1");
+}
 
 interface Message {
   role: "user" | "assistant";
@@ -86,20 +95,47 @@ function pillLabelForPath(pathname: string): string {
 
 export default function AIChat() {
   const pathname = usePathname();
+  const { userId } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [babyContext, setBabyContext] = useState("");
   const [babyName, setBabyName] = useState("bebelușul");
+  const [headerBabyName, setHeaderBabyName] = useState("bebelușul tău");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    try {
-      const user = readCurrentUserFromStorage();
-      if (user?.baby) {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        let resolvedHeaderName = "";
+        if (userId) {
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("babies")
+            .select("name")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (!cancelled && data?.name?.trim()) {
+            resolvedHeaderName = data.name.trim();
+          }
+        }
+
+        const user = readCurrentUserFromStorage();
+        if (!resolvedHeaderName && user?.baby?.name?.trim()) {
+          resolvedHeaderName = user.baby.name.trim();
+        }
+        if (!cancelled) {
+          setHeaderBabyName(resolvedHeaderName || "bebelușul tău");
+        }
+
+        if (user?.baby) {
         const baby = user.baby;
         const birthDate = baby.birthDate ? new Date(baby.birthDate) : null;
         const ageMonths =
@@ -110,7 +146,8 @@ export default function AIChat() {
               )
             : 0;
 
-        const displayName = baby.name?.trim() || "bebelușul";
+        const displayName =
+          resolvedHeaderName || baby.name?.trim() || "bebelușul";
         setBabyName(displayName);
 
         const email = user.email?.trim();
@@ -172,36 +209,60 @@ Numele părintelui: ${user.parentName || "Părintele"}
 
         setBabyContext(context);
 
-        const nm = baby.name?.trim();
-        setMessages([
-          {
-            role: "assistant",
-            content: `Bună! 🍼 Sunt BebeAsist, asistentul tău personal pentru diversificarea lui ${nm || "bebelușului tău"}. Știu că ${nm || "bebelușul"} are ${ageMonths} luni și am acces la istoricul său alimentar. Cu ce te pot ajuta azi?`,
-          },
-        ]);
+        const nm = resolvedHeaderName || baby.name?.trim();
+        if (!cancelled) {
+          setMessages([
+            {
+              role: "assistant",
+              content: `Bună! 🍼 Sunt BebeAsist, asistentul tău personal pentru diversificarea lui ${nm || "bebelușului tău"}. Știu că ${nm || "bebelușul"} are ${ageMonths} luni și am acces la istoricul său alimentar. Cu ce te pot ajuta azi?`,
+            },
+          ]);
+        }
+      } else if (resolvedHeaderName) {
+        if (!cancelled) {
+          setBabyName(resolvedHeaderName);
+          setBabyContext(`Nume bebeluș: ${resolvedHeaderName}`);
+          setMessages([
+            {
+              role: "assistant",
+              content: `Bună! 🍼 Sunt BebeAsist, asistentul tău personal pentru diversificarea lui ${resolvedHeaderName}. Cu ce te pot ajuta azi?`,
+            },
+          ]);
+        }
       } else {
+        if (!cancelled) {
+          setBabyName("bebelușul");
+          setHeaderBabyName("bebelușul tău");
+          setBabyContext("Nu există profil de bebeluș creat încă.");
+          setMessages([
+            {
+              role: "assistant",
+              content:
+                "Bună! 🍼 Sunt BebeAsist, asistentul tău pentru diversificarea bebelușului. Cu ce te pot ajuta azi?",
+            },
+          ]);
+        }
+      }
+    } catch {
+      if (!cancelled) {
         setBabyName("bebelușul");
+        setHeaderBabyName("bebelușul tău");
         setBabyContext("Nu există profil de bebeluș creat încă.");
         setMessages([
           {
             role: "assistant",
             content:
-              "Bună! 🍼 Sunt BebeAsist, asistentul tău pentru diversificarea bebelușului. Cu ce te pot ajuta azi?",
+              "Bună! 🍼 Sunt BebeAsist. Cu ce te pot ajuta cu diversificarea bebelușului?",
           },
         ]);
       }
-    } catch {
-      setBabyName("bebelușul");
-      setBabyContext("Nu există profil de bebeluș creat încă.");
-      setMessages([
-        {
-          role: "assistant",
-          content:
-            "Bună! 🍼 Sunt BebeAsist. Cu ce te pot ajuta cu diversificarea bebelușului?",
-        },
-      ]);
     }
-  }, [isOpen]);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, userId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -378,7 +439,7 @@ Numele părintelui: ${user.parentName || "Părintele"}
                   <div
                     style={{ color: "rgba(255,255,255,0.8)", fontSize: 11 }}
                   >
-                    Asistent personal pentru {babyName}
+                    Asistent personal pentru {headerBabyName}
                   </div>
                 </div>
               </div>
@@ -461,7 +522,9 @@ Numele părintelui: ${user.parentName || "Părintele"}
                       whiteSpace: "pre-wrap",
                     }}
                   >
-                    {msg.content}
+                    {msg.role === "assistant"
+                      ? stripSimpleMarkdown(msg.content)
+                      : msg.content}
                   </div>
                 </div>
               ))}

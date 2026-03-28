@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useUser } from "@/lib/useUser";
 import Navbar from "../components/Navbar";
-import { getFoodEntries, type FoodEntry } from "../lib/store";
-import { useStoreRefresh } from "../lib/useStoreRefresh";
+import type { FoodEntry } from "../lib/store";
 
 const RO_MONTHS_LONG = [
   "ianuarie",
@@ -61,6 +62,64 @@ function moodLabel(m: FoodEntry["babyMood"]): string {
 
 function hasBadSymptoms(e: FoodEntry) {
   return e.symptoms.length > 0 && !e.symptoms.includes("Nicio reacție");
+}
+
+function hasAdverseJournalSignal(e: FoodEntry) {
+  if (hasBadSymptoms(e)) return true;
+  return e.reaction === "disliked" || e.reaction === "refused";
+}
+
+type FoodJournalRow = {
+  id: string;
+  food_id: string;
+  food_name: string;
+  reaction: string | null;
+  notes: string | null;
+  logged_at: string;
+  meal_type: string | null;
+};
+
+function dbReactionToFoodReaction(db: string | null): FoodEntry["reaction"] {
+  if (!db) return null;
+  if (db === "pozitiv" || db === "loved") return "loved";
+  if (db === "neutru" || db === "ok") return "ok";
+  if (db === "negativ" || db === "disliked") return "disliked";
+  if (db === "refused") return "refused";
+  if (db === "alergie") return "disliked";
+  return null;
+}
+
+function rowToFoodEntry(row: FoodJournalRow): FoodEntry {
+  const d = new Date(row.logged_at);
+  const date =
+    row.logged_at.length >= 10
+      ? row.logged_at.slice(0, 10)
+      : todayISOFromDate(d);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const time = Number.isNaN(d.getTime())
+    ? "12:00"
+    : `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return {
+    id: row.id,
+    type: "food",
+    foodId: row.food_id,
+    foodName: row.food_name,
+    emoji: "🍽️",
+    date,
+    time,
+    reaction: dbReactionToFoodReaction(row.reaction),
+    portion: null,
+    symptoms: [],
+    notes: (row.notes ?? "").trim(),
+    babyMood: null,
+  };
+}
+
+function todayISOFromDate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function parseEntryDate(e: FoodEntry): Date | null {
@@ -250,14 +309,29 @@ function EntryDetailSheet({
 
 export default function IstoricPage() {
   const router = useRouter();
-  const storeVersion = useStoreRefresh();
+  const { userId } = useUser();
+  const [journalRows, setJournalRows] = useState<FoodJournalRow[]>([]);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sheetEntry, setSheetEntry] = useState<FoodEntry | null>(null);
 
-  const allEntries = useMemo(() => {
-    void storeVersion;
-    return getFoodEntries();
-  }, [storeVersion]);
+  useEffect(() => {
+    if (!userId) {
+      setJournalRows([]);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from("food_journal")
+      .select("id, food_id, food_name, reaction, notes, logged_at, meal_type")
+      .eq("user_id", userId)
+      .order("logged_at", { ascending: false })
+      .then(({ data }) => setJournalRows((data as FoodJournalRow[]) || []));
+  }, [userId]);
+
+  const allEntries = useMemo(
+    () => journalRows.map(rowToFoodEntry),
+    [journalRows]
+  );
 
   const last30 = useMemo(() => {
     const n = new Date();
@@ -276,7 +350,7 @@ export default function IstoricPage() {
           : `f:${e.foodId}`
       )
     );
-    const reactions = last30.filter((e) => hasBadSymptoms(e)).length;
+    const reactions = last30.filter((e) => hasAdverseJournalSignal(e)).length;
     return { total, unique: uniqueKeys.size, reactions };
   }, [last30]);
 
@@ -291,7 +365,7 @@ export default function IstoricPage() {
       const dt = parseEntryDate(e);
       if (!dt) return false;
       if (filter === "loved") return e.reaction === "loved";
-      if (filter === "reactions") return hasBadSymptoms(e);
+      if (filter === "reactions") return hasAdverseJournalSignal(e);
       if (filter === "week") return dt >= mon && dt <= sun;
       if (filter === "month") return dt >= monthStart && dt <= monthEnd;
       return true;
@@ -321,17 +395,14 @@ export default function IstoricPage() {
   ];
 
   const filterActive = filter !== "all";
-  const totallyEmpty = last30.length === 0;
+  const totallyEmpty = !userId || allEntries.length === 0;
 
   return (
     <div
       className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center"
       style={{ fontFamily: '"Nunito", sans-serif' }}
     >
-      <main
-        key={storeVersion}
-        className="w-full max-w-[393px] px-6 pb-[128px]"
-      >
+      <main className="w-full max-w-[393px] px-6 pb-[128px]">
         <header className="pt-6">
           <button
             type="button"
@@ -417,7 +488,7 @@ export default function IstoricPage() {
           <div className="mt-10 flex flex-col items-center text-center px-4">
             <span className="text-[40px]">📭</span>
             <p className="mt-3 text-[14px] text-[#8B7A8E]">
-              Nicio intrare găsită
+              Nicio masă jurnalizată încă
             </p>
             <p className="mt-1 text-[13px] text-[#B0A0B8]">
               Jurnalizează prima masă din ultima lună
@@ -446,7 +517,7 @@ export default function IstoricPage() {
                   {formatGroupHeader(dateKey)}
                 </p>
                 {dayEntries.map((e) => {
-                  const bad = hasBadSymptoms(e);
+                  const bad = hasAdverseJournalSignal(e);
                   const meal = inferMealChip(e.time || "12:00");
                   const rx = reactionLabel(e.reaction);
                   const pt = portionLabel(e.portion);

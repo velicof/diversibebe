@@ -1,6 +1,46 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useUser } from "@/lib/useUser";
 
 export default function Home() {
+  const router = useRouter();
+  const { user, loading } = useUser();
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/dashboard");
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center px-6 bg-gradient-to-b from-[#FFF8F6] via-[#FDE8EE] to-[#EDE7F6]">
+        <p
+          className="text-[14px] text-[#8B7A8E]"
+          style={{ fontFamily: "Nunito, sans-serif" }}
+        >
+          Se încarcă…
+        </p>
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center px-6 bg-gradient-to-b from-[#FFF8F6] via-[#FDE8EE] to-[#EDE7F6]">
+        <p
+          className="text-[14px] text-[#8B7A8E]"
+          style={{ fontFamily: "Nunito, sans-serif" }}
+        >
+          Se încarcă…
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center px-6 bg-gradient-to-b from-[#FFF8F6] via-[#FDE8EE] to-[#EDE7F6]">
       <main className="w-full max-w-[393px] flex flex-col items-center justify-center text-center">

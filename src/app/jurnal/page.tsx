@@ -229,6 +229,18 @@ function JurnalInner() {
       return;
     }
 
+    const parts = dateStr.split("-").map(Number);
+    const selectedDate =
+      parts.length === 3 && parts.every((n) => !Number.isNaN(n))
+        ? new Date(parts[0], parts[1] - 1, parts[2])
+        : new Date(dateStr);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    if (selectedDate > today) {
+      alert("Nu poți jurnaliza mese în viitor!");
+      return;
+    }
+
     const loggedAt = (() => {
       try {
         const d = new Date(`${dateStr}T${timeStr}:00`);
@@ -256,6 +268,28 @@ function JurnalInner() {
       console.error("food_journal insert error:", journalError);
       alert("Eroare la salvare: " + journalError.message);
       return;
+    }
+
+    if (
+      entry.symptoms.length > 0 &&
+      !entry.symptoms.includes("Nicio reacție")
+    ) {
+      const severity =
+        entry.symptoms.includes("Erupție") || entry.symptoms.includes("Vărsături")
+          ? "severa"
+          : "usoara";
+      const { error: allergyErr } = await supabaseClient
+        .from("allergy_records")
+        .insert({
+          user_id: userId,
+          baby_id: null,
+          food_id: entry.foodId,
+          food_name: entry.foodName,
+          severity,
+          notes: entry.symptoms.join(", "),
+          recorded_at: new Date().toISOString(),
+        });
+      if (allergyErr) console.error("allergy_records insert error:", allergyErr);
     }
 
     if (entry.type === "food") {
