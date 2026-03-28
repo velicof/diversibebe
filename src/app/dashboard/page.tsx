@@ -117,7 +117,7 @@ function greetingForLocalHour(d = new Date()): string {
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session } = useSession();
-  const userId = (session?.user as any)?.id ?? null;
+  const userId = (session?.user as any)?.id as string | undefined;
   const storeVersion = useStoreRefresh();
   const [visitorBannerVisible, setVisitorBannerVisible] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -179,14 +179,19 @@ export default function DashboardPage() {
   }, [router, storeVersion, session?.user?.email, session?.user?.name]);
 
   useEffect(() => {
+    console.log("[dashboard] userId:", userId);
     if (!userId) return;
+
     supabaseClient
       .from("food_journal")
       .select("id, food_id, food_name, reaction, logged_at")
       .eq("user_id", userId)
       .order("logged_at", { ascending: false })
       .limit(5)
-      .then(({ data }) => setRecentJournal(data || []));
+      .then(({ data, error }) => {
+        console.log("[dashboard] journal data:", data, "error:", error);
+        setRecentJournal(data || []);
+      });
 
     supabaseClient
       .from("tried_foods")
@@ -653,49 +658,60 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="mt-3 flex flex-col">
-              {recentJournal.map((j: any) => {
-                const rx = reactionLineDashboard(j.reaction ?? null);
-                return (
-                  <Link
-                    key={j.id}
-                    href={j.food_id ? `/alimente/${j.food_id}` : "/alimente"}
-                    className="flex flex-row items-center gap-3 rounded-[12px] bg-white py-[10px] pl-[14px] pr-[10px] cursor-pointer"
-                    style={{
-                      marginBottom: 8,
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                    }}
+              {recentJournal.map((entry: any) => (
+                <div
+                  key={entry.id}
+                  className="flex flex-row items-center gap-3 rounded-[12px] bg-white py-[10px] pl-[14px] pr-[10px]"
+                  style={{
+                    marginBottom: 8,
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                  }}
+                >
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[18px]"
+                    style={{ background: "#FFF0F5" }}
                   >
-                    <div
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[18px]"
-                      style={{ background: "#FFF0F5" }}
+                    🍽️
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="text-[13px] font-bold leading-tight truncate"
+                      style={{ color: "#3D2C3E" }}
                     >
-                      🍽️
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className="text-[13px] font-bold leading-tight truncate"
-                        style={{ color: "#3D2C3E" }}
-                      >
-                        {j.food_name}
-                      </p>
-                      {rx ? (
-                        <p
-                          className="mt-0.5 text-[11px] leading-snug line-clamp-2"
-                          style={{ color: "#8B7A8E" }}
-                        >
-                          {rx}
-                        </p>
-                      ) : null}
-                    </div>
-                    <span
-                      className="shrink-0 text-[11px] whitespace-nowrap self-start pt-0.5"
-                      style={{ color: "#B0A0B8" }}
+                      {entry.food_name}
+                    </p>
+                    <p
+                      className="mt-0.5 text-[11px] leading-snug"
+                      style={{ color: "#8B7A8E" }}
                     >
-                      {formatJournalRelative(j.logged_at)}
-                    </span>
-                  </Link>
-                );
-              })}
+                      {entry.reaction === "loved"
+                        ? "😍 Adorat"
+                        : entry.reaction === "ok"
+                          ? "😊 Ok"
+                          : entry.reaction === "disliked"
+                            ? "😕 Nu a plăcut"
+                            : entry.reaction === "refused"
+                              ? "🙅 Refuzat"
+                              : ""}
+                    </p>
+                  </div>
+                  <span
+                    className="shrink-0 text-[11px] whitespace-nowrap"
+                    style={{ color: "#B0A0B8" }}
+                  >
+                    {(() => {
+                      const d = new Date(entry.logged_at);
+                      const now = new Date();
+                      const diff = Math.floor(
+                        (now.getTime() - d.getTime()) / 86400000
+                      );
+                      if (diff === 0) return "Azi";
+                      if (diff === 1) return "Ieri";
+                      return `Acum ${diff} zile`;
+                    })()}
+                  </span>
+                </div>
+              ))}
               <button
                 type="button"
                 onClick={() => router.push("/istoric")}

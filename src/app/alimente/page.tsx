@@ -70,7 +70,8 @@ function AlimentePageInner() {
   const storeVersion = useStoreRefresh();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
-  const userId = (session?.user as any)?.id ?? null;
+  const userId = (session?.user as any)?.id as string | undefined;
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<AgeTabId>("6-8");
   const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,6 +81,10 @@ function AlimentePageInner() {
 
   const groupFromUrl = searchParams.get("group");
   const triedOnly = searchParams.get("filter") === "incercate";
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (groupFromUrl && AGE_TAB_IDS.has(groupFromUrl)) {
@@ -167,13 +172,13 @@ function AlimentePageInner() {
     [triedFoods]
   );
 
-  if (triedOnly && triedLoading) {
+  if (!mounted || (triedOnly && triedLoading && status === "loading")) {
     return (
       <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
         <main className="w-full max-w-[393px] px-6 pb-[128px]">
           <header className="pt-6">
             <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
-              Alimente încercate 🥄
+              {triedOnly ? "Alimente încercate 🥄" : "Calendarul alimentar 🥄"}
             </h1>
           </header>
           <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">

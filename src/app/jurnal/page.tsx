@@ -219,22 +219,36 @@ function JurnalInner() {
       return;
     }
 
-    const loggedAt = new Date(`${entry.date}T${entry.time}`).toISOString();
+    const loggedAt = (() => {
+      try {
+        const d = new Date(`${dateStr}T${timeStr}:00`);
+        if (!isNaN(d.getTime())) return d.toISOString();
+      } catch {
+        /* ignore */
+      }
+      return new Date().toISOString();
+    })();
 
-    // 1) Insert into food_journal
-    await supabaseClient.from("food_journal").insert({
-      user_id: userId,
-      baby_id: null,
-      food_id: entry.foodId,
-      food_name: entry.foodName,
-      meal_type: null,
-      reaction: entry.reaction,
-      notes: entry.notes,
-      logged_at: loggedAt,
-    });
+    const { error: journalError } = await supabaseClient
+      .from("food_journal")
+      .insert({
+        user_id: userId,
+        baby_id: null,
+        food_id: entry.foodId,
+        food_name: entry.foodName,
+        meal_type: null,
+        reaction: entry.reaction,
+        notes: entry.notes || null,
+        logged_at: loggedAt,
+      });
+
+    if (journalError) {
+      console.error("food_journal insert error:", journalError);
+      alert("Eroare la salvare: " + journalError.message);
+      return;
+    }
 
     if (entry.type === "food") {
-      // 2) Upsert into tried_foods (increment try_count)
       const { data: existing } = await supabaseClient
         .from("tried_foods")
         .select("id, try_count")
@@ -243,19 +257,23 @@ function JurnalInner() {
         .maybeSingle();
 
       if (existing) {
-        await supabaseClient
+        const { error: triedError } = await supabaseClient
           .from("tried_foods")
           .update({ try_count: Number(existing.try_count ?? 0) + 1 })
           .eq("id", existing.id);
+        if (triedError) console.error("tried_foods error:", triedError);
       } else {
-        await supabaseClient.from("tried_foods").insert({
-          user_id: userId,
-          baby_id: null,
-          food_id: entry.foodId,
-          food_name: entry.foodName,
-          first_tried_at: new Date().toISOString(),
-          try_count: 1,
-        });
+        const { error: triedError } = await supabaseClient
+          .from("tried_foods")
+          .insert({
+            user_id: userId,
+            baby_id: null,
+            food_id: entry.foodId,
+            food_name: entry.foodName,
+            first_tried_at: new Date().toISOString(),
+            try_count: 1,
+          });
+        if (triedError) console.error("tried_foods error:", triedError);
       }
     }
 
