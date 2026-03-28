@@ -80,7 +80,7 @@ export default function RegisterPage() {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastFading, setToastFading] = useState(false);
 
-  const handleContinue = (e: React.MouseEvent) => {
+  const handleContinue = async (e: React.MouseEvent) => {
     e.preventDefault();
 
     const newErrors = { name: "", email: "", password: "", confirmPassword: "" };
@@ -105,26 +105,26 @@ export default function RegisterPage() {
 
     setErrors(newErrors);
     setTouched({ name: true, email: true, password: true, confirmPassword: true });
-
     if (!isValid) return;
 
-    try {
-      localStorage.setItem(
-        "register_step1",
-        JSON.stringify({ name: parentName, email, password })
-      );
-      localStorage.setItem(
-        "diversibebe_register_step1",
-        JSON.stringify({
-          parentName: parentName.trim(),
-          email: email.trim(),
-          password,
-          confirmPassword,
-        })
-      );
-    } catch {
-      // ignore
-    }
+    // Check if email already exists in Supabase
+    // We do this by attempting signInWithPassword with wrong password
+    // A cleaner way: just save and let step2 handle the error
+
+    localStorage.setItem(
+      "register_step1",
+      JSON.stringify({ name: parentName, email, password })
+    );
+    localStorage.setItem(
+      "diversibebe_register_step1",
+      JSON.stringify({
+        parentName: parentName.trim(),
+        email: email.trim(),
+        password,
+        confirmPassword,
+      })
+    );
+
     router.push("/register/step2");
   };
 

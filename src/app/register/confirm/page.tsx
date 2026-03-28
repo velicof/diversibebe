@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 function CheckmarkIcon() {
   return (
@@ -23,7 +25,32 @@ function CheckmarkIcon() {
   );
 }
 
+/** When Supabase Auth has "Confirm email" disabled, set NEXT_PUBLIC_SUPABASE_EMAIL_CONFIRMATION_DISABLED=true */
+const skipEmailConfirmMessage =
+  process.env.NEXT_PUBLIC_SUPABASE_EMAIL_CONFIRMATION_DISABLED === "true";
+
 export default function RegisterConfirmPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (skipEmailConfirmMessage) {
+      router.replace("/dashboard");
+    }
+  }, [router]);
+
+  if (skipEmailConfirmMessage) {
+    return (
+      <div className="min-h-screen w-full bg-[#FFF8F6] flex items-center justify-center px-6">
+        <main
+          className="w-full max-w-[393px] flex flex-col items-center text-center"
+          style={{ fontFamily: '"Nunito", sans-serif' }}
+        >
+          <p className="text-[14px] font-normal text-[#8B7A8E]">Se încarcă…</p>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex items-center justify-center px-6">
       <main
@@ -38,7 +65,8 @@ export default function RegisterConfirmPage() {
           Totul e pregătit!
         </h1>
         <p className="mt-2 text-[14px] font-normal text-[#8B7A8E]">
-          Contul tău a fost creat cu succes!
+          Contul tău a fost creat! Verifică emailul pentru a confirma
+          înregistrarea.
         </p>
 
         <div className="mt-8 w-full max-w-[280px]">

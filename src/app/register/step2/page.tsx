@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import SocialLoginButtons from "../../components/SocialLoginButtons";
-import { registerUser, type UserAccount } from "../../lib/store";
 
 type Gender = "boy" | "girl" | null;
 
@@ -25,6 +24,7 @@ export default function RegisterStep2Page() {
   const [nameBlurred, setNameBlurred] = useState(false);
   const [birthBlurred, setBirthBlurred] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const nameTrim = babyName.trim();
   const nameOk = nameTrim.length >= 2;
@@ -224,15 +224,20 @@ export default function RegisterStep2Page() {
 
           <button
             type="button"
-            disabled={!canCreate}
+            disabled={!canCreate || loading}
             className={`h-12 w-full rounded-full bg-[#D4849A] text-white font-bold text-[16px] mt-4 ${
-              canCreate ? "cursor-pointer" : "opacity-50 cursor-not-allowed"
+              canCreate && !loading
+                ? "cursor-pointer"
+                : "opacity-50 cursor-not-allowed"
             }`}
-            onClick={() => {
+            onClick={async () => {
               setSubmitAttempted(true);
               setNameBlurred(true);
               setBirthBlurred(true);
               if (!canCreate) return;
+
+              setLoading(true);
+
               try {
                 const step1Raw = localStorage.getItem(
                   "diversibebe_register_step1"
@@ -244,34 +249,64 @@ export default function RegisterStep2Page() {
                       password?: string;
                     })
                   : {};
-                const newUser: UserAccount = {
-                  email: step1.email?.trim() || "demo@diversibebe.ro",
-                  password: step1.password || "demo123",
-                  parentName: step1.parentName?.trim() || "Părinte DiversiBebe",
-                  baby: {
-                    name: nameTrim,
-                    birthDate: birthDate.trim(),
-                    weight: birthWeight.trim(),
-                    gender: gender,
-                    allergies: [],
-                    diversificationStartDate:
-                      diversificationMode === "started" && divStartDate
-                        ? new Date(divStartDate).toISOString()
-                        : null,
+
+                const email = step1.email?.trim() || "";
+                const password = step1.password || "";
+                const parentName = step1.parentName?.trim() || "";
+
+                if (!email || !password) {
+                  router.push("/register");
+                  return;
+                }
+
+                const supabase = createClient();
+                const { data, error } = await supabase.auth.signUp({
+                  email,
+                  password,
+                  options: {
+                    data: {
+                      full_name: parentName,
+                      name: parentName,
+                    },
+                    emailRedirectTo: `${window.location.origin}/auth/callback`,
                   },
-                  isPremium: false,
-                  isVerified: true,
-                  verificationToken: null,
-                  createdAt: new Date().toISOString(),
-                };
-                registerUser(newUser);
-              } catch {
-                // ignore
+                });
+
+                if (error) {
+                  alert(
+                    error.message.includes("already")
+                      ? "Există deja un cont cu acest email. Te rugăm să te conectezi."
+                      : "Eroare la creare cont: " + error.message
+                  );
+                  return;
+                }
+
+                const userId = data.user?.id;
+                if (userId) {
+                  await supabase.from("babies").insert({
+                    user_id: userId,
+                    name: nameTrim,
+                    birthdate: birthDate.trim(),
+                    gender: gender,
+                    weight_kg: birthWeight
+                      ? parseFloat(birthWeight.replace(",", "."))
+                      : null,
+                  });
+                }
+
+                localStorage.removeItem("register_step1");
+                localStorage.removeItem("diversibebe_register_step1");
+
+                router.push("/register/confirm");
+              } catch (err) {
+                console.error("Registration error:", err);
+                alert("A apărut o eroare. Te rugăm să încerci din nou.");
+              } finally {
+                setLoading(false);
               }
-              router.push("/register/confirm");
             }}
           >
-            Creează cont
+            {loading ? "Se creează contul..." : "Creează cont"}
           </button>
         </form>
       </main>
