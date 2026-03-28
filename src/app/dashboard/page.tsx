@@ -85,6 +85,15 @@ function reactionLineDashboard(r: FoodEntry["reaction"]): string {
   return "";
 }
 
+function reactionLabel(r: string | null) {
+  if (r === "pozitiv" || r === "loved") return "😍 Adorat";
+  if (r === "neutru" || r === "ok") return "😊 Ok";
+  if (r === "negativ" || r === "disliked" || r === "refused")
+    return "😕 Nu a plăcut";
+  if (r === "alergie") return "⚠️ Alergie";
+  return "";
+}
+
 function portionBulletDashboard(p: FoodEntry["portion"]): string {
   if (p === "putin") return "• Puțin";
   if (p === "jumatate") return "• Jumătate";
@@ -208,6 +217,7 @@ export default function DashboardPage() {
       .eq("user_id", userId)
       .not("reaction", "is", null)
       .not("reaction", "eq", "ok")
+      .not("reaction", "eq", "neutru")
       .then(({ count }) => setReactionsCount(count || 0));
 
     supabaseClient
@@ -684,15 +694,7 @@ export default function DashboardPage() {
                       className="mt-0.5 text-[11px] leading-snug"
                       style={{ color: "#8B7A8E" }}
                     >
-                      {entry.reaction === "loved"
-                        ? "😍 Adorat"
-                        : entry.reaction === "ok"
-                          ? "😊 Ok"
-                          : entry.reaction === "disliked"
-                            ? "😕 Nu a plăcut"
-                            : entry.reaction === "refused"
-                              ? "🙅 Refuzat"
-                              : ""}
+                      {reactionLabel(entry.reaction)}
                     </p>
                   </div>
                   <span

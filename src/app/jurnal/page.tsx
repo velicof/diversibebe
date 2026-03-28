@@ -79,6 +79,17 @@ function nowTime() {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+const mapReaction = (r: string | null): string | null => {
+  if (!r) return null;
+  const map: Record<string, string> = {
+    loved: "pozitiv",
+    ok: "neutru",
+    disliked: "negativ",
+    refused: "negativ",
+  };
+  return map[r] ?? r;
+};
+
 function JurnalInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -237,7 +248,7 @@ function JurnalInner() {
         food_id: entry.foodId,
         food_name: entry.foodName,
         meal_type: null,
-        reaction: entry.reaction,
+        reaction: mapReaction(entry.reaction),
         notes: entry.notes || null,
         logged_at: loggedAt,
       });
