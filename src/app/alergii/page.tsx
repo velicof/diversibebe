@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useUser } from "@/lib/useUser";
 import Navbar from "../components/Navbar";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { getAllFoods } from "../lib/store";
@@ -30,7 +30,7 @@ function severityFromSymptoms(symptoms: string[]): "severa" | "usoara" {
 
 export default function AlergiiPage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { userId } = useUser();
   const [allergies, setAllergies] = useState<any[]>([]);
   const foods = useMemo(() => getAllFoods(), []);
 
@@ -59,7 +59,6 @@ export default function AlergiiPage() {
   };
 
   useEffect(() => {
-    const userId = (session?.user as any)?.id;
     if (!userId) return;
     supabaseClient
       .from("allergy_records")
@@ -67,11 +66,10 @@ export default function AlergiiPage() {
       .eq("user_id", userId)
       .order("recorded_at", { ascending: false })
       .then(({ data }) => setAllergies(data || []));
-  }, [session]);
+  }, [userId]);
 
   const saveManual = async () => {
     if (!picked || symSel.length === 0) return;
-    const userId = (session?.user as any)?.id;
     if (!userId) {
       alert("Autentifică-te pentru a salva");
       return;

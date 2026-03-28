@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useUser } from "@/lib/useUser";
+import { upsertCurrentBaby } from "@/app/lib/supabaseData";
 import {
   getCurrentUser,
   saveOnboardingBabyProfile,
@@ -13,22 +14,23 @@ type Gender = "boy" | "girl" | null;
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading } = useUser();
   const [guardDone, setGuardDone] = useState(false);
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState<Gender>(null);
 
   useEffect(() => {
-    if (status === "loading") return;
-    const email = session?.user?.email;
-    if (status !== "authenticated" || !email) {
+    if (loading) return;
+    const email = user?.email;
+    if (!email) {
       router.replace("/login");
       return;
     }
+    const nameMeta = user.user_metadata?.full_name;
     syncGoogleSessionToLocalUser({
       email,
-      name: session.user?.name ?? null,
+      name: typeof nameMeta === "string" ? nameMeta : null,
     });
     const u = getCurrentUser();
     if (
@@ -39,12 +41,12 @@ export default function OnboardingPage() {
       return;
     }
     setGuardDone(true);
-  }, [session, status, router]);
+  }, [user, loading, router]);
 
   const canSubmit =
     babyName.trim().length >= 2 && birthDate.trim().length > 0;
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
     saveOnboardingBabyProfile({
@@ -52,10 +54,15 @@ export default function OnboardingPage() {
       birthDate: birthDate.trim(),
       gender,
     });
+    await upsertCurrentBaby({
+      name: babyName.trim(),
+      birthdate: birthDate.trim(),
+      gender,
+    });
     router.push("/dashboard");
   }
 
-  if (status === "loading" || !guardDone) {
+  if (loading || !guardDone) {
     return (
       <div
         className="min-h-screen w-full bg-[#FFF8F6] flex items-center justify-center px-6"

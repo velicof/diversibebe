@@ -1,6 +1,6 @@
 "use client";
 
-import { getSession } from "next-auth/react";
+import { createClient } from "@/lib/supabase/client";
 import {
   applyRemoteSyncFromServer,
   getAllergies,
@@ -9,16 +9,19 @@ import {
 } from "@/app/lib/store";
 
 /**
- * Push local journal/profile/allergies to Supabase (NextAuth session required).
+ * Push local journal/profile/allergies to Supabase (authenticated user required).
  * Debounced from store via dynamic import to avoid circular deps.
  */
 export async function pushLocalToCloud(): Promise<void> {
-  const session = await getSession();
-  if (!session?.user?.email) return;
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return;
 
-  const email = session.user.email.toLowerCase();
-  const user = getCurrentUser();
-  if (!user || user.email.toLowerCase() !== email) return;
+  const email = user.email.toLowerCase();
+  const localUser = getCurrentUser();
+  if (!localUser || localUser.email.toLowerCase() !== email) return;
 
   const foodEntries = getFoodEntries();
   const allergies = getAllergies();
@@ -28,9 +31,9 @@ export async function pushLocalToCloud(): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       profile: {
-        parentName: user.parentName,
-        baby: user.baby,
-        isPremium: user.isPremium,
+        parentName: localUser.parentName,
+        baby: localUser.baby,
+        isPremium: localUser.isPremium,
       },
       foodEntries,
       allergies,
@@ -43,15 +46,15 @@ let lastPullAt = 0;
 let lastPullEmail: string | null = null;
 
 export async function pullRemoteUserData(): Promise<void> {
-  const session = await getSession();
-  if (!session?.user?.email) return;
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return;
 
-  const email = session.user.email.toLowerCase();
+  const email = user.email.toLowerCase();
   const now = Date.now();
-  if (
-    lastPullEmail === email &&
-    now - lastPullAt < PULL_THROTTLE_MS
-  ) {
+  if (lastPullEmail === email && now - lastPullAt < PULL_THROTTLE_MS) {
     return;
   }
   lastPullAt = now;

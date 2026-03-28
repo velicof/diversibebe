@@ -1,7 +1,8 @@
 "use client";
 
-import { getSession } from "next-auth/react";
-import { supabaseBrowser } from "@/lib/supabase-browser";
+import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
 
 export type DbBaby = {
   id: string;
@@ -15,6 +16,11 @@ export type DbBaby = {
 let cachedUserId: string | null = null;
 let cachedBaby: DbBaby | null = null;
 
+export function clearSupabaseDataCache(): void {
+  cachedUserId = null;
+  cachedBaby = null;
+}
+
 function toIsoDate(input: string): string {
   if (!input) return "";
   const d = new Date(input);
@@ -24,17 +30,11 @@ function toIsoDate(input: string): string {
 
 export async function getCurrentUserId(): Promise<string | null> {
   if (cachedUserId) return cachedUserId;
-  const session = await getSession();
-  const email = session?.user?.email?.trim().toLowerCase();
-  if (!email) return null;
-
-  const { data, error } = await supabaseBrowser
-    .from("profiles")
-    .select("id")
-    .eq("email", email)
-    .maybeSingle();
-  if (error || !data?.id) return null;
-  cachedUserId = data.id as string;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.id) return null;
+  cachedUserId = user.id;
   return cachedUserId;
 }
 
@@ -42,7 +42,7 @@ export async function getCurrentBaby(): Promise<DbBaby | null> {
   if (cachedBaby) return cachedBaby;
   const userId = await getCurrentUserId();
   if (!userId) return null;
-  const { data, error } = await supabaseBrowser
+  const { data, error } = await supabase
     .from("babies")
     .select("*")
     .eq("user_id", userId)
@@ -74,7 +74,7 @@ export async function upsertCurrentBaby(input: {
   };
 
   if (existing?.id) {
-    const { data, error } = await supabaseBrowser
+    const { data, error } = await supabase
       .from("babies")
       .update(payload)
       .eq("id", existing.id)
@@ -85,7 +85,7 @@ export async function upsertCurrentBaby(input: {
     return cachedBaby;
   }
 
-  const { data, error } = await supabaseBrowser
+  const { data, error } = await supabase
     .from("babies")
     .insert(payload)
     .select("*")
@@ -107,7 +107,7 @@ export async function addFoodJournalEntry(input: {
   const baby = await getCurrentBaby();
   if (!userId || !baby?.id) return false;
 
-  const { error } = await supabaseBrowser.from("food_journal").insert({
+  const { error } = await supabase.from("food_journal").insert({
     user_id: userId,
     baby_id: baby.id,
     food_id: input.foodId,
@@ -133,7 +133,7 @@ export async function listFoodJournal(limit?: number): Promise<
 > {
   const userId = await getCurrentUserId();
   if (!userId) return [];
-  let query = supabaseBrowser
+  let query = supabase
     .from("food_journal")
     .select("*")
     .eq("user_id", userId)
@@ -160,7 +160,7 @@ export async function upsertTriedFood(input: {
   const baby = await getCurrentBaby();
   if (!userId || !baby?.id) return;
 
-  const { data: existing } = await supabaseBrowser
+  const { data: existing } = await supabase
     .from("tried_foods")
     .select("id,try_count,first_tried_at")
     .eq("user_id", userId)
@@ -168,7 +168,7 @@ export async function upsertTriedFood(input: {
     .maybeSingle();
 
   if (!existing?.id) {
-    await supabaseBrowser.from("tried_foods").upsert(
+    await supabase.from("tried_foods").upsert(
       {
         user_id: userId,
         baby_id: baby.id,
@@ -182,7 +182,7 @@ export async function upsertTriedFood(input: {
     return;
   }
 
-  await supabaseBrowser
+  await supabase
     .from("tried_foods")
     .update({
       try_count: Number(existing.try_count ?? 0) + 1,
@@ -196,7 +196,7 @@ export async function listTriedFoods(): Promise<
 > {
   const userId = await getCurrentUserId();
   if (!userId) return [];
-  const { data, error } = await supabaseBrowser
+  const { data, error } = await supabase
     .from("tried_foods")
     .select("*")
     .eq("user_id", userId)
@@ -219,7 +219,7 @@ export async function addAllergyRecord(input: {
   const userId = await getCurrentUserId();
   const baby = await getCurrentBaby();
   if (!userId || !baby?.id) return;
-  await supabaseBrowser.from("allergy_records").insert({
+  await supabase.from("allergy_records").insert({
     user_id: userId,
     baby_id: baby.id,
     food_id: input.foodId,
@@ -242,7 +242,7 @@ export async function listAllergyRecords(): Promise<
 > {
   const userId = await getCurrentUserId();
   if (!userId) return [];
-  const { data, error } = await supabaseBrowser
+  const { data, error } = await supabase
     .from("allergy_records")
     .select("*")
     .eq("user_id", userId)
@@ -261,7 +261,7 @@ export async function listAllergyRecords(): Promise<
 export async function deleteAllergyRecord(id: string): Promise<void> {
   const userId = await getCurrentUserId();
   if (!userId) return;
-  await supabaseBrowser
+  await supabase
     .from("allergy_records")
     .delete()
     .eq("user_id", userId)
@@ -271,7 +271,7 @@ export async function deleteAllergyRecord(id: string): Promise<void> {
 export async function markRecipeCooked(recipeId: string): Promise<boolean> {
   const userId = await getCurrentUserId();
   if (!userId) return false;
-  const { error } = await supabaseBrowser.from("cooked_recipes").insert({
+  const { error } = await supabase.from("cooked_recipes").insert({
     user_id: userId,
     recipe_id: recipeId,
     cooked_at: new Date().toISOString(),
@@ -282,7 +282,7 @@ export async function markRecipeCooked(recipeId: string): Promise<boolean> {
 export async function isRecipeFavorited(recipeId: string): Promise<boolean> {
   const userId = await getCurrentUserId();
   if (!userId) return false;
-  const { data, error } = await supabaseBrowser
+  const { data, error } = await supabase
     .from("favorite_recipes")
     .select("id")
     .eq("user_id", userId)
@@ -297,14 +297,14 @@ export async function toggleRecipeFavorite(recipeId: string): Promise<boolean> {
   if (!userId) return false;
   const fav = await isRecipeFavorited(recipeId);
   if (fav) {
-    await supabaseBrowser
+    await supabase
       .from("favorite_recipes")
       .delete()
       .eq("user_id", userId)
       .eq("recipe_id", recipeId);
     return false;
   }
-  await supabaseBrowser.from("favorite_recipes").insert({
+  await supabase.from("favorite_recipes").insert({
     user_id: userId,
     recipe_id: recipeId,
     saved_at: new Date().toISOString(),

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { createClient } from "@/lib/supabase/client";
+import { clearSupabaseDataCache } from "@/app/lib/supabaseData";
 import { calculateBabyAge, getCurrentUser, logoutUser } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 
@@ -127,7 +128,9 @@ export default function ProfilPage() {
       red: true,
       onClick: async () => {
         logoutUser();
-        await signOut({ redirect: false });
+        clearSupabaseDataCache();
+        const supabase = createClient();
+        await supabase.auth.signOut();
         router.push("/");
       },
     },

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useUser } from "@/lib/useUser";
 import Navbar from "../components/Navbar";
 import type { FoodCatalogItem, FoodEntry, UserAccount } from "../lib/store";
 import { supabaseClient } from "@/lib/supabaseClient";
@@ -125,8 +125,7 @@ function greetingForLocalHour(d = new Date()): string {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { data: session } = useSession();
-  const userId = (session?.user as any)?.id as string | undefined;
+  const { user: authUser, userId, loading: authLoading } = useUser();
   const storeVersion = useStoreRefresh();
   const [visitorBannerVisible, setVisitorBannerVisible] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -175,17 +174,19 @@ export default function DashboardPage() {
   }, [storeVersion]);
 
   useEffect(() => {
-    const email = session?.user?.email;
+    if (authLoading) return;
+    const email = authUser?.email;
     if (!email) return;
+    const nameMeta = authUser?.user_metadata?.full_name;
     syncGoogleSessionToLocalUser({
       email,
-      name: session.user?.name ?? null,
+      name: typeof nameMeta === "string" ? nameMeta : null,
     });
     const u = getCurrentUser();
     if (u?.email?.toLowerCase() === email.toLowerCase() && !u.baby?.name?.trim()) {
       router.replace("/onboarding");
     }
-  }, [router, storeVersion, session?.user?.email, session?.user?.name]);
+  }, [router, storeVersion, authLoading, authUser?.email, authUser?.user_metadata]);
 
   useEffect(() => {
     console.log("[dashboard] userId:", userId);

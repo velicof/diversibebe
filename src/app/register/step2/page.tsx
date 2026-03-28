@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { createClient } from "@/lib/supabase/client";
 import SocialLoginButtons from "../../components/SocialLoginButtons";
 import { registerUser, type UserAccount } from "../../lib/store";
 
@@ -209,11 +209,15 @@ export default function RegisterStep2Page() {
           </p>
           <div className="flex justify-center mt-2">
             <SocialLoginButtons
-              onGoogleClick={() =>
-                signIn("google", {
-                  callbackUrl: "http://localhost:3000/dashboard",
-                })
-              }
+              onGoogleClick={async () => {
+                const supabase = createClient();
+                await supabase.auth.signInWithOAuth({
+                  provider: "google",
+                  options: {
+                    redirectTo: `${window.location.origin}/auth/callback`,
+                  },
+                });
+              }}
               onSocialClick={showSocialToast}
             />
           </div>

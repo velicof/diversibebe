@@ -3,7 +3,7 @@
 type SocialLoginButtonsProps = {
   /** Facebook / Apple — e.g. „în curând” toast */
   onSocialClick?: () => void;
-  /** Google OAuth — signIn("google") from next-auth/react */
+  /** Google OAuth — caller typically uses Supabase `signInWithOAuth` */
   onGoogleClick?: () => void | Promise<unknown>;
 };
 

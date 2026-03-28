@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { createClient } from "@/lib/supabase/client";
 import SocialLoginButtons from "../components/SocialLoginButtons";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -277,11 +277,15 @@ export default function RegisterPage() {
 
           <div className="flex justify-center">
             <SocialLoginButtons
-              onGoogleClick={() =>
-                signIn("google", {
-                  callbackUrl: "http://localhost:3000/dashboard",
-                })
-              }
+              onGoogleClick={async () => {
+                const supabase = createClient();
+                await supabase.auth.signInWithOAuth({
+                  provider: "google",
+                  options: {
+                    redirectTo: `${window.location.origin}/auth/callback`,
+                  },
+                });
+              }}
               onSocialClick={showSocialToast}
             />
           </div>

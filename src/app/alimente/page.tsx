@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
-import { useSession } from "next-auth/react";
+import { useUser } from "@/lib/useUser";
 import { supabaseClient } from "@/lib/supabaseClient";
 import {
   getAllFoods,
@@ -69,7 +69,7 @@ type TriedFoodRow = {
 function AlimentePageInner() {
   const storeVersion = useStoreRefresh();
   const searchParams = useSearchParams();
-  const { data: session, status } = useSession();
+  const { userId, loading: authLoading } = useUser();
   const [activeTab, setActiveTab] = useState<AgeTabId>("6-8");
   const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -78,7 +78,6 @@ function AlimentePageInner() {
   const [triedAuthMissing, setTriedAuthMissing] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  const userId = (session?.user as any)?.id as string | undefined;
   const groupFromUrl = searchParams.get("group");
   const triedOnly = searchParams.get("filter") === "incercate";
 
@@ -125,7 +124,7 @@ function AlimentePageInner() {
   useEffect(() => {
     if (!triedOnly) return;
     let active = true;
-    if (status === "loading") {
+    if (authLoading) {
       setTriedLoading(true);
       setTriedAuthMissing(false);
       return;
@@ -161,7 +160,7 @@ function AlimentePageInner() {
     return () => {
       active = false;
     };
-  }, [triedOnly, status, userId]);
+  }, [triedOnly, authLoading, userId]);
 
   const triedIdSet = useMemo(
     () => new Set(triedFoods.map((t) => t.food_id)),

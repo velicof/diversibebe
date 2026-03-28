@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useUser } from "@/lib/useUser";
 import { estimateRecipeNutrition, getServingSuggestion } from "@/app/lib/nutrition";
 import { supabaseClient } from "@/lib/supabaseClient";
 import {
@@ -99,7 +99,7 @@ export default function RecipeDetailPage({
   const [cookedState, setCookedState] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [authSaveMessage, setAuthSaveMessage] = useState<string | null>(null);
-  const { data: session } = useSession();
+  const { userId } = useUser();
 
   useEffect(() => {
     setBabyAgeMonths(readBabyAgeMonthsFromStorage());
@@ -108,7 +108,6 @@ export default function RecipeDetailPage({
   useEffect(() => {
     let active = true;
     void (async () => {
-      const userId = (session?.user as any)?.id;
       if (!recipe || !userId) return;
 
       const { data } = await supabaseClient
@@ -125,7 +124,7 @@ export default function RecipeDetailPage({
     return () => {
       active = false;
     };
-  }, [recipe?.id, (session as any)?.user?.id]);
+  }, [recipe?.id, userId]);
 
   const effectiveMonths = babyAgeMonths ?? 8;
   const nutAgeKey = nutritionAgeKeyFromMonths(effectiveMonths);
@@ -510,7 +509,6 @@ export default function RecipeDetailPage({
                 onClick={async () => {
                   setAuthSaveMessage(null);
                   if (!recipe) return;
-                  const userId = (session?.user as any)?.id;
                   if (!userId) {
                     setAuthSaveMessage("Autentifică-te pentru a salva");
                     return;
@@ -537,7 +535,6 @@ export default function RecipeDetailPage({
                 onClick={async () => {
                   setAuthSaveMessage(null);
                   if (!recipe) return;
-                  const userId = (session?.user as any)?.id;
                   if (!userId) {
                     setAuthSaveMessage("Autentifică-te pentru a salva");
                     return;

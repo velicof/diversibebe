@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useUser } from "@/lib/useUser";
 import Navbar from "../components/Navbar";
 import { supabaseClient } from "@/lib/supabaseClient";
 import {
@@ -93,7 +93,7 @@ const mapReaction = (r: string | null): string | null => {
 function JurnalInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
+  const { userId } = useUser();
 
   const paramFoodId = searchParams.get("foodId");
   const paramFoodName = searchParams.get("foodName");
@@ -224,7 +224,6 @@ function JurnalInner() {
             notes: notes.trim(),
             babyMood,
           };
-    const userId = (session?.user as any)?.id;
     if (!userId) {
       alert("Autentifică-te pentru a salva jurnalul");
       return;

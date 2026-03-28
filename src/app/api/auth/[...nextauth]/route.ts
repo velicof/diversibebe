@@ -1,6 +1,9 @@
-import NextAuth from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { NextResponse } from "next/server";
 
-const handler = NextAuth(authOptions);
+export function GET() {
+  return new NextResponse(null, { status: 404 });
+}
 
-export { handler as GET, handler as POST };
+export function POST() {
+  return new NextResponse(null, { status: 404 });
+}
