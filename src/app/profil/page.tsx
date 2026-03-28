@@ -138,7 +138,7 @@ export default function ProfilPage() {
       <main key={storeVersion} className="relative w-full max-w-[393px]">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => router.push("/dashboard")}
           className="absolute left-0 top-6 z-10 cursor-pointer leading-none"
           style={{
             color: "#D4849A",

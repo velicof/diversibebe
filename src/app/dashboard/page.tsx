@@ -319,7 +319,7 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[13px] font-normal text-[#8B7A8E]">
-                {isVisitor ? "Bună! 👋" : "Bună dimineața!"}
+                {isVisitor ? "Bună! 👋" : greetingForLocalHour()}
               </p>
               <p className="mt-1 text-[22px] font-extrabold text-[#3D2C3E]">
                 {isVisitor

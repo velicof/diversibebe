@@ -70,15 +70,15 @@ function AlimentePageInner() {
   const storeVersion = useStoreRefresh();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
-  const userId = (session?.user as any)?.id as string | undefined;
-  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<AgeTabId>("6-8");
   const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [triedFoods, setTriedFoods] = useState<TriedFoodRow[]>([]);
   const [triedLoading, setTriedLoading] = useState(false);
   const [triedAuthMissing, setTriedAuthMissing] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
+  const userId = (session?.user as any)?.id as string | undefined;
   const groupFromUrl = searchParams.get("group");
   const triedOnly = searchParams.get("filter") === "incercate";
 
@@ -172,13 +172,54 @@ function AlimentePageInner() {
     [triedFoods]
   );
 
-  if (!mounted || (triedOnly && triedLoading && status === "loading")) {
+  const foodsInAgeGroup = useMemo(() => {
+    if (triedOnly) return getAllFoods();
+    if (activeTab === "all") return getAllFoods();
+    if (activeTab === "12+") return getFoodsByAgeGroup("10-12");
+    return getFoodsByAgeGroup(activeTab);
+  }, [activeTab, triedOnly]);
+  const foodsByCategory = useMemo(() => {
+    if (triedOnly || activeCategory === "all") return foodsInAgeGroup;
+    return foodsInAgeGroup.filter((f) => f.category === activeCategory);
+  }, [activeCategory, foodsInAgeGroup, triedOnly]);
+
+  const searchTrim = searchQuery.trim();
+  const foods = useMemo(() => {
+    let list: ReturnType<typeof getAllFoods>;
+    if (!searchTrim) list = foodsByCategory;
+    else {
+      const q = normalizeForSearch(searchTrim);
+      list = getAllFoods().filter((f) => normalizeForSearch(f.name).includes(q));
+    }
+    if (!triedOnly) return list;
+    return list.filter((f) => triedIdSet.has(f.id));
+  }, [foodsByCategory, searchTrim, triedOnly, triedIdSet, storeVersion]);
+
+  if (!mounted) {
     return (
       <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
         <main className="w-full max-w-[393px] px-6 pb-[128px]">
           <header className="pt-6">
             <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
               {triedOnly ? "Alimente încercate 🥄" : "Calendarul alimentar 🥄"}
+            </h1>
+          </header>
+          <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
+            Se încarcă…
+          </p>
+        </main>
+        <Navbar activeTab="alimente" />
+      </div>
+    );
+  }
+
+  if (triedOnly && triedLoading) {
+    return (
+      <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
+        <main className="w-full max-w-[393px] px-6 pb-[128px]">
+          <header className="pt-6">
+            <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
+              Alimente încercate 🥄
             </h1>
           </header>
           <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
@@ -213,29 +254,6 @@ function AlimentePageInner() {
       </div>
     );
   }
-
-  const foodsInAgeGroup = useMemo(() => {
-    if (triedOnly) return getAllFoods();
-    if (activeTab === "all") return getAllFoods();
-    if (activeTab === "12+") return getFoodsByAgeGroup("10-12");
-    return getFoodsByAgeGroup(activeTab);
-  }, [activeTab, triedOnly]);
-  const foodsByCategory = useMemo(() => {
-    if (triedOnly || activeCategory === "all") return foodsInAgeGroup;
-    return foodsInAgeGroup.filter((f) => f.category === activeCategory);
-  }, [activeCategory, foodsInAgeGroup, triedOnly]);
-
-  const searchTrim = searchQuery.trim();
-  const foods = useMemo(() => {
-    let list: ReturnType<typeof getAllFoods>;
-    if (!searchTrim) list = foodsByCategory;
-    else {
-      const q = normalizeForSearch(searchTrim);
-      list = getAllFoods().filter((f) => normalizeForSearch(f.name).includes(q));
-    }
-    if (!triedOnly) return list;
-    return list.filter((f) => triedIdSet.has(f.id));
-  }, [foodsByCategory, searchTrim, triedOnly, triedIdSet, storeVersion]);
 
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center transition-colors">

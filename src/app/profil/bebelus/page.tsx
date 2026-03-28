@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getCurrentUser, registerUser, type UserAccount } from "../../lib/store";
 
 type Gender = "boy" | "girl";
@@ -11,6 +11,7 @@ function CameraIcon() {
 }
 
 export default function ProfilBebelusPage() {
+  const router = useRouter();
   const current = getCurrentUser();
   const [gender, setGender] = useState<Gender>(
     (current?.baby.gender as Gender) || "boy"
@@ -40,12 +41,14 @@ export default function ProfilBebelusPage() {
       <main className="w-full max-w-[393px]">
         <header className="pt-6">
           <div className="flex items-center gap-3">
-            <Link
-              href="/profil"
-              className="text-[22px] text-[#3D2C3E] leading-none cursor-pointer"
+            <button
+              type="button"
+              onClick={() => router.push("/profil")}
+              className="text-[22px] text-[#3D2C3E] leading-none cursor-pointer bg-transparent border-0 p-0"
+              aria-label="Înapoi"
             >
               ←
-            </Link>
+            </button>
             <h1 className="text-[18px] font-extrabold text-[#3D2C3E]">
               Profilul bebelușului
             </h1>

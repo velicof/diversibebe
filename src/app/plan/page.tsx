@@ -101,30 +101,48 @@ function recipeMinAgeTier(age: string): number {
   return any ? Number(any[1]) : 99;
 }
 
+function isTooSolid(name: string, ageMonths: number): boolean {
+  if (ageMonths >= 8) return false;
+  const solidWords = [
+    "chiftele",
+    "chifteluț",
+    "baghetele",
+    "fingers",
+    "biscuit",
+    "toast",
+    "pâine",
+    "sandwich",
+    "wrap",
+    "salată",
+  ];
+  const n = name.toLowerCase();
+  return solidWords.some((w) => n.includes(w));
+}
+
 function filterRecipesByBabyAge(
   recipes: RecipeCatalogItem[],
   ageMonths: number
 ): RecipeCatalogItem[] {
   const tier = (r: RecipeCatalogItem) => recipeMinAgeTier(r.age);
+  let filtered: RecipeCatalogItem[];
   if (ageMonths < 6) {
-    return recipes.filter((r) => tier(r) === 4);
-  }
-  if (ageMonths < 8) {
-    return recipes.filter((r) => {
+    filtered = recipes.filter((r) => tier(r) === 4);
+  } else if (ageMonths < 8) {
+    filtered = recipes.filter((r) => {
       const t = tier(r);
       return t === 4 || t === 5 || t === 6;
     });
-  }
-  if (ageMonths < 10) {
-    return recipes.filter((r) => {
+  } else if (ageMonths < 10) {
+    filtered = recipes.filter((r) => {
       const t = tier(r);
       return t >= 4 && t <= 8;
     });
+  } else if (ageMonths < 12) {
+    filtered = recipes.filter((r) => tier(r) < 12);
+  } else {
+    filtered = recipes;
   }
-  if (ageMonths < 12) {
-    return recipes.filter((r) => tier(r) < 12);
-  }
-  return recipes;
+  return filtered.filter((r) => !isTooSolid(r.name, ageMonths));
 }
 
 function getMonday(weekOffset: number): Date {
