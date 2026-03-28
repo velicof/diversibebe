@@ -14,11 +14,31 @@ type Row = {
   href?: string;
   red?: boolean;
   onClick?: () => void | Promise<void>;
+  comingSoon?: boolean;
 };
 
 function RowView({ row }: { row: Row }) {
   const arrowColor = row.red ? "#B8A9BB" : "#B8A9BB";
   const textColor = row.red ? "#E88B8B" : "#3D2C3E";
+
+  if (row.comingSoon) {
+    return (
+      <div className="w-full flex items-center justify-between gap-3 px-[16px] py-[14px] opacity-60 cursor-default">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <span className="text-[18px] leading-none shrink-0">{row.emoji}</span>
+          <span
+            className="text-[14px] font-normal leading-snug flex-1 text-left"
+            style={{ color: textColor, fontWeight: row.red ? 600 : 400 }}
+          >
+            {row.text}
+          </span>
+        </div>
+        <span className="text-[10px] bg-[#EDE7F6] text-[#8B7A8E] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+          În curând
+        </span>
+      </div>
+    );
+  }
 
   const content = (
     <>
@@ -108,14 +128,14 @@ export default function ProfilPage() {
 
   const contulMeu: Row[] = [
     { key: "baby-profile", emoji: "👶", text: "Profilul bebelușului", href: "/profil/bebelus" },
-    { key: "add-baby", emoji: "➕", text: "Adaugă alt bebeluș" },
-    { key: "subscription", emoji: "👑", text: "Gestionează abonament", href: "/premium" },
+    { key: "add-baby", emoji: "➕", text: "Adaugă alt bebeluș", comingSoon: true },
+    { key: "subscription", emoji: "👑", text: "Gestionează abonament", comingSoon: true },
   ];
 
   const setari: Row[] = [
     { key: "notifications", emoji: "🔔", text: "Notificări", href: "/notificari" },
-    { key: "password", emoji: "🔒", text: "Schimbă parola", href: "/forgot-password" },
-    { key: "export", emoji: "📄", text: "Export jurnal PDF" },
+    { key: "password", emoji: "🔒", text: "Schimbă parola", href: "/profil/schimba-parola" },
+    { key: "export", emoji: "📄", text: "Export jurnal PDF", comingSoon: true },
   ];
 
   const altele: Row[] = [

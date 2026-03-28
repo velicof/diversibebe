@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
 import Navbar from "../components/Navbar";
 import type { FoodCatalogItem, FoodEntry, UserAccount } from "../lib/store";
@@ -137,6 +138,28 @@ export default function DashboardPage() {
   const [reactionsCount, setReactionsCount] = useState(0);
   const [triedFoodIds, setTriedFoodIds] = useState<string[]>([]);
   const [streakCount, setStreakCount] = useState(0);
+  const [babyName, setBabyName] = useState("");
+  const [babyBirthdate, setBabyBirthdate] = useState("");
+
+  useEffect(() => {
+    if (!userId) {
+      setBabyName("");
+      setBabyBirthdate("");
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from("babies")
+      .select("name, birthdate, gender")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setBabyName(data.name || "");
+          setBabyBirthdate(data.birthdate || "");
+        }
+      });
+  }, [userId]);
 
   useEffect(() => {
     try {
@@ -146,7 +169,7 @@ export default function DashboardPage() {
       const u = data.appState?.currentUser ?? data.currentUser ?? null;
       setUser(u);
       setDayOfMonth(new Date().getDate());
-      const birthDate = u?.baby?.birthDate ?? "";
+      const birthDate = babyBirthdate.trim() || u?.baby?.birthDate || "";
       const parsed = birthDate ? parseDate(birthDate) : null;
       const ageMonths =
         parsed && !Number.isNaN(parsed.getTime())
@@ -171,7 +194,7 @@ export default function DashboardPage() {
       setTargetFoods(40);
     }
     setMounted(true);
-  }, [storeVersion]);
+  }, [storeVersion, babyBirthdate]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -254,8 +277,23 @@ export default function DashboardPage() {
 
   const isLoggedIn = storeIsLoggedIn();
   const currentUser = user;
-  const userName = currentUser?.baby.name ?? "";
-  const userAge = calculateBabyAge(currentUser?.baby.birthDate ?? "");
+  const userName = babyName.trim() || currentUser?.baby.name || "";
+  const ageMonthsFromSupabase =
+    babyBirthdate.trim().length > 0 &&
+    !Number.isNaN(new Date(babyBirthdate).getTime())
+      ? Math.floor(
+          (Date.now() - new Date(babyBirthdate).getTime()) /
+            (1000 * 60 * 60 * 24 * 30.44)
+        )
+      : null;
+  const userAge =
+    ageMonthsFromSupabase !== null
+      ? {
+          months: Math.max(0, ageMonthsFromSupabase),
+          display:
+            ageMonthsFromSupabase > 0 ? `${ageMonthsFromSupabase} luni` : "",
+        }
+      : calculateBabyAge(currentUser?.baby.birthDate ?? "");
 
   const isVisitor = !isLoggedIn || userName.trim().length === 0;
 

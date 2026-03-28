@@ -273,11 +273,19 @@ export default function RegisterStep2Page() {
                 });
 
                 if (error) {
-                  alert(
-                    error.message.includes("already")
-                      ? "Există deja un cont cu acest email. Te rugăm să te conectezi."
-                      : "Eroare la creare cont: " + error.message
-                  );
+                  const msg = error.message.toLowerCase();
+                  if (
+                    msg.includes("already") ||
+                    msg.includes("registered") ||
+                    msg.includes("exists")
+                  ) {
+                    alert(
+                      "Există deja un cont cu acest email. Te rugăm să te conectezi la /login"
+                    );
+                    router.push("/login");
+                    return;
+                  }
+                  alert("Eroare la creare cont: " + error.message);
                   return;
                 }
 

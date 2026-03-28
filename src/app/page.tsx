@@ -6,8 +6,8 @@ import { useEffect } from "react";
 import { useUser } from "@/lib/useUser";
 
 export default function Home() {
-  const router = useRouter();
   const { user, loading } = useUser();
+  const router = useRouter();
 
   useEffect(() => {
     if (!loading && user) {
@@ -16,29 +16,11 @@ export default function Home() {
   }, [user, loading, router]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center px-6 bg-gradient-to-b from-[#FFF8F6] via-[#FDE8EE] to-[#EDE7F6]">
-        <p
-          className="text-[14px] text-[#8B7A8E]"
-          style={{ fontFamily: "Nunito, sans-serif" }}
-        >
-          Se încarcă…
-        </p>
-      </div>
-    );
+    return null;
   }
 
   if (user) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center px-6 bg-gradient-to-b from-[#FFF8F6] via-[#FDE8EE] to-[#EDE7F6]">
-        <p
-          className="text-[14px] text-[#8B7A8E]"
-          style={{ fontFamily: "Nunito, sans-serif" }}
-        >
-          Se încarcă…
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -67,13 +49,13 @@ export default function Home() {
           </Link>
           <Link
             href="/login"
-            className="w-full h-12 rounded-[50px] border border-[#F4B4C4] bg-transparent px-7 font-extrabold text-[#D4849A] text-[16px] flex items-center justify-center text-center"
+            className="w-full h-12 rounded-[50px] border border-[#F4B4C4] bg-transparent px-7 font-extrabold text-[#D4849A] text-[16px] flex items-center justify-center text-center whitespace-nowrap"
           >
             Am deja cont
           </Link>
           <Link
             href="/register"
-            className="mt-1 text-[13px] font-semibold text-[#D4849A] w-full text-center"
+            className="mt-1 text-[13px] font-semibold text-[#D4849A] w-full text-center whitespace-nowrap"
           >
             Înregistrează-te
           </Link>

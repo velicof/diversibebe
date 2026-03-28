@@ -262,6 +262,9 @@ function JurnalInner() {
         reaction: mapReaction(entry.reaction),
         notes: entry.notes || null,
         logged_at: loggedAt,
+        symptoms: entry.symptoms || [],
+        portion: entry.portion || null,
+        baby_mood: entry.babyMood || null,
       });
 
     if (journalError) {

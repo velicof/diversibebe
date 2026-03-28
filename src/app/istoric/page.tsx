@@ -77,6 +77,9 @@ type FoodJournalRow = {
   notes: string | null;
   logged_at: string;
   meal_type: string | null;
+  symptoms: string[] | null;
+  portion: string | null;
+  baby_mood: string | null;
 };
 
 function dbReactionToFoodReaction(db: string | null): FoodEntry["reaction"] {
@@ -108,10 +111,10 @@ function rowToFoodEntry(row: FoodJournalRow): FoodEntry {
     date,
     time,
     reaction: dbReactionToFoodReaction(row.reaction),
-    portion: null,
-    symptoms: [],
+    portion: (row.portion as FoodEntry["portion"]) ?? null,
+    symptoms: Array.isArray(row.symptoms) ? row.symptoms : [],
     notes: (row.notes ?? "").trim(),
-    babyMood: null,
+    babyMood: (row.baby_mood as FoodEntry["babyMood"]) ?? null,
   };
 }
 
@@ -322,7 +325,9 @@ export default function IstoricPage() {
     const supabase = createClient();
     supabase
       .from("food_journal")
-      .select("id, food_id, food_name, reaction, notes, logged_at, meal_type")
+      .select(
+        "id, food_id, food_name, reaction, notes, logged_at, meal_type, symptoms, portion, baby_mood"
+      )
       .eq("user_id", userId)
       .order("logged_at", { ascending: false })
       .then(({ data }) => setJournalRows((data as FoodJournalRow[]) || []));

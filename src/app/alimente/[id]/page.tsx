@@ -1,20 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useUser } from "@/lib/useUser";
 import Navbar from "../../components/Navbar";
 import type { RecipeCatalogItem } from "../../lib/recipesDatabase";
 import { RECIPES } from "../../lib/recipesDatabase";
 import type { FoodEntry } from "../../lib/store";
-import {
-  getEntriesForFood,
-  getFoodById,
-  getFoodStatus,
-  getFoodStatusMeta,
-  isLoggedIn as storeIsLoggedIn,
-} from "../../lib/store";
-import { useStoreRefresh } from "../../lib/useStoreRefresh";
+import { getFoodById } from "../../lib/store";
+
+type JournalPreviewRow = {
+  id: string;
+  food_id: string;
+  food_name: string;
+  reaction: string | null;
+  logged_at: string;
+  portion: string | null;
+};
+
+function dbReactionToFoodReaction(db: string | null): FoodEntry["reaction"] {
+  if (!db) return null;
+  if (db === "pozitiv" || db === "loved") return "loved";
+  if (db === "neutru" || db === "ok") return "ok";
+  if (db === "negativ" || db === "disliked") return "disliked";
+  if (db === "refused") return "refused";
+  if (db === "alergie") return "disliked";
+  return null;
+}
 
 function recipeRelatesToFood(
   recipe: RecipeCatalogItem,
@@ -44,8 +58,42 @@ export default function FoodDetailPage({
 }) {
   const router = useRouter();
   const [showGuestPopup, setShowGuestPopup] = useState(false);
-  const storeVersion = useStoreRefresh();
   const { id } = use(params);
+  const { userId } = useUser();
+  const [triedData, setTriedData] = useState<{
+    try_count: number;
+    first_tried_at: string;
+  } | null>(null);
+  const [journalEntries, setJournalEntries] = useState<JournalPreviewRow[]>(
+    []
+  );
+
+  useEffect(() => {
+    if (!userId || !id) {
+      setTriedData(null);
+      setJournalEntries([]);
+      return;
+    }
+    const supabase = createClient();
+
+    supabase
+      .from("tried_foods")
+      .select("try_count, first_tried_at")
+      .eq("user_id", userId)
+      .eq("food_id", id)
+      .maybeSingle()
+      .then(({ data }) => setTriedData(data));
+
+    supabase
+      .from("food_journal")
+      .select("id, food_id, food_name, reaction, logged_at, portion")
+      .eq("user_id", userId)
+      .eq("food_id", id)
+      .order("logged_at", { ascending: false })
+      .limit(3)
+      .then(({ data }) => setJournalEntries((data as JournalPreviewRow[]) || []));
+  }, [userId, id]);
+
   const food = useMemo(() => {
     const fromCatalog = getFoodById(id);
     if (!fromCatalog) return undefined;
@@ -101,40 +149,39 @@ export default function FoodDetailPage({
     );
   }
 
-  const statusFromStore = getFoodStatus(food.id);
-  const s = getFoodStatusMeta(statusFromStore.status);
-  const triedEntry = statusFromStore.entry;
-  const reactionDisplay = triedEntry
-    ? triedEntry.reaction === "loved"
+  const isTried = triedData !== null;
+  const latestJournal = journalEntries[0];
+  const latestReaction = latestJournal
+    ? dbReactionToFoodReaction(latestJournal.reaction)
+    : null;
+  const reactionDisplay =
+    latestReaction === "loved"
       ? "😋 A adorat"
-      : triedEntry.reaction === "ok"
-      ? "😐 Ok"
-      : triedEntry.reaction === "disliked"
-      ? "🙁 Nu a plăcut"
-      : triedEntry.reaction === "refused"
-      ? "🤢 A refuzat"
-      : "Jurnalizat"
-    : "Niciuna";
-  const reactionDateText = triedEntry
+      : latestReaction === "ok"
+        ? "😐 Ok"
+        : latestReaction === "disliked"
+          ? "🙁 Nu a plăcut"
+          : latestReaction === "refused"
+            ? "🤢 A refuzat"
+            : isTried
+              ? "Jurnalizat"
+              : "Niciuna";
+  const reactionDateText = latestJournal?.logged_at
     ? (() => {
-        const [y, m, d] = triedEntry.date.split("-").map(Number);
-        const dt = new Date(y, m - 1, d);
-        const datePart = dt.toLocaleDateString("ro-RO");
-        return triedEntry.time ? `${datePart}, ${triedEntry.time}` : datePart;
+        const dt = new Date(latestJournal.logged_at);
+        return dt.toLocaleString("ro-RO", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
       })()
     : "";
 
-  const journalForFood = getEntriesForFood(food.id);
-  const journalLast3 = journalForFood.slice(0, 3);
-  const journalCount = journalForFood.length;
-  const firstJournal = journalCount
-    ? journalForFood[journalForFood.length - 1]
-    : null;
-  const firstJournalLabel = firstJournal
-    ? (() => {
-        const [y, m, d] = firstJournal.date.split("-").map(Number);
-        return new Date(y, m - 1, d).toLocaleDateString("ro-RO");
-      })()
+  const journalCount = triedData?.try_count ?? 0;
+  const firstJournalLabel = triedData?.first_tried_at
+    ? new Date(triedData.first_tried_at).toLocaleDateString("ro-RO")
     : "";
 
   function journalReactionEmoji(r: FoodEntry["reaction"]) {
@@ -160,7 +207,6 @@ export default function FoodDetailPage({
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
       <main
-        key={storeVersion}
         className="w-full max-w-[393px] px-6 pb-[128px]"
         style={{ fontFamily: '"Nunito", sans-serif' }}
       >
@@ -237,8 +283,11 @@ export default function FoodDetailPage({
             <p className="text-[11px] font-normal" style={{ color: "#0F6E56" }}>
               Status
             </p>
-            <p className="mt-1 text-[14px] font-bold" style={{ color: s.badgeColor }}>
-              {s.badgeText}
+            <p
+              className="mt-1 text-[14px] font-bold"
+              style={{ color: isTried ? "#0F6E56" : "#C47A3A" }}
+            >
+              {isTried ? "✅ Încercat" : "🆕 De încercat"}
             </p>
           </div>
 
@@ -258,7 +307,7 @@ export default function FoodDetailPage({
             >
               {reactionDisplay}
             </p>
-            {triedEntry ? (
+            {latestJournal ? (
               <p className="mt-1 text-[11px] font-normal" style={{ color: "#8B7A8E" }}>
                 {reactionDateText}
               </p>
@@ -267,12 +316,12 @@ export default function FoodDetailPage({
         </section>
 
         <section className="mt-5">
-          {!triedEntry ? (
+          {!isTried ? (
             <button
               type="button"
               className="h-12 w-full rounded-full bg-[#D4849A] text-white font-bold text-[16px] flex items-center justify-center cursor-pointer"
               onClick={() => {
-                if (!storeIsLoggedIn()) {
+                if (!userId) {
                   setShowGuestPopup(true);
                   return;
                 }
@@ -308,9 +357,10 @@ export default function FoodDetailPage({
                 {journalCount === 1 ? "dată" : "ori"} în jurnal
               </p>
               <div className="mt-3 flex flex-col gap-2">
-                {journalLast3.map((je) => {
-                  const [jy, jm, jd] = je.date.split("-").map(Number);
-                  const jdt = new Date(jy, jm - 1, jd);
+                {journalEntries.map((je) => {
+                  const jdt = new Date(je.logged_at);
+                  const rx = dbReactionToFoodReaction(je.reaction);
+                  const pt = je.portion as FoodEntry["portion"] | null;
                   return (
                     <div
                       key={je.id}
@@ -319,9 +369,9 @@ export default function FoodDetailPage({
                       <p className="text-[12px] font-semibold text-[#3D2C3E]">
                         {jdt.toLocaleDateString("ro-RO")}
                         <span className="ml-2 text-[#8B7A8E]">
-                          {journalReactionEmoji(je.reaction)}
-                          {journalPortionText(je.portion)
-                            ? ` · ${journalPortionText(je.portion)}`
+                          {journalReactionEmoji(rx)}
+                          {journalPortionText(pt)
+                            ? ` · ${journalPortionText(pt)}`
                             : ""}
                         </span>
                       </p>
@@ -335,7 +385,7 @@ export default function FoodDetailPage({
             type="button"
             className="mt-4 h-11 w-full rounded-full border border-[#D4849A] bg-white text-[14px] font-bold text-[#D4849A] cursor-pointer"
             onClick={() => {
-              if (!storeIsLoggedIn()) {
+              if (!userId) {
                 setShowGuestPopup(true);
                 return;
               }
