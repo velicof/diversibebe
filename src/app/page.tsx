@@ -228,14 +228,17 @@ export default function Home() {
               className="text-[15px] font-semibold italic leading-relaxed"
               style={{ color: "#3D2C3E" }}
             >
-              &ldquo;DiversiBebe m-a ajutat enorm la diversificarea Sofiei.
-              Totul e clar și adaptat vârstei ei!&rdquo;
+              &ldquo;Nu știam de unde să încep cu diversificarea. DiversiBebe
+              mi-a dat un plan clar și am știut exact ce să îi dau Sofiei în
+              fiecare zi. Prima oară când a mâncat morcov piure a fost magic!
+              🥕&rdquo;
             </p>
             <footer
               className="mt-4 text-[13px] font-bold"
               style={{ color: "#8B7A8E" }}
             >
-              — Ana M., mamă de 8 luni
+              <div>— Andreea M.</div>
+              <div className="mt-1 font-semibold">Mamă a Sofiei, 7 luni</div>
             </footer>
           </blockquote>
         </section>

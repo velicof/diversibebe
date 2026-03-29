@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type NavbarProps = {
   activeTab: string;
@@ -16,6 +17,15 @@ const NAV_ITEMS = [
 ] as const;
 
 export default function Navbar({ activeTab }: NavbarProps) {
+  const pathname = usePathname();
+  if (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/register/step2"
+  ) {
+    return null;
+  }
+
   const normalized = (activeTab || "").toLowerCase();
 
   return (

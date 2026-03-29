@@ -333,6 +333,14 @@ Numele părintelui: ${user.parentName || "Părintele"}
         ? 132
         : 92;
 
+  if (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/register/step2"
+  ) {
+    return null;
+  }
+
   return (
     <>
       {!isOpen ? (
