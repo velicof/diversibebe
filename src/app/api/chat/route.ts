@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -19,6 +22,85 @@ function extractAssistantText(data: unknown): string {
   return "";
 }
 
+async function loadBebeAsistContext(userId: string | undefined): Promise<{
+  ageMonthsLabel: string;
+  triedCount: number;
+  lastFoodsLine: string;
+  allergiesLine: string;
+}> {
+  if (!userId) {
+    return {
+      ageMonthsLabel: "necunoscută",
+      triedCount: 0,
+      lastFoodsLine: "—",
+      allergiesLine: "nicio alergie înregistrată",
+    };
+  }
+
+  const supabase = await createClient();
+
+  const [{ data: baby }, triedCountRes, { data: lastTried }, { data: allergyRows }] =
+    await Promise.all([
+      supabase
+        .from("babies")
+        .select("birthdate")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("tried_foods")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId),
+      supabase
+        .from("tried_foods")
+        .select("food_name")
+        .eq("user_id", userId)
+        .order("first_tried_at", { ascending: false })
+        .limit(3),
+      supabase
+        .from("allergy_records")
+        .select("food_name")
+        .eq("user_id", userId),
+    ]);
+
+  let ageMonthsLabel = "necunoscută";
+  if (baby?.birthdate) {
+    const b = new Date(baby.birthdate);
+    if (!Number.isNaN(b.getTime())) {
+      const months = Math.floor(
+        (Date.now() - b.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+      );
+      ageMonthsLabel = String(Math.max(0, months));
+    }
+  }
+
+  const triedCount = triedCountRes.count ?? 0;
+
+  const names = (lastTried ?? [])
+    .map((r: { food_name?: string }) => r.food_name?.trim())
+    .filter((n): n is string => typeof n === "string" && n.length > 0);
+  const lastFoodsLine =
+    names.length > 0 ? names.join(", ") : "încă niciunul";
+
+  const allergySet = new Set<string>();
+  for (const row of allergyRows ?? []) {
+    const n = (row as { food_name?: string }).food_name?.trim();
+    if (n) allergySet.add(n);
+  }
+  const allergiesLine =
+    allergySet.size > 0
+      ? [...allergySet].join(", ")
+      : "nicio alergie înregistrată";
+
+  return {
+    ageMonthsLabel,
+    triedCount,
+    lastFoodsLine,
+    allergiesLine,
+  };
+}
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey?.trim()) {
@@ -35,19 +117,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const babyContext =
-    typeof body.babyContext === "string" && body.babyContext.trim()
-      ? body.babyContext.trim()
-      : "Nu există profil de bebeluș creat încă.";
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const systemPrompt = `Ești NutriBot, asistentul AI personal al aplicației DiversiBebe.
+  const ctx = await loadBebeAsistContext(user?.id);
 
-CONTEXT BEBELUȘ:
-${babyContext}
+  const ageDisplay =
+    ctx.ageMonthsLabel === "necunoscută"
+      ? "necunoscută"
+      : `${ctx.ageMonthsLabel} luni`;
+
+  const systemPrompt = `Ești BebeAsist, asistentul personal pentru diversificarea bebelușului.
+Date despre bebeluș:
+- Vârstă: ${ageDisplay}
+- Alimente încercate: ${ctx.triedCount} alimente
+- Ultimele alimente introduse: ${ctx.lastFoodsLine}
+- Alergii cunoscute: ${ctx.allergiesLine}
+Oferă sfaturi specifice bazate pe aceste date. Răspunde în română.
 
 Răspunzi DOAR în limba română.
 Ești prietenos, empatic și profesionist.
-Folosești NUMELE bebelușului din context când răspunzi - face răspunsul personal și cald.
 Oferi sfaturi bazate pe ghidurile OMS și Societatea Română de Pediatrie.
 Ești concis - răspunsuri de maxim 3-4 paragrafe.
 Folosești emoji-uri moderate: 👶 🥕 🍎 ✅ ⚠️

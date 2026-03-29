@@ -453,8 +453,27 @@ export default function DashboardPage() {
         </section>
 
         <p className="mt-5 text-[11px] font-bold uppercase tracking-wide text-[#8B7A8E]">
-          Recomandare pentru azi
+          Astăzi încearcă
         </p>
+        {!isVisitor ? (
+          <div
+            className="mt-2"
+            style={{
+              background: "#E0F5F0",
+              color: "#0F6E56",
+              borderRadius: 12,
+              padding: "10px 14px",
+              fontSize: 13,
+              marginBottom: 12,
+            }}
+          >
+            {triedCount === 0
+              ? "Începe diversificarea: încearcă primul aliment azi 🥕"
+              : triedCount < 5
+                ? `Continuă! Mai ai ${5 - triedCount} alimente de introdus săptămâna asta`
+                : `Bravo! ${userName?.trim() ? userName : "Bebelușul"} a încercat ${triedCount} alimente 🎉`}
+          </div>
+        ) : null}
         <Link
           href={
             allRecommendedTried
@@ -498,10 +517,10 @@ export default function DashboardPage() {
         {!isVisitor ? (
           <div className="mt-5 rounded-[14px] bg-white/80 border border-[#EDE7F6] px-4 py-3">
             <p className="text-[11px] font-bold uppercase tracking-wide text-[#8B7A8E]">
-              Pasul următor
+              Următorul pas pentru tine
             </p>
             <p className="mt-1 text-[13px] text-[#3D2C3E] font-semibold leading-snug">
-              Notează o masă în jurnal sau deschide recomandarea de mai sus.
+              {`Jurnalizează ce a mâncat ${userName?.trim() ? userName : "bebelușul"} azi sau explorează recomandarea`}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Link
@@ -555,8 +574,14 @@ export default function DashboardPage() {
             <div className="mt-1 text-[22px] font-bold text-[#0F6E56]">
               {streak}
             </div>
-            <p className="mt-1 text-[10px] font-semibold text-[#085041]">
-              {streak === 0 ? "Începe azi!" : "Zile consecutive"}
+            <p className="mt-1 text-[10px] font-semibold text-[#085041] leading-tight">
+              {streak === 0
+                ? "Începe azi!"
+                : streak === 1
+                  ? "1 zi consecutivă 🔥 Continuă mâine!"
+                  : streak >= 3
+                    ? `${streak} zile 🔥 Ești pe val!`
+                    : `${streak} zile consecutive`}
             </p>
           </Link>
         </div>
@@ -565,7 +590,7 @@ export default function DashboardPage() {
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-[15px] font-bold text-[#3D2C3E]">
-                Activitate recentă
+                Ce ai făcut recent
               </p>
               <p className="mt-0.5 text-[12px] text-[#8B7A8E]">
                 Ultimele jurnalizări
@@ -694,7 +719,7 @@ export default function DashboardPage() {
           ) : recentJournal.length === 0 ? (
             <div className="mt-3 text-center">
               <p className="text-[14px] text-[#8B7A8E]">
-                📝 Nicio masă jurnalizată încă
+                Prima ta jurnalizare te așteaptă! 🎉
               </p>
               <button
                 type="button"
