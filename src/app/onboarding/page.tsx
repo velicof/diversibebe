@@ -24,19 +24,22 @@ export default function OnboardingPage() {
       return;
     }
     const supabase = createClient();
-    supabase
-      .from("babies")
-      .select("id, name, birthdate")
-      .eq("user_id", userId)
-      .maybeSingle()
-      .then(({ data }) => {
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("babies")
+          .select("id, name, birthdate")
+          .eq("user_id", userId)
+          .maybeSingle();
         if (data?.name && data?.birthdate) {
           router.replace("/dashboard");
         } else {
           setChecking(false);
         }
-      })
-      .catch(() => setChecking(false));
+      } catch {
+        setChecking(false);
+      }
+    })();
   }, [userId, loading, router]);
 
   const canSubmit =

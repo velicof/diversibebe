@@ -31,6 +31,13 @@ const MEAL_LABELS: Record<RecipeCatalogItem["mealType"], string> = {
   gustare: "Gustare",
 };
 
+const JOURNAL_MEAL_TYPE_MAP: Record<string, string> = {
+  "mic-dejun": "mic-dejun",
+  pranz: "pranz",
+  cina: "cina",
+  gustare: "gustare",
+};
+
 function PillView({ pill }: { pill: Pill }) {
   return (
     <span
@@ -544,13 +551,19 @@ export default function RecipeDetailPage({
                     return;
                   }
 
+                  const journalMealType =
+                    JOURNAL_MEAL_TYPE_MAP[recipe.mealType] ?? "pranz";
+
                   const { error: cookedErr } = await supabaseClient
                     .from("cooked_recipes")
-                    .insert({
-                      user_id: userId,
-                      recipe_id: recipe.id,
-                      cooked_at: new Date().toISOString(),
-                    });
+                    .upsert(
+                      {
+                        user_id: userId,
+                        recipe_id: recipe.id,
+                        cooked_at: new Date().toISOString(),
+                      },
+                      { onConflict: "user_id,recipe_id" }
+                    );
                   if (cookedErr) {
                     alert("Eroare: " + cookedErr.message);
                     return;
@@ -560,9 +573,8 @@ export default function RecipeDetailPage({
                     .from("food_journal")
                     .insert({
                       user_id: userId,
-                      food_id: recipe.id,
                       food_name: recipe.name,
-                      meal_type: "reteta",
+                      meal_type: journalMealType,
                       reaction: "pozitiv",
                       notes: "Rețetă gătită: " + recipe.name,
                       logged_at: new Date().toISOString(),
@@ -595,10 +607,6 @@ export default function RecipeDetailPage({
                       .eq("user_id", userId)
                       .eq("recipe_id", recipe.id);
                     setIsFavorite(false);
-                    console.log("[retete] favorite toggled", {
-                      isFavorite: false,
-                      isCooked,
-                    });
                   } else {
                     await supabaseClient.from("favorite_recipes").insert({
                       user_id: userId,
@@ -606,10 +614,6 @@ export default function RecipeDetailPage({
                       saved_at: new Date().toISOString(),
                     });
                     setIsFavorite(true);
-                    console.log("[retete] favorite toggled", {
-                      isFavorite: true,
-                      isCooked,
-                    });
                   }
                 }}
               >

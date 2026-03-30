@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
 import { useUser } from "@/lib/useUser";
@@ -13,6 +13,7 @@ import {
   getFoodsByAgeGroup,
   parseDate,
   TRIED_FOODS_UPDATED_EVENT,
+  type FoodStatus,
   type TriedFoodsOptimisticDetail,
 } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
@@ -86,6 +87,8 @@ function AlimentePageInner() {
 
   const groupFromUrl = searchParams.get("group");
   const triedOnly = searchParams.get("filter") === "incercate";
+  const userIdRef = useRef<string | null>(null);
+  userIdRef.current = userId ?? null;
 
   useEffect(() => {
     setMounted(true);
@@ -204,6 +207,16 @@ function AlimentePageInner() {
           ...prev,
         ];
       });
+      const uid = userIdRef.current;
+      if (!uid) return;
+      void supabaseClient
+        .from("tried_foods")
+        .select("food_id, food_name, try_count, first_tried_at")
+        .eq("user_id", uid)
+        .order("first_tried_at", { ascending: false })
+        .then(({ data: refreshed }) => {
+          if (refreshed) setTriedFoods(refreshed as TriedFoodRow[]);
+        });
     };
     window.addEventListener(TRIED_FOODS_UPDATED_EVENT, handler);
     return () => window.removeEventListener(TRIED_FOODS_UPDATED_EVENT, handler);
@@ -427,13 +440,18 @@ function AlimentePageInner() {
           >
             {foods.map((food) => {
               const tried = triedByFoodId.get(food.id);
+              const local = getFoodStatus(food.id);
+              const statusForCard: FoodStatus =
+                triedIdSet.has(food.id) && local.status === "De încercat"
+                  ? "Încercat"
+                  : local.status;
               const s = triedOnly
                 ? {
                     border: "#EDE7F6",
                     statusColor: "#8B7A8E",
                     statusText: "",
                   }
-                : getFoodStatusMeta(getFoodStatus(food.id).status);
+                : getFoodStatusMeta(statusForCard);
               return (
                 <Link
                   key={food.id}
