@@ -125,6 +125,7 @@ function greetingForLocalHour(d = new Date()): string {
 }
 
 export default function DashboardPage() {
+  console.log("[dashboard] checking user session...");
   const router = useRouter();
   const { user: authUser, userId, loading: authLoading } = useUser();
   const storeVersion = useStoreRefresh();
