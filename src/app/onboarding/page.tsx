@@ -5,17 +5,13 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/useUser";
 import { createClient } from "@/lib/supabase/client";
 import { upsertCurrentBaby } from "@/app/lib/supabaseData";
-import {
-  getCurrentUser,
-  saveOnboardingBabyProfile,
-  syncGoogleSessionToLocalUser,
-} from "../lib/store";
+import { saveOnboardingBabyProfile } from "../lib/store";
 
 type Gender = "boy" | "girl" | null;
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, userId, loading } = useUser();
+  const { userId, loading } = useUser();
   const [checking, setChecking] = useState(true);
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -23,26 +19,8 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (loading) return;
-    const email = user?.email;
-    if (!email) {
-      router.replace("/login");
-      return;
-    }
-    const nameMeta = user.user_metadata?.full_name;
-    syncGoogleSessionToLocalUser({
-      email,
-      name: typeof nameMeta === "string" ? nameMeta : null,
-    });
-    const u = getCurrentUser();
-    if (
-      u?.email?.toLowerCase() === email.toLowerCase() &&
-      u.baby?.name?.trim()
-    ) {
-      router.replace("/dashboard");
-      return;
-    }
     if (!userId) {
-      setChecking(false);
+      router.replace("/login");
       return;
     }
     const supabase = createClient();
@@ -59,7 +37,7 @@ export default function OnboardingPage() {
         }
       })
       .catch(() => setChecking(false));
-  }, [user, loading, userId, router]);
+  }, [userId, loading, router]);
 
   const canSubmit =
     babyName.trim().length >= 2 && birthDate.trim().length > 0;

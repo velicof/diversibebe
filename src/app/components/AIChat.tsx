@@ -318,6 +318,17 @@ Numele părintelui: ${user.parentName || "Părintele"}
     }
   }
 
+  const hiddenPaths = [
+    "/login",
+    "/register",
+    "/onboarding",
+    "/forgot-password",
+    "/register/confirm",
+  ];
+  if (hiddenPaths.some((p) => pathname.startsWith(p))) {
+    return null;
+  }
+
   const quickQuestions = [
     `Ce îi recomand lui ${babyName} mâine?`,
     "Cum gestionez refuzul alimentar?",
@@ -332,17 +343,6 @@ Numele părintelui: ${user.parentName || "Părintele"}
       : pathname === "/jurnal" || pathname.startsWith("/jurnal/")
         ? 132
         : 92;
-
-  const hiddenPaths = [
-    "/login",
-    "/register",
-    "/onboarding",
-    "/forgot-password",
-    "/register/confirm",
-  ];
-  if (hiddenPaths.some((p) => pathname.startsWith(p))) {
-    return null;
-  }
 
   return (
     <>
