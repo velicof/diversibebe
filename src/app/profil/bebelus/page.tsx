@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useUser } from "@/lib/useUser";
 import { getCurrentUser, registerUser, type UserAccount } from "../../lib/store";
 
 type Gender = "boy" | "girl";
@@ -12,16 +14,36 @@ function CameraIcon() {
 
 export default function ProfilBebelusPage() {
   const router = useRouter();
+  const { userId } = useUser();
   const current = getCurrentUser();
-  const [gender, setGender] = useState<Gender>(
-    (current?.baby.gender as Gender) || "boy"
-  );
+  const [babyName, setBabyName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [weight, setWeight] = useState("");
+  const [gender, setGender] = useState<Gender>("boy");
 
-  const [fullName, setFullName] = useState(current?.baby.name || "Andrei");
-  const [birthDate, setBirthDate] = useState(
-    current?.baby.birthDate || "15 Octombrie 2025"
-  );
-  const [birthWeight, setBirthWeight] = useState(current?.baby.weight || "3.450 kg");
+  useEffect(() => {
+    if (!userId) return;
+    const supabase = createClient();
+    supabase
+      .from("babies")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setBabyName(data.name || "");
+          setBirthDate(data.birthdate || "");
+          setWeight(
+            data.weight_kg != null && !Number.isNaN(Number(data.weight_kg))
+              ? String(data.weight_kg)
+              : ""
+          );
+          if (data.gender === "girl" || data.gender === "boy") {
+            setGender(data.gender);
+          }
+        }
+      });
+  }, [userId]);
 
   const allergyTags = useMemo(
     () => [
@@ -35,6 +57,39 @@ export default function ProfilBebelusPage() {
     ],
     [current?.baby.allergies]
   );
+
+  const handleSave = async () => {
+    if (!userId) return;
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("babies")
+      .update({
+        name: babyName,
+        birthdate: birthDate,
+        weight_kg: weight ? parseFloat(weight.replace(",", ".")) : null,
+        gender,
+      })
+      .eq("user_id", userId);
+    if (error) {
+      alert("Eroare: " + error.message);
+    } else {
+      alert("Salvat!");
+      if (current) {
+        const updated: UserAccount = {
+          ...current,
+          baby: {
+            ...current.baby,
+            name: babyName.trim(),
+            birthDate: birthDate.trim(),
+            weight: weight.trim(),
+            gender,
+          },
+        };
+        registerUser(updated);
+      }
+      router.push("/profil");
+    }
+  };
 
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center px-6 pb-[24px]">
@@ -68,25 +123,14 @@ export default function ProfilBebelusPage() {
           className="mt-6 flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!current) return;
-            const updated: UserAccount = {
-              ...current,
-              baby: {
-                ...current.baby,
-                name: fullName.trim(),
-                birthDate: birthDate.trim(),
-                weight: birthWeight.trim(),
-                gender,
-              },
-            };
-            registerUser(updated);
+            void handleSave();
           }}
         >
           <div>
             <div className="text-[12px] font-semibold text-[#8B7A8E] mb-2">Numele bebelușului</div>
             <input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              value={babyName}
+              onChange={(e) => setBabyName(e.target.value)}
               className="w-full py-[14px] px-[16px] bg-white border border-[#EDE7F6] rounded-2xl text-[15px] text-[#3D2C3E] outline-none"
             />
           </div>
@@ -94,6 +138,8 @@ export default function ProfilBebelusPage() {
           <div>
             <div className="text-[12px] font-semibold text-[#8B7A8E] mb-2">Data nașterii</div>
             <input
+              type="date"
+              max={new Date().toISOString().split("T")[0]}
               value={birthDate}
               onChange={(e) => setBirthDate(e.target.value)}
               className="w-full py-[14px] px-[16px] bg-white border border-[#EDE7F6] rounded-2xl text-[15px] text-[#3D2C3E] outline-none"
@@ -103,8 +149,12 @@ export default function ProfilBebelusPage() {
           <div>
             <div className="text-[12px] font-semibold text-[#8B7A8E] mb-2">Greutate la naștere</div>
             <input
-              value={birthWeight}
-              onChange={(e) => setBirthWeight(e.target.value)}
+              type="number"
+              step="0.001"
+              min="0.5"
+              max="15"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
               className="w-full py-[14px] px-[16px] bg-white border border-[#EDE7F6] rounded-2xl text-[15px] text-[#3D2C3E] outline-none"
             />
           </div>
@@ -169,4 +219,3 @@ export default function ProfilBebelusPage() {
     </div>
   );
 }
-

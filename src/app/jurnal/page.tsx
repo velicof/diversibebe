@@ -10,6 +10,7 @@ import {
   getCurrentUser,
   getRecipeById,
   getRecipes,
+  TRIED_FOODS_UPDATED_EVENT,
   type FoodEntry,
 } from "../lib/store";
 import type { FoodCatalogItem } from "../lib/store";
@@ -322,6 +323,10 @@ function JurnalInner() {
           });
         if (triedError) console.error("tried_foods error:", triedError);
       }
+    }
+
+    if (entry.type === "food" && typeof window !== "undefined") {
+      window.dispatchEvent(new Event(TRIED_FOODS_UPDATED_EVENT));
     }
 
     setToast("success");

@@ -26,9 +26,5 @@ export function useUser() {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    console.log("[useUser] session check result:", user?.email ?? "null");
-  }, [user, loading]);
-
   return { user, loading, userId: user?.id };
 }

@@ -11,6 +11,7 @@ import {
 import {
   ageBandLabelRo,
   ageMonthsToAgeBand,
+  calendarMonthsFromBirthdateString,
   formatApproxBabyServingsRo,
   formatRecipePortionLineRo,
   inferTotalYieldGrams,
@@ -20,7 +21,8 @@ import {
   type MealType,
   type RecipeCatalogItem,
 } from "../lib/recipesDatabase";
-import { parseDate } from "../lib/store";
+import { useUser } from "@/lib/useUser";
+import { supabaseClient } from "@/lib/supabaseClient";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 
 const RO_MONTHS_LONG = [
@@ -81,14 +83,6 @@ function readBirthDateFromStorage(): string | null {
   } catch {
     return null;
   }
-}
-
-function ageMonthsFromBirth(birthDate: string): number {
-  const d = parseDate(birthDate);
-  if (!d || Number.isNaN(d.getTime())) return 0;
-  return Math.floor(
-    (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-  );
 }
 
 function recipeMinAgeTier(age: string): number {
@@ -261,6 +255,7 @@ function ageGroupFromMonths(ageMonths: number): string {
 
 export default function PlanPage() {
   const router = useRouter();
+  const { userId } = useUser();
   const storeVersion = useStoreRefresh();
   const [currentWeek, setCurrentWeek] = useState(0);
   const [mode, setMode] = useState<"normal" | "cu-fibre">("normal");
@@ -275,9 +270,21 @@ export default function PlanPage() {
     setHydrated(true);
   }, [storeVersion]);
 
+  useEffect(() => {
+    if (!userId) return;
+    supabaseClient
+      .from("babies")
+      .select("birthdate")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.birthdate) setBirthDate(data.birthdate);
+      });
+  }, [userId]);
+
   const ageMonths = useMemo(() => {
     if (!birthDate) return 0;
-    return Math.max(0, ageMonthsFromBirth(birthDate));
+    return calendarMonthsFromBirthdateString(birthDate);
   }, [birthDate]);
 
   const meals = useMemo(

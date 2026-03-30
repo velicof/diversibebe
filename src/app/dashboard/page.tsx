@@ -125,7 +125,6 @@ function greetingForLocalHour(d = new Date()): string {
 }
 
 export default function DashboardPage() {
-  console.log("[dashboard] checking user session...");
   const router = useRouter();
   const { user: authUser, userId, loading: authLoading } = useUser();
   const storeVersion = useStoreRefresh();
@@ -213,7 +212,6 @@ export default function DashboardPage() {
   }, [router, storeVersion, authLoading, authUser?.email, authUser?.user_metadata]);
 
   useEffect(() => {
-    console.log("[dashboard] userId:", userId);
     if (!userId) return;
 
     supabaseClient
@@ -222,8 +220,7 @@ export default function DashboardPage() {
       .eq("user_id", userId)
       .order("logged_at", { ascending: false })
       .limit(5)
-      .then(({ data, error }) => {
-        console.log("[dashboard] journal data:", data, "error:", error);
+      .then(({ data }) => {
         setRecentJournal(data || []);
       });
 

@@ -12,6 +12,7 @@ import {
   formatRecipePortionLineRo,
   inferTotalYieldGrams,
   nutritionAgeKeyFromMonths,
+  calendarMonthsFromBirthdateString,
   readBabyAgeMonthsFromStorage,
 } from "@/app/lib/recipePortions";
 import Navbar from "../../components/Navbar";
@@ -96,29 +97,58 @@ export default function RecipeDetailPage({
   const { id } = use(params);
   const recipe = useMemo(() => getRecipeById(id), [id]);
   const [babyAgeMonths, setBabyAgeMonths] = useState<number | null>(null);
-  const [cookedState, setCookedState] = useState(false);
+  const [isCooked, setIsCooked] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [authSaveMessage, setAuthSaveMessage] = useState<string | null>(null);
   const { userId } = useUser();
 
   useEffect(() => {
-    setBabyAgeMonths(readBabyAgeMonthsFromStorage());
-  }, []);
+    let active = true;
+    if (!userId) {
+      setBabyAgeMonths(readBabyAgeMonthsFromStorage());
+      return;
+    }
+    void supabaseClient
+      .from("babies")
+      .select("birthdate")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active) return;
+        if (data?.birthdate) {
+          setBabyAgeMonths(calendarMonthsFromBirthdateString(data.birthdate));
+        } else {
+          setBabyAgeMonths(readBabyAgeMonthsFromStorage());
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [userId]);
 
   useEffect(() => {
     let active = true;
     void (async () => {
       if (!recipe || !userId) return;
 
-      const { data } = await supabaseClient
-        .from("favorite_recipes")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("recipe_id", recipe.id)
-        .maybeSingle();
+      const [fav, cooked] = await Promise.all([
+        supabaseClient
+          .from("favorite_recipes")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("recipe_id", recipe.id)
+          .maybeSingle(),
+        supabaseClient
+          .from("cooked_recipes")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("recipe_id", recipe.id)
+          .maybeSingle(),
+      ]);
 
       if (!active) return;
-      setIsFavorite(Boolean(data));
+      setIsFavorite(Boolean(fav.data));
+      setIsCooked(Boolean(cooked.data));
     })();
 
     return () => {
@@ -504,7 +534,7 @@ export default function RecipeDetailPage({
               <button
                 type="button"
                 className={`flex-1 h-12 rounded-full font-bold cursor-pointer text-white ${
-                  cookedState ? "bg-[#0F6E56]" : "bg-[#D4849A]"
+                  isCooked ? "bg-[#0F6E56]" : "bg-[#D4849A]"
                 }`}
                 onClick={async () => {
                   setAuthSaveMessage(null);
@@ -514,19 +544,38 @@ export default function RecipeDetailPage({
                     return;
                   }
 
-                  await supabaseClient.from("cooked_recipes").insert({
-                    user_id: userId,
-                    recipe_id: recipe.id,
-                    cooked_at: new Date().toISOString(),
-                  });
+                  const { error: cookedErr } = await supabaseClient
+                    .from("cooked_recipes")
+                    .insert({
+                      user_id: userId,
+                      recipe_id: recipe.id,
+                      cooked_at: new Date().toISOString(),
+                    });
+                  if (cookedErr) {
+                    alert("Eroare: " + cookedErr.message);
+                    return;
+                  }
 
-                  setCookedState(true);
-                  window.setTimeout(() => {
-                    setCookedState(false);
-                  }, 2000);
+                  const { error: journalErr } = await supabaseClient
+                    .from("food_journal")
+                    .insert({
+                      user_id: userId,
+                      baby_id: null,
+                      food_id: null,
+                      food_name: recipe.name,
+                      meal_type: "reteta",
+                      reaction: "pozitiv",
+                      notes: "Rețetă gătită: " + recipe.name,
+                      logged_at: new Date().toISOString(),
+                    });
+                  if (journalErr) {
+                    alert("Eroare jurnal: " + journalErr.message);
+                  }
+
+                  setIsCooked(true);
                 }}
               >
-                {cookedState ? "✓ Gătit!" : "Am gătit!"}
+                {isCooked ? "✓ Gătit!" : "Am gătit!"}
               </button>
               <button
                 type="button"

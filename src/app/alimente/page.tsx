@@ -128,25 +128,32 @@ function AlimentePageInner() {
   }, [groupFromUrl, storeVersion]);
 
   useEffect(() => {
-    if (!triedOnly) return;
     let active = true;
     if (authLoading) {
-      setTriedLoading(true);
-      setTriedAuthMissing(false);
+      if (triedOnly) {
+        setTriedLoading(true);
+        setTriedAuthMissing(false);
+      }
       return;
     }
 
     void (async () => {
       if (!active) return;
       if (!userId) {
-        setTriedAuthMissing(true);
-        setTriedFoods([]);
-        setTriedLoading(false);
+        if (triedOnly) {
+          setTriedAuthMissing(true);
+          setTriedFoods([]);
+          setTriedLoading(false);
+        } else {
+          setTriedFoods([]);
+        }
         return;
       }
 
-      setTriedAuthMissing(false);
-      setTriedLoading(true);
+      if (triedOnly) {
+        setTriedAuthMissing(false);
+        setTriedLoading(true);
+      }
 
       const { data, error } = await supabaseClient
         .from("tried_foods")
@@ -160,13 +167,13 @@ function AlimentePageInner() {
       } else {
         setTriedFoods(data as TriedFoodRow[]);
       }
-      setTriedLoading(false);
+      if (triedOnly) setTriedLoading(false);
     })();
 
     return () => {
       active = false;
     };
-  }, [triedOnly, authLoading, userId]);
+  }, [triedOnly, authLoading, userId, storeVersion]);
 
   const triedIdSet = useMemo(
     () => new Set(triedFoods.map((t) => t.food_id)),
@@ -180,7 +187,8 @@ function AlimentePageInner() {
   const foodsInAgeGroup = useMemo(() => {
     if (triedOnly) return getAllFoods();
     if (activeTab === "all") return getAllFoods();
-    if (activeTab === "sub-6") return [];
+    // Alimente din grupa 6–8 (început diversificare ~6 luni), aliniat cu rețetele minAge ≤ 6
+    if (activeTab === "sub-6") return getFoodsByAgeGroup("6-7");
     if (activeTab === "12+") return getFoodsByAgeGroup("10-12");
     return getFoodsByAgeGroup(activeTab);
   }, [activeTab, triedOnly]);

@@ -25,6 +25,17 @@ export function ageBandLabelRo(band: AgeBandId): string {
   return m[band];
 }
 
+/** Vârstă în luni (diferență de luni calendaristice), minim 0. */
+export function calendarMonthsFromBirthdateString(birthDate: string): number {
+  const d = parseDate(birthDate.trim());
+  if (!d || Number.isNaN(d.getTime())) return 0;
+  const now = new Date();
+  const months =
+    (now.getFullYear() - d.getFullYear()) * 12 +
+    (now.getMonth() - d.getMonth());
+  return Math.max(0, months);
+}
+
 /** Citește vârsta în luni din `diversibebe_data` (profil bebeluș). */
 export function readBabyAgeMonthsFromStorage(): number | null {
   if (typeof window === "undefined") return null;
@@ -39,12 +50,7 @@ export function readBabyAgeMonthsFromStorage(): number | null {
       data.appState?.currentUser?.baby?.birthDate ??
       data.currentUser?.baby?.birthDate;
     if (!birthDate || typeof birthDate !== "string") return null;
-    const d = parseDate(birthDate.trim());
-    if (!d || Number.isNaN(d.getTime())) return null;
-    const months = Math.floor(
-      (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-    );
-    return Math.max(0, months);
+    return calendarMonthsFromBirthdateString(birthDate);
   } catch {
     return null;
   }

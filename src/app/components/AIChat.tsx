@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { calendarMonthsFromBirthdateString } from "@/app/lib/recipePortions";
 import { useUser } from "@/lib/useUser";
 import { getUserKey } from "../lib/store";
 
@@ -113,17 +114,26 @@ export default function AIChat() {
     void (async () => {
       try {
         let resolvedHeaderName = "";
+        let dbBirthdate: string | null = null;
+        let dbGender: "boy" | "girl" | null = null;
         if (userId) {
           const supabase = createClient();
           const { data } = await supabase
             .from("babies")
-            .select("name")
+            .select("name, birthdate, gender")
             .eq("user_id", userId)
             .order("created_at", { ascending: true })
             .limit(1)
             .maybeSingle();
           if (!cancelled && data?.name?.trim()) {
             resolvedHeaderName = data.name.trim();
+          }
+          if (!cancelled && data) {
+            dbBirthdate = data.birthdate ?? null;
+            dbGender =
+              data.gender === "boy" || data.gender === "girl"
+                ? data.gender
+                : null;
           }
         }
 
@@ -135,22 +145,26 @@ export default function AIChat() {
           setHeaderBabyName(resolvedHeaderName || "bebelușul tău");
         }
 
-        if (user?.baby) {
-        const baby = user.baby;
-        const birthDate = baby.birthDate ? new Date(baby.birthDate) : null;
-        const ageMonths =
-          birthDate && !Number.isNaN(birthDate.getTime())
-            ? Math.floor(
-                (Date.now() - birthDate.getTime()) /
-                  (1000 * 60 * 60 * 24 * 30.44)
-              )
-            : 0;
+        const birthStr = (
+          dbBirthdate ||
+          user?.baby?.birthDate ||
+          ""
+        ).trim();
+        const ageMonths = birthStr
+          ? calendarMonthsFromBirthdateString(birthStr)
+          : 0;
 
+        if (user?.baby || birthStr || resolvedHeaderName) {
+        const baby = user?.baby ?? {
+          name: resolvedHeaderName,
+          birthDate: birthStr,
+          gender: dbGender,
+        };
         const displayName =
           resolvedHeaderName || baby.name?.trim() || "bebelușul";
         setBabyName(displayName);
 
-        const email = user.email?.trim();
+        const email = user?.email?.trim();
         let triedFoods: string[] = [];
         let allergies: AllergyRaw[] = [];
         let entries: FoodEntryRaw[] = [];
@@ -181,10 +195,16 @@ export default function AIChat() {
         const sorted = sortEntriesByRecent(entries);
         const last = sorted[0];
 
+        const genderLabel =
+          baby.gender === "boy"
+            ? "Băiat"
+            : baby.gender === "girl"
+              ? "Fată"
+              : "Necunoscut";
         const context = `
 Nume bebeluș: ${baby.name || "Necunoscut"}
 Vârstă: ${ageMonths} luni
-Gen: ${baby.gender === "boy" ? "Băiat" : baby.gender === "girl" ? "Fată" : "Necunoscut"}
+Gen: ${genderLabel}
 Alimente deja încercate (${triedFoods.length}): ${triedFoods.length > 0 ? triedFoods.slice(0, 20).join(", ") : "Niciun aliment încă"}
 Alergii detectate: ${
           allergies.length > 0
@@ -204,7 +224,7 @@ Ultima masă jurnalizată: ${
             ? `${last.foodName} - ${last.reaction ?? "—"}`
             : "Niciuna"
         }
-Numele părintelui: ${user.parentName || "Părintele"}
+Numele părintelui: ${user?.parentName || "Părintele"}
         `.trim();
 
         setBabyContext(context);

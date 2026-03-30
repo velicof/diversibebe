@@ -87,6 +87,9 @@ export type FoodStatus =
 
 export const STORE_UPDATED_EVENT = "diversibebe_store_updated";
 
+/** Bump `useStoreRefresh` after Supabase `tried_foods` changes (e.g. from jurnal). */
+export const TRIED_FOODS_UPDATED_EVENT = "diversibebe_tried_foods_updated";
+
 // Supabase-first: legacy cloud sync disabled.
 
 type PersistedData = { appState: AppState; accounts: UserAccount[] };
