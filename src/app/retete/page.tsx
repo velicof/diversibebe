@@ -9,9 +9,11 @@ import {
 import Navbar from "../components/Navbar";
 import { getRecipes, parseDate, type MealType } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
+import { useUser } from "@/lib/useUser";
+import { createClient } from "@/lib/supabase/client";
 
-type AgeFilterId = "all" | "4" | "6" | "7" | "8" | "10" | "12";
-type MealFilterId = "all" | MealType;
+type AgeFilterId = "all" | "6" | "7" | "8" | "10" | "12";
+type MealFilterId = "all" | MealType | "favorite";
 
 const RECIPES = getRecipes();
 
@@ -36,24 +38,15 @@ const MEAL_LABELS: Record<MealType, string> = {
 
 const MEAL_FILTERS: Array<{ id: MealFilterId; label: string }> = [
   { id: "all", label: "Toate" },
+  { id: "favorite", label: "Favorite ❤️" },
   { id: "mic-dejun", label: "Mic dejun 🌅" },
   { id: "pranz", label: "Prânz 🍽️" },
   { id: "cina", label: "Cină 🌙" },
   { id: "gustare", label: "Gustare 🍎" },
 ];
 
-const AGE_MIN_MONTHS: Record<Exclude<AgeFilterId, "all">, number> = {
-  "4": 4,
-  "6": 6,
-  "7": 7,
-  "8": 8,
-  "10": 10,
-  "12": 12,
-};
-
 const AGE_FILTERS: Array<{ id: AgeFilterId; label: string }> = [
   { id: "all", label: "Toate" },
-  { id: "4", label: "4+ luni" },
   { id: "6", label: "6+ luni" },
   { id: "7", label: "7+ luni" },
   { id: "8", label: "8+ luni" },
@@ -77,6 +70,10 @@ export default function RetetePage() {
     null
   );
   const [babyAgeMonths, setBabyAgeMonths] = useState<number | null>(null);
+  const { userId } = useUser();
+  const [favoriteRecipeIds, setFavoriteRecipeIds] = useState<
+    string[] | null
+  >(null);
   const ageFilter = manualAgeFilter ?? profileAgeFilter;
   const prevBirthKey = useRef<string | null>(null);
 
@@ -105,7 +102,7 @@ export default function RetetePage() {
             )
           : 0;
       let next: AgeFilterId = "12";
-      if (ageMonths < 6) next = "4";
+      if (ageMonths < 6) next = "6";
       else if (ageMonths < 7) next = "6";
       else if (ageMonths < 8) next = "7";
       else if (ageMonths < 10) next = "8";
@@ -122,6 +119,35 @@ export default function RetetePage() {
     setBabyAgeMonths(readBabyAgeMonthsFromStorage());
   }, [storeVersion]);
 
+  useEffect(() => {
+    if (!userId) {
+      setFavoriteRecipeIds([]);
+      return;
+    }
+    const supabase = createClient();
+    setFavoriteRecipeIds(null);
+    supabase
+      .from("favorite_recipes")
+      .select("recipe_id")
+      .eq("user_id", userId)
+      .then(({ data }) => {
+        setFavoriteRecipeIds((data ?? []).map((d: any) => d.recipe_id));
+      });
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || mealFilter !== "favorite") return;
+    const supabase = createClient();
+    setFavoriteRecipeIds(null);
+    supabase
+      .from("favorite_recipes")
+      .select("recipe_id")
+      .eq("user_id", userId)
+      .then(({ data }) => {
+        setFavoriteRecipeIds((data ?? []).map((d: any) => d.recipe_id));
+      });
+  }, [mealFilter, userId]);
+
   const searchTrim = searchQuery.trim();
 
   const visible = useMemo(() => {
@@ -131,11 +157,45 @@ export default function RetetePage() {
     }
     let list = RECIPES;
     if (mealFilter !== "all") {
-      list = list.filter((r) => r.mealType === mealFilter);
+      if (mealFilter === "favorite") {
+        const favSet = new Set(favoriteRecipeIds ?? []);
+        list = favoriteRecipeIds
+          ? list.filter((r) => favSet.has(r.id))
+          : [];
+      } else {
+        list = list.filter((r) => r.mealType === mealFilter);
+      }
     }
     if (ageFilter !== "all") {
-      const min = AGE_MIN_MONTHS[ageFilter];
-      list = list.filter((r) => ageToMinMonths(r.age) >= min);
+      const AGE_ORDER = ["6+", "7+", "8+", "10+", "12+"] as const;
+      const recipeMinAgeIndex = (age: string): number => {
+        const a = age.trim();
+        // Robustness for any legacy recipes still using 4+/5+.
+        if (a.startsWith("4") || a.startsWith("5")) return 0;
+        for (let i = 0; i < AGE_ORDER.length; i++) {
+          if (a.startsWith(AGE_ORDER[i])) return i;
+        }
+        // Fallback: parse first number.
+        const n = ageToMinMonths(a);
+        if (n >= 12) return 4;
+        if (n >= 10) return 3;
+        if (n >= 8) return 2;
+        if (n >= 7) return 1;
+        return 0;
+      };
+
+      const selectedIndex =
+        ageFilter === "6"
+          ? 0
+          : ageFilter === "7"
+            ? 1
+            : ageFilter === "8"
+              ? 2
+              : ageFilter === "10"
+                ? 3
+                : 4;
+
+      list = list.filter((r) => recipeMinAgeIndex(r.age) <= selectedIndex);
     }
     return list;
   }, [searchTrim, mealFilter, ageFilter]);
@@ -220,10 +280,19 @@ export default function RetetePage() {
             Nicio rețetă găsită pentru „{searchTrim}”
           </p>
         ) : visible.length === 0 ? (
-          <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
-            Nicio rețetă pentru filtrele selectate. Încearcă alt tip de masă sau
-            altă vârstă.
-          </p>
+          mealFilter === "favorite" &&
+          favoriteRecipeIds !== null &&
+          favoriteRecipeIds.length === 0 ? (
+            <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
+              Nu ai rețete favorite încă. Apasă ❤️ pe o rețetă pentru a o
+              salva.
+            </p>
+          ) : (
+            <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
+              Nicio rețetă pentru filtrele selectate. Încearcă alt tip de masă
+              sau altă vârstă.
+            </p>
+          )
         ) : (
           <section className="mt-5 flex flex-col gap-[10px]">
             {visible.map((r) => (

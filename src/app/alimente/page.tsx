@@ -235,7 +235,7 @@ function AlimentePageInner() {
     if (triedOnly) return getAllFoods();
     if (activeTab === "all") return getAllFoods();
     // Alimente din grupa 6–8 (început diversificare ~6 luni), aliniat cu rețetele minAge ≤ 6
-    if (activeTab === "sub-6") return getFoodsByAgeGroup("6-7");
+    if (activeTab === "sub-6") return [];
     if (activeTab === "12+") return getFoodsByAgeGroup("10-12");
     return getFoodsByAgeGroup(activeTab);
   }, [activeTab, triedOnly]);
@@ -420,12 +420,41 @@ function AlimentePageInner() {
         </p>
 
         {foods.length === 0 ? (
-          searchTrim || triedOnly ? (
+          activeTab === "sub-6" ? (
+            <div
+              style={{
+                background: "#FDE8EE",
+                borderRadius: 16,
+                padding: 16,
+                marginTop: 20,
+                width: "100%",
+              }}
+            >
+              <div style={{ fontSize: 28, lineHeight: 1, marginBottom: 8 }}>
+                👶
+              </div>
+              <h3 className="text-[16px] font-extrabold text-[#3D2C3E]">
+                Alăptare exclusivă
+              </h3>
+              <p
+                className="mt-2 text-[13px] font-normal text-[#3D2C3E]"
+                style={{ lineHeight: 1.6 }}
+              >
+                Conform Organizației Mondiale a Sănătății (OMS), înainte de 6
+                luni alimentația bebelușului trebuie să constea{" "}
+                <strong>exclusiv din lapte matern sau formulă</strong>.
+              </p>
+              <p
+                className="mt-2 text-[13px] font-normal text-[#3D2C3E]"
+                style={{ lineHeight: 1.6 }}
+              >
+                Diversificarea se recomandă să înceapă la vârsta de 6 luni.
+              </p>
+            </div>
+          ) : searchTrim || triedOnly ? (
             <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
               {searchTrim ? (
                 <>Niciun aliment găsit pentru „{searchTrim}”</>
-              ) : activeTab === "sub-6" ? (
-                <>Sub 6 luni se recomandă doar lapte. Începe diversificarea după 6 luni.</>
               ) : (
                 <>
                   Niciun aliment încercat încă. Jurnalizează prima masă!
