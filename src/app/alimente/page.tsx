@@ -15,7 +15,7 @@ import {
 } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 
-type AgeTabId = "all" | "6-8" | "8-10" | "10-12" | "12+";
+type AgeTabId = "all" | "sub-6" | "6-7" | "7-8" | "8-10" | "10-12" | "12+";
 
 type CategoryId =
   | "all"
@@ -28,7 +28,9 @@ type CategoryId =
 
 const AGE_TABS: Array<{ id: AgeTabId; label: string }> = [
   { id: "all", label: "Toate" },
-  { id: "6-8", label: "6-8 luni" },
+  { id: "sub-6", label: "sub 6 luni" },
+  { id: "6-7", label: "6-7 luni" },
+  { id: "7-8", label: "7-8 luni" },
   { id: "8-10", label: "8-10 luni" },
   { id: "10-12", label: "10-12 luni" },
   { id: "12+", label: "12+ luni" },
@@ -46,7 +48,9 @@ const CATEGORY_TABS: Array<{ id: CategoryId; label: string }> = [
 
 const AGE_TAB_IDS = new Set<string>([
   "all",
-  "6-8",
+  "sub-6",
+  "6-7",
+  "7-8",
   "8-10",
   "10-12",
   "12+",
@@ -70,7 +74,7 @@ function AlimentePageInner() {
   const storeVersion = useStoreRefresh();
   const searchParams = useSearchParams();
   const { userId, loading: authLoading } = useUser();
-  const [activeTab, setActiveTab] = useState<AgeTabId>("6-8");
+  const [activeTab, setActiveTab] = useState<AgeTabId>("6-7");
   const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [triedFoods, setTriedFoods] = useState<TriedFoodRow[]>([]);
@@ -111,7 +115,9 @@ function AlimentePageInner() {
             )
           : 0;
       let tab: AgeTabId = "12+";
-      if (ageMonths < 8) tab = "6-8";
+      if (ageMonths < 6) tab = "sub-6";
+      else if (ageMonths < 7) tab = "6-7";
+      else if (ageMonths < 8) tab = "7-8";
       else if (ageMonths < 10) tab = "8-10";
       else if (ageMonths < 12) tab = "10-12";
       else tab = "12+";
@@ -174,6 +180,7 @@ function AlimentePageInner() {
   const foodsInAgeGroup = useMemo(() => {
     if (triedOnly) return getAllFoods();
     if (activeTab === "all") return getAllFoods();
+    if (activeTab === "sub-6") return [];
     if (activeTab === "12+") return getFoodsByAgeGroup("10-12");
     return getFoodsByAgeGroup(activeTab);
   }, [activeTab, triedOnly]);
@@ -362,6 +369,8 @@ function AlimentePageInner() {
             <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
               {searchTrim ? (
                 <>Niciun aliment găsit pentru „{searchTrim}”</>
+              ) : activeTab === "sub-6" ? (
+                <>Sub 6 luni se recomandă doar lapte. Începe diversificarea după 6 luni.</>
               ) : (
                 <>
                   Niciun aliment încercat încă. Jurnalizează prima masă!

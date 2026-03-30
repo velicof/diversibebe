@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/useUser";
+import { createClient } from "@/lib/supabase/client";
 import { upsertCurrentBaby } from "@/app/lib/supabaseData";
 import {
   getCurrentUser,
@@ -14,8 +15,8 @@ type Gender = "boy" | "girl" | null;
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, loading } = useUser();
-  const [guardDone, setGuardDone] = useState(false);
+  const { user, userId, loading } = useUser();
+  const [checking, setChecking] = useState(true);
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState<Gender>(null);
@@ -40,8 +41,25 @@ export default function OnboardingPage() {
       router.replace("/dashboard");
       return;
     }
-    setGuardDone(true);
-  }, [user, loading, router]);
+    if (!userId) {
+      setChecking(false);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from("babies")
+      .select("id, name, birthdate")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.name && data?.birthdate) {
+          router.replace("/dashboard");
+        } else {
+          setChecking(false);
+        }
+      })
+      .catch(() => setChecking(false));
+  }, [user, loading, userId, router]);
 
   const canSubmit =
     babyName.trim().length >= 2 && birthDate.trim().length > 0;
@@ -62,16 +80,7 @@ export default function OnboardingPage() {
     router.push("/dashboard");
   }
 
-  if (loading || !guardDone) {
-    return (
-      <div
-        className="min-h-screen w-full bg-[#FFF8F6] flex items-center justify-center px-6"
-        style={{ fontFamily: '"Nunito", sans-serif' }}
-      >
-        <p className="text-[14px] text-[#8B7A8E]">Se încarcă…</p>
-      </div>
-    );
-  }
+  if (checking) return null;
 
   return (
     <div

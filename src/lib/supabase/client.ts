@@ -1,5 +1,8 @@
 import { createBrowserClient } from "@supabase/ssr";
 
+// Make sure https://www.diversibebe.com is in Google Cloud
+// Authorized JavaScript Origins
+
 // After this migration, run this SQL in Supabase to restore proper RLS:
 // DROP POLICY IF EXISTS "allow_all_food_journal" ON food_journal;
 // CREATE POLICY "Users can manage own journal" ON food_journal FOR ALL USING (auth.uid() = user_id);

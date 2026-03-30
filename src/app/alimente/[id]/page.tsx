@@ -99,8 +99,12 @@ export default function FoodDetailPage({
     if (!fromCatalog) return undefined;
 
     const ageLabel =
-      fromCatalog.ageGroup === "6-8"
-        ? "6-8 luni"
+      fromCatalog.ageGroup === "6-7"
+        ? "6-7 luni"
+        : fromCatalog.ageGroup === "7-8"
+        ? "7-8 luni"
+        : fromCatalog.ageGroup === "6-8"
+        ? "6-7 / 7-8 luni"
         : fromCatalog.ageGroup === "8-10"
         ? "8-10 luni"
         : "10-12 luni";

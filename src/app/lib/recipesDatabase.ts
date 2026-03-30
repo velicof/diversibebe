@@ -17,7 +17,8 @@ import {
 export type MealType = "mic-dejun" | "pranz" | "cina" | "gustare";
 
 /** Benzi de vârstă pentru porții recomandate (luni). */
-export type AgeBandId = "6-8" | "8-10" | "10-12";
+export type AgeBandId = "6-7" | "7-8" | "8-10" | "10-12";
+type LegacyAgeBandId = "6-8";
 
 export type RecipeCatalogItem = {
   id: string;
@@ -43,9 +44,9 @@ export type RecipeCatalogItem = {
    * Porție recomandată (g preparat) per bandă, pentru bebeluș.
    * Lipsă = se folosesc valorile implicite din `recipePortions.ts`.
    */
-  babyPortionGramsByAgeBand?: Partial<Record<AgeBandId, number>>;
+  babyPortionGramsByAgeBand?: Partial<Record<AgeBandId | LegacyAgeBandId, number>>;
   /** Notă scurtă despre textură per bandă (opțional). */
-  textureNoteByAgeBand?: Partial<Record<AgeBandId, string>>;
+  textureNoteByAgeBand?: Partial<Record<AgeBandId | LegacyAgeBandId, string>>;
 };
 
 const LEGACY_RECIPES: RecipeCatalogItem[] = [

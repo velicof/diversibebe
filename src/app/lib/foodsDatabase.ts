@@ -6,7 +6,7 @@ export type FoodCategory =
   | "grasimi"
   | "condimente";
 
-export type AgeGroup = "6-8" | "8-10" | "10-12";
+export type AgeGroup = "6-7" | "7-8" | "8-10" | "10-12" | "6-8";
 
 export interface Food {
   id: string;

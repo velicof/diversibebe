@@ -327,7 +327,8 @@ export default function DashboardPage() {
   }
 
   const nextGroupMap: Record<typeof ageGroup, string> = {
-    "6-8": "8-10",
+    "6-7": "7-8",
+    "7-8": "8-10",
     "8-10": "10-12",
     "10-12": "12+",
   };

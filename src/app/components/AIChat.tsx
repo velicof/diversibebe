@@ -333,11 +333,14 @@ Numele părintelui: ${user.parentName || "Părintele"}
         ? 132
         : 92;
 
-  if (
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/register/step2"
-  ) {
+  const hiddenPaths = [
+    "/login",
+    "/register",
+    "/onboarding",
+    "/forgot-password",
+    "/register/confirm",
+  ];
+  if (hiddenPaths.some((p) => pathname.startsWith(p))) {
     return null;
   }
 

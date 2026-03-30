@@ -10,7 +10,7 @@ import Navbar from "../components/Navbar";
 import { getRecipes, parseDate, type MealType } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 
-type AgeFilterId = "all" | "4" | "6" | "8" | "10" | "12";
+type AgeFilterId = "all" | "4" | "6" | "7" | "8" | "10" | "12";
 type MealFilterId = "all" | MealType;
 
 const RECIPES = getRecipes();
@@ -45,6 +45,7 @@ const MEAL_FILTERS: Array<{ id: MealFilterId; label: string }> = [
 const AGE_MIN_MONTHS: Record<Exclude<AgeFilterId, "all">, number> = {
   "4": 4,
   "6": 6,
+  "7": 7,
   "8": 8,
   "10": 10,
   "12": 12,
@@ -54,6 +55,7 @@ const AGE_FILTERS: Array<{ id: AgeFilterId; label: string }> = [
   { id: "all", label: "Toate" },
   { id: "4", label: "4+ luni" },
   { id: "6", label: "6+ luni" },
+  { id: "7", label: "7+ luni" },
   { id: "8", label: "8+ luni" },
   { id: "10", label: "10+ luni" },
   { id: "12", label: "12+ luni" },
@@ -104,7 +106,8 @@ export default function RetetePage() {
           : 0;
       let next: AgeFilterId = "12";
       if (ageMonths < 6) next = "4";
-      else if (ageMonths < 8) next = "6";
+      else if (ageMonths < 7) next = "6";
+      else if (ageMonths < 8) next = "7";
       else if (ageMonths < 10) next = "8";
       else if (ageMonths < 12) next = "10";
       else next = "12";

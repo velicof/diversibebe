@@ -2,21 +2,23 @@ import { parseDate } from "./store";
 import type { AgeBandId, RecipeCatalogItem } from "./recipesDatabase";
 
 export const BABY_PORTIONS: Record<string, Record<string, number>> = {
-  "6-8": { pranz: 60, "mic-dejun": 0, cina: 0, gustare: 35 },
+  "6-7": { pranz: 60, "mic-dejun": 0, cina: 0, gustare: 0 },
   "7-8": { pranz: 90, "mic-dejun": 70, cina: 0, gustare: 35 },
   "8-10": { pranz: 145, "mic-dejun": 120, cina: 100, gustare: 45 },
   "10-12": { pranz: 165, "mic-dejun": 130, cina: 120, gustare: 55 },
 };
 
 export function ageMonthsToAgeBand(ageMonths: number): AgeBandId {
-  if (ageMonths < 8) return "6-8";
+  if (ageMonths < 7) return "6-7";
+  if (ageMonths < 8) return "7-8";
   if (ageMonths < 10) return "8-10";
   return "10-12";
 }
 
 export function ageBandLabelRo(band: AgeBandId): string {
   const m: Record<AgeBandId, string> = {
-    "6-8": "6–8 luni",
+    "6-7": "6–7 luni",
+    "7-8": "7–8 luni",
     "8-10": "8–10 luni",
     "10-12": "10–12 luni",
   };
@@ -54,9 +56,9 @@ export function readBabyAgeMonthsFromStorage(): number | null {
 function firstPositiveRecipeBandGrams(recipe: RecipeCatalogItem): number {
   const m = recipe.babyPortionGramsByAgeBand;
   if (!m) return 0;
-  const order: AgeBandId[] = ["6-8", "8-10", "10-12"];
+  const order: AgeBandId[] = ["6-7", "7-8", "8-10", "10-12"];
   for (const k of order) {
-    const v = m[k];
+    const v = m[k] ?? m["6-8"];
     if (typeof v === "number" && v > 0) return v;
   }
   for (const v of Object.values(m)) {
@@ -104,22 +106,32 @@ export function getBabyPortionGrams(
   const months = typeof ageMonths === "number" ? ageMonths : 8;
   const babyBand = ageMonthsToAgeBand(months);
 
-  const exact = recipe.babyPortionGramsByAgeBand?.[babyBand];
+  const exact =
+    recipe.babyPortionGramsByAgeBand?.[babyBand] ??
+    ((babyBand === "6-7" || babyBand === "7-8"
+      ? recipe.babyPortionGramsByAgeBand?.["6-8"]
+      : undefined) as number | undefined);
   if (typeof exact === "number" && exact > 0) return exact;
 
   const bandFallback: AgeBandId[] =
-    babyBand === "6-8"
-      ? ["6-8", "8-10", "10-12"]
+    babyBand === "6-7"
+      ? ["6-7", "7-8", "8-10", "10-12"]
+      : babyBand === "7-8"
+        ? ["7-8", "6-7", "8-10", "10-12"]
       : babyBand === "8-10"
-        ? ["8-10", "6-8", "10-12"]
-        : ["10-12", "8-10", "6-8"];
+        ? ["8-10", "7-8", "6-7", "10-12"]
+        : ["10-12", "8-10", "7-8", "6-7"];
   for (const b of bandFallback) {
-    const g = recipe.babyPortionGramsByAgeBand?.[b];
+    const g =
+      recipe.babyPortionGramsByAgeBand?.[b] ??
+      ((b === "6-7" || b === "7-8"
+        ? recipe.babyPortionGramsByAgeBand?.["6-8"]
+        : undefined) as number | undefined);
     if (typeof g === "number" && g > 0) return g;
   }
 
   const tableBand =
-    months >= 10 ? "10-12" : months >= 8 ? "8-10" : months >= 7 ? "7-8" : "6-8";
+    months >= 10 ? "10-12" : months >= 8 ? "8-10" : months >= 7 ? "7-8" : "6-7";
   const portions = BABY_PORTIONS[tableBand];
   let grams = portions?.[recipe.mealType] ?? 0;
   if (grams <= 0 && portions) {

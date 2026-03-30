@@ -60,7 +60,7 @@ function getBabyPortion(ageLabel: string): string {
   const twelvePlus =
     "Porție orientativă 150-250g. La această vârstă bebelușul mănâncă aproape ca un adult mic!";
 
-  if (s.includes("6-8")) return sixToEight;
+  if (s.includes("6-7") || s.includes("7-8") || s.includes("6-8")) return sixToEight;
   if (s.includes("8-10")) return eightToTen;
   if (s.includes("10-12")) return tenToTwelve;
 
