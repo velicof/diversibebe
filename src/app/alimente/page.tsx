@@ -12,6 +12,8 @@ import {
   getFoodStatusMeta,
   getFoodsByAgeGroup,
   parseDate,
+  TRIED_FOODS_UPDATED_EVENT,
+  type TriedFoodsOptimisticDetail,
 } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 
@@ -173,7 +175,39 @@ function AlimentePageInner() {
     return () => {
       active = false;
     };
-  }, [triedOnly, authLoading, userId, storeVersion]);
+  }, [triedOnly, authLoading, userId]);
+
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const e = ev as CustomEvent<TriedFoodsOptimisticDetail>;
+      const d = e.detail;
+      if (!d?.food_id) return;
+      setTriedFoods((prev) => {
+        const idx = prev.findIndex((t) => t.food_id === d.food_id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = {
+            ...next[idx]!,
+            food_name: d.food_name,
+            try_count: d.try_count,
+            first_tried_at: d.first_tried_at,
+          };
+          return next;
+        }
+        return [
+          {
+            food_id: d.food_id,
+            food_name: d.food_name,
+            try_count: d.try_count,
+            first_tried_at: d.first_tried_at,
+          },
+          ...prev,
+        ];
+      });
+    };
+    window.addEventListener(TRIED_FOODS_UPDATED_EVENT, handler);
+    return () => window.removeEventListener(TRIED_FOODS_UPDATED_EVENT, handler);
+  }, []);
 
   const triedIdSet = useMemo(
     () => new Set(triedFoods.map((t) => t.food_id)),

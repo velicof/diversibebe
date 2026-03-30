@@ -560,8 +560,7 @@ export default function RecipeDetailPage({
                     .from("food_journal")
                     .insert({
                       user_id: userId,
-                      baby_id: null,
-                      food_id: null,
+                      food_id: recipe.id,
                       food_name: recipe.name,
                       meal_type: "reteta",
                       reaction: "pozitiv",
@@ -596,6 +595,10 @@ export default function RecipeDetailPage({
                       .eq("user_id", userId)
                       .eq("recipe_id", recipe.id);
                     setIsFavorite(false);
+                    console.log("[retete] favorite toggled", {
+                      isFavorite: false,
+                      isCooked,
+                    });
                   } else {
                     await supabaseClient.from("favorite_recipes").insert({
                       user_id: userId,
@@ -603,6 +606,10 @@ export default function RecipeDetailPage({
                       saved_at: new Date().toISOString(),
                     });
                     setIsFavorite(true);
+                    console.log("[retete] favorite toggled", {
+                      isFavorite: true,
+                      isCooked,
+                    });
                   }
                 }}
               >

@@ -12,6 +12,7 @@ import {
   getRecipes,
   TRIED_FOODS_UPDATED_EVENT,
   type FoodEntry,
+  type TriedFoodsOptimisticDetail,
 } from "../lib/store";
 import type { FoodCatalogItem } from "../lib/store";
 import type { RecipeCatalogItem } from "../lib/recipesDatabase";
@@ -297,19 +298,32 @@ function JurnalInner() {
     }
 
     if (entry.type === "food") {
+      const nowIso = new Date().toISOString();
       const { data: existing } = await supabaseClient
         .from("tried_foods")
-        .select("id, try_count")
+        .select("id, try_count, first_tried_at")
         .eq("user_id", userId)
         .eq("food_id", entry.foodId)
         .maybeSingle();
 
+      let detail: TriedFoodsOptimisticDetail | null = null;
+
       if (existing) {
+        const nextCount = Number(existing.try_count ?? 0) + 1;
         const { error: triedError } = await supabaseClient
           .from("tried_foods")
-          .update({ try_count: Number(existing.try_count ?? 0) + 1 })
+          .update({ try_count: nextCount })
           .eq("id", existing.id);
-        if (triedError) console.error("tried_foods error:", triedError);
+        if (triedError) {
+          console.error("tried_foods error:", triedError);
+        } else {
+          detail = {
+            food_id: entry.foodId,
+            food_name: entry.foodName,
+            try_count: nextCount,
+            first_tried_at: existing.first_tried_at ?? nowIso,
+          };
+        }
       } else {
         const { error: triedError } = await supabaseClient
           .from("tried_foods")
@@ -318,15 +332,29 @@ function JurnalInner() {
             baby_id: null,
             food_id: entry.foodId,
             food_name: entry.foodName,
-            first_tried_at: new Date().toISOString(),
+            first_tried_at: nowIso,
             try_count: 1,
           });
-        if (triedError) console.error("tried_foods error:", triedError);
+        if (triedError) {
+          console.error("tried_foods error:", triedError);
+        } else {
+          detail = {
+            food_id: entry.foodId,
+            food_name: entry.foodName,
+            try_count: 1,
+            first_tried_at: nowIso,
+          };
+        }
       }
-    }
 
-    if (entry.type === "food" && typeof window !== "undefined") {
-      window.dispatchEvent(new Event(TRIED_FOODS_UPDATED_EVENT));
+      if (detail && typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent<TriedFoodsOptimisticDetail>(
+            TRIED_FOODS_UPDATED_EVENT,
+            { detail }
+          )
+        );
+      }
     }
 
     setToast("success");

@@ -35,7 +35,7 @@ export default function ProfilBebelusPage() {
           setBirthDate(data.birthdate || "");
           setWeight(
             data.weight_kg != null && !Number.isNaN(Number(data.weight_kg))
-              ? String(data.weight_kg)
+              ? String(Math.round(Number(data.weight_kg) * 1000))
               : ""
           );
           if (data.gender === "girl" || data.gender === "boy") {
@@ -66,7 +66,9 @@ export default function ProfilBebelusPage() {
       .update({
         name: babyName,
         birthdate: birthDate,
-        weight_kg: weight ? parseFloat(weight.replace(",", ".")) : null,
+        weight_kg: weight
+          ? parseFloat(weight.replace(",", ".")) / 1000
+          : null,
         gender,
       })
       .eq("user_id", userId);
@@ -147,12 +149,14 @@ export default function ProfilBebelusPage() {
           </div>
 
           <div>
-            <div className="text-[12px] font-semibold text-[#8B7A8E] mb-2">Greutate la naștere</div>
+            <div className="text-[12px] font-semibold text-[#8B7A8E] mb-2">
+              Greutate la naștere <span className="font-normal">(în grame)</span>
+            </div>
             <input
               type="number"
-              step="0.001"
-              min="0.5"
-              max="15"
+              step="1"
+              min="500"
+              max="15000"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
               className="w-full py-[14px] px-[16px] bg-white border border-[#EDE7F6] rounded-2xl text-[15px] text-[#3D2C3E] outline-none"

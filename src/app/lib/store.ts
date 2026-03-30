@@ -90,6 +90,13 @@ export const STORE_UPDATED_EVENT = "diversibebe_store_updated";
 /** Bump `useStoreRefresh` after Supabase `tried_foods` changes (e.g. from jurnal). */
 export const TRIED_FOODS_UPDATED_EVENT = "diversibebe_tried_foods_updated";
 
+export type TriedFoodsOptimisticDetail = {
+  food_id: string;
+  food_name: string;
+  try_count: number;
+  first_tried_at: string;
+};
+
 // Supabase-first: legacy cloud sync disabled.
 
 type PersistedData = { appState: AppState; accounts: UserAccount[] };
