@@ -68,7 +68,7 @@ export const PRANZ_6_8_RECIPES: RecipeCatalogItem[] = [
     emoji: "🍠",
     mealType: "pranz",
     time: "20 min",
-    age: "4+ luni",
+    age: "6+ luni",
     difficulty: "Ușor",
     servings: "2-3",
     ingredients: [

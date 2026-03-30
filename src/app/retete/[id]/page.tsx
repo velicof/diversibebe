@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
 import { useUser } from "@/lib/useUser";
 import { estimateRecipeNutrition, getServingSuggestion } from "@/app/lib/nutrition";
+import { createClient } from "@/lib/supabase/client";
 import { supabaseClient } from "@/lib/supabaseClient";
 import {
   ageBandLabelRo,
@@ -29,13 +30,6 @@ const MEAL_LABELS: Record<RecipeCatalogItem["mealType"], string> = {
   pranz: "Prânz",
   cina: "Cină",
   gustare: "Gustare",
-};
-
-const JOURNAL_MEAL_TYPE_MAP: Record<string, string> = {
-  "mic-dejun": "mic-dejun",
-  pranz: "pranz",
-  cina: "cina",
-  gustare: "gustare",
 };
 
 function PillView({ pill }: { pill: Pill }) {
@@ -551,37 +545,38 @@ export default function RecipeDetailPage({
                     return;
                   }
 
-                  const journalMealType =
-                    JOURNAL_MEAL_TYPE_MAP[recipe.mealType] ?? "pranz";
+                  const supabase = createClient();
 
-                  const { error: cookedErr } = await supabaseClient
+                  const { error: cookedError } = await supabase
                     .from("cooked_recipes")
-                    .upsert(
-                      {
-                        user_id: userId,
-                        recipe_id: recipe.id,
-                        cooked_at: new Date().toISOString(),
-                      },
-                      { onConflict: "user_id,recipe_id" }
-                    );
-                  if (cookedErr) {
-                    alert("Eroare: " + cookedErr.message);
+                    .insert({
+                      user_id: userId,
+                      recipe_id: recipe.id,
+                      cooked_at: new Date().toISOString(),
+                    });
+
+                  if (cookedError && cookedError.code !== "23505") {
+                    alert("Eroare: " + cookedError.message);
                     return;
                   }
 
-                  const { error: journalErr } = await supabaseClient
-                    .from("food_journal")
-                    .insert({
-                      user_id: userId,
-                      food_name: recipe.name,
-                      meal_type: journalMealType,
-                      reaction: "pozitiv",
-                      notes: "Rețetă gătită: " + recipe.name,
-                      logged_at: new Date().toISOString(),
-                    });
-                  if (journalErr) {
-                    alert("Eroare jurnal: " + journalErr.message);
-                  }
+                  const mealTypeMap: Record<string, string> = {
+                    "mic-dejun": "mic-dejun",
+                    pranz: "pranz",
+                    cina: "cina",
+                    gustare: "gustare",
+                  };
+                  const journalMealType =
+                    mealTypeMap[recipe.mealType] ?? "pranz";
+
+                  await supabase.from("food_journal").insert({
+                    user_id: userId,
+                    food_name: recipe.name,
+                    meal_type: journalMealType,
+                    reaction: "pozitiv",
+                    notes: "Rețetă gătită: " + recipe.name,
+                    logged_at: new Date().toISOString(),
+                  });
 
                   setIsCooked(true);
                 }}

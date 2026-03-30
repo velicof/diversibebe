@@ -56,7 +56,7 @@ const LEGACY_RECIPES: RecipeCatalogItem[] = [
     emoji: "🥒",
     mealType: "pranz",
     time: "15 min",
-    age: "4+ luni",
+    age: "6+ luni",
     difficulty: "Ușor",
     servings: 1,
     ingredients: [
@@ -90,7 +90,7 @@ const LEGACY_RECIPES: RecipeCatalogItem[] = [
     emoji: "🥕",
     mealType: "pranz",
     time: "20 min",
-    age: "4+ luni",
+    age: "6+ luni",
     difficulty: "Ușor",
     servings: 1,
     ingredients: [
@@ -119,7 +119,7 @@ const LEGACY_RECIPES: RecipeCatalogItem[] = [
     emoji: "🍌",
     mealType: "mic-dejun",
     time: "5 min",
-    age: "5+ luni",
+    age: "6+ luni",
     difficulty: "Ușor",
     servings: 1,
     ingredients: [
@@ -657,7 +657,7 @@ const MIC_DEJUN_RECIPES: RecipeCatalogItem[] = [
     emoji: "🍠",
     mealType: "mic-dejun",
     time: "20 min",
-    age: "4+ luni",
+    age: "6+ luni",
     difficulty: "Ușor",
     servings: 1,
     ingredients: [
@@ -1469,8 +1469,8 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
       "Întoarce pulpele. Adaugă legumele pe tavă cu restul de ulei.",
       "Coace încă 30 minute până pulpele sunt aurii.",
       "Verifică să nu fie roz (75°C intern).",
-      "Scoate pielea de pe pulpe pentru bebeluși!",
-      "Stropește cu suc de lămâie. Servește cu iaurt.",
+      "IMPORTANT: Scoate pielea și dezosează complet! Sfărâmă carnea fin pentru 8-12 luni, taie bucăți mici pentru 12+ luni.",
+      "Stropește cu suc de lămâie. Servește cu iaurt. Nu servi pulpa întreagă bebelușului — doar carnea dezosată și sfărâmată.",
     ],
     allergens: ["Lactoză"],
     relatedFoods: ["pui", "ardei-gras", "cartof-dulce", "dovlecel", "iaurt"],
@@ -1995,7 +1995,7 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
     emoji: "🥕",
     mealType: "pranz",
     time: "25 min",
-    age: "4+ luni",
+    age: "6+ luni",
     difficulty: "Ușor",
     servings: "1-2",
     ingredients: [
