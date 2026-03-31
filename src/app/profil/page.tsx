@@ -389,7 +389,9 @@ export default function ProfilPage() {
         } catch {
           // ignore
         }
-        router.push("/dashboard");
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 50);
       },
     },
     { key: "rate", emoji: "⭐", text: "Evaluează aplicația" },

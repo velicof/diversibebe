@@ -123,16 +123,19 @@ export default function AIChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      const mode = localStorage.getItem("bebeAsistAutoOpen");
-      if (mode === "support") {
-        localStorage.removeItem("bebeAsistAutoOpen");
-        setSupportAutoOpen(true);
-        setIsOpen(true);
+    const timer = setTimeout(() => {
+      try {
+        const mode = localStorage.getItem("bebeAsistAutoOpen");
+        if (mode === "support") {
+          localStorage.removeItem("bebeAsistAutoOpen");
+          setSupportAutoOpen(true);
+          setIsOpen(true);
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
+    }, 200);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
