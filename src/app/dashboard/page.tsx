@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
 import Navbar from "../components/Navbar";
+import BabyAvatar from "../components/BabyAvatar";
 import type { FoodCatalogItem, FoodEntry, UserAccount } from "../lib/store";
 import { supabaseClient } from "@/lib/supabaseClient";
 import {
@@ -140,23 +141,26 @@ export default function DashboardPage() {
   const [streakCount, setStreakCount] = useState(0);
   const [babyName, setBabyName] = useState("");
   const [babyBirthdate, setBabyBirthdate] = useState("");
+  const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) {
       setBabyName("");
       setBabyBirthdate("");
+      setBabyAvatarUrl(null);
       return;
     }
     const supabase = createClient();
     supabase
       .from("babies")
-      .select("name, birthdate, gender")
+      .select("name, birthdate, gender, avatar_url")
       .eq("user_id", userId)
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
           setBabyName(data.name || "");
           setBabyBirthdate(data.birthdate || "");
+          setBabyAvatarUrl(data.avatar_url || null);
         }
       });
   }, [userId]);
@@ -385,10 +389,10 @@ export default function DashboardPage() {
               ) : (
                 <Link
                   href="/profil"
-                  className="w-[44px] h-[44px] rounded-full bg-[#FDE8EE] flex items-center justify-center text-[22px] cursor-pointer"
+                  className="w-[44px] h-[44px] rounded-full bg-[#FDE8EE] flex items-center justify-center cursor-pointer overflow-hidden"
                   aria-label="Profil"
                 >
-                  👶
+                  <BabyAvatar avatarUrl={babyAvatarUrl} size={44} />
                 </Link>
               )}
             </div>

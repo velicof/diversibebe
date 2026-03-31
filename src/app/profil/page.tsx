@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { clearSupabaseDataCache } from "@/app/lib/supabaseData";
+import {
+  clearSupabaseDataCache,
+  uploadBabyAvatar,
+} from "@/app/lib/supabaseData";
 import { calculateBabyAge, getCurrentUser, logoutUser } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
+import { useUser } from "@/lib/useUser";
+import BabyAvatar from "../components/BabyAvatar";
 
 type Row = {
   key: string;
@@ -120,11 +126,52 @@ function CardSection({
 export default function ProfilPage() {
   const storeVersion = useStoreRefresh();
   const router = useRouter();
+  const { userId } = useUser();
   const currentUser = getCurrentUser();
   const babyName = currentUser?.baby.name || "Andrei";
   const parentName = currentUser?.parentName || "Maria Popescu";
   const premium = currentUser?.isPremium ?? true;
   const age = calculateBabyAge(currentUser?.baby.birthDate || "");
+  const [babyId, setBabyId] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      setBabyId(null);
+      setAvatarUrl(null);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from("babies")
+      .select("id, avatar_url")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setBabyId(data?.id ?? null);
+        setAvatarUrl(data?.avatar_url ?? null);
+      });
+  }, [userId, storeVersion]);
+
+  const handlePickAvatar = () => {
+    if (uploading) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId || !babyId) return;
+    setUploading(true);
+    try {
+      const url = await uploadBabyAvatar(babyId, file, userId);
+      if (url) setAvatarUrl(url);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const contulMeu: Row[] = [
     { key: "baby-profile", emoji: "👶", text: "Profilul bebelușului", href: "/profil/bebelus" },
@@ -175,8 +222,28 @@ export default function ProfilPage() {
           ←
         </button>
         <div className="pt-6 flex flex-col items-center text-center">
-          <div className="w-[80px] h-[80px] rounded-full bg-[#FDE8EE] flex items-center justify-center">
-            <span className="text-[40px] leading-none">👶</span>
+          <div className="relative w-[80px] h-[80px]">
+            <div className={`${uploading ? "opacity-60" : ""}`}>
+              <BabyAvatar avatarUrl={avatarUrl} size={80} />
+            </div>
+            <button
+              type="button"
+              onClick={handlePickAvatar}
+              aria-label="Încarcă poză bebeluș"
+              className="absolute right-0 bottom-0 w-[26px] h-[26px] rounded-full bg-[#D4849A] text-white flex items-center justify-center cursor-pointer"
+              disabled={uploading}
+            >
+              <span style={{ fontSize: 13, lineHeight: 1 }}>📷</span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                void handleFileChange(e);
+              }}
+            />
           </div>
 
           <h1 className="mt-4 text-[20px] font-extrabold text-[#3D2C3E]">

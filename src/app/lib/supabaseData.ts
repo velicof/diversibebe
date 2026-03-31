@@ -11,6 +11,7 @@ export type DbBaby = {
   birthdate: string;
   gender: "boy" | "girl" | null;
   weight_kg: number | null;
+  avatar_url?: string | null;
 };
 
 let cachedUserId: string | null = null;
@@ -93,6 +94,38 @@ export async function upsertCurrentBaby(input: {
   if (error || !data) return null;
   cachedBaby = data as DbBaby;
   return cachedBaby;
+}
+
+export async function uploadBabyAvatar(
+  babyId: string,
+  file: File,
+  userId: string
+): Promise<string | null> {
+  try {
+    if (!babyId || !file || !userId) return null;
+    const path = `${userId}/${babyId}.jpg`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+    if (uploadError) return null;
+
+    const publicUrl = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+    if (!publicUrl) return null;
+
+    const { data: updated, error: updateError } = await supabase
+      .from("babies")
+      .update({ avatar_url: publicUrl })
+      .eq("id", babyId)
+      .select("*")
+      .maybeSingle();
+    if (updateError) return null;
+
+    if (updated) cachedBaby = updated as DbBaby;
+    return publicUrl;
+  } catch {
+    return null;
+  }
 }
 
 export async function addFoodJournalEntry(input: {

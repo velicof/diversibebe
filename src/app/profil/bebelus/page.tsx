@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
 import { getCurrentUser, registerUser, type UserAccount } from "../../lib/store";
+import BabyAvatar from "../../components/BabyAvatar";
 
 type Gender = "boy" | "girl";
 
@@ -20,6 +21,7 @@ export default function ProfilBebelusPage() {
   const [birthDate, setBirthDate] = useState("");
   const [weight, setWeight] = useState("");
   const [gender, setGender] = useState<Gender>("boy");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -33,6 +35,7 @@ export default function ProfilBebelusPage() {
         if (data) {
           setBabyName(data.name || "");
           setBirthDate(data.birthdate || "");
+          setAvatarUrl(data.avatar_url || null);
           setWeight(
             data.weight_kg != null && !Number.isNaN(Number(data.weight_kg))
               ? String(Math.round(Number(data.weight_kg) * 1000))
@@ -114,7 +117,7 @@ export default function ProfilBebelusPage() {
 
         <section className="mt-6 flex flex-col items-center text-center">
           <div className="relative w-[88px] h-[88px] rounded-full bg-[#FDE8EE] flex items-center justify-center">
-            <span className="text-[44px] leading-none">👶</span>
+            <BabyAvatar avatarUrl={avatarUrl} size={88} />
             <div className="absolute bottom-0 right-0 w-[28px] h-[28px] rounded-full bg-[#D4849A] flex items-center justify-center">
               <CameraIcon />
             </div>
