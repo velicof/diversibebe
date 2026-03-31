@@ -80,6 +80,7 @@ type FoodJournalRow = {
   symptoms: string[] | null;
   portion: string | null;
   baby_mood: string | null;
+  quantity_grams?: number | null;
 };
 
 function dbReactionToFoodReaction(db: string | null): FoodEntry["reaction"] {
@@ -326,7 +327,7 @@ export default function IstoricPage() {
     supabase
       .from("food_journal")
       .select(
-        "id, food_id, food_name, reaction, notes, logged_at, meal_type, symptoms, portion, baby_mood"
+        "id, food_id, food_name, reaction, notes, logged_at, meal_type, symptoms, portion, baby_mood, quantity_grams"
       )
       .eq("user_id", userId)
       .order("logged_at", { ascending: false })
@@ -390,6 +391,14 @@ export default function IstoricPage() {
     }
     return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   }, [filtered]);
+
+  const quantityByEntryId = useMemo(
+    () =>
+      new Map(
+        journalRows.map((row) => [row.id, row.quantity_grams ?? null] as const)
+      ),
+    [journalRows]
+  );
 
   const chips: { key: FilterKey; label: string }[] = [
     { key: "all", label: "Toate" },
@@ -547,6 +556,11 @@ export default function IstoricPage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-[14px] font-bold text-[#3D2C3E] truncate">
                           {entryDisplayName(e)}
+                          {typeof quantityByEntryId.get(e.id) === "number" ? (
+                            <span className="ml-1 text-[11px] font-normal text-[#8B7A8E]">
+                              {quantityByEntryId.get(e.id)}g
+                            </span>
+                          ) : null}
                         </p>
                         <p className="mt-1 text-[10px] font-semibold text-[#8B7A8E]">
                           {meal.emoji} {meal.label}

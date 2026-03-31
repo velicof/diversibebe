@@ -23,6 +23,11 @@ function ageToMinMonths(age: string) {
   return match ? Number(match[1]) : 0;
 }
 
+function extractMinAge(ageStr: string): number {
+  const match = ageStr.match(/(\d+)/);
+  return match ? Number.parseInt(match[1], 10) : 99;
+}
+
 function normalizeForSearch(s: string) {
   return s
     .toLowerCase()
@@ -210,6 +215,9 @@ export default function RetetePage() {
                 : 4;
 
       list = list.filter((r) => recipeMinAgeIndex(r.age) <= selectedIndex);
+    }
+    if (ageFilter === "all" && mealFilter !== "all" && mealFilter !== "favorite") {
+      list = [...list].sort((a, b) => extractMinAge(a.age) - extractMinAge(b.age));
     }
     return list;
   }, [searchTrim, mealFilter, ageFilter]);

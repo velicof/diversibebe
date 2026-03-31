@@ -183,7 +183,7 @@ export const FOODS_DATABASE: Food[] = [
   },
   {
     id: "broccoli",
-    name: "Varză broccoli",
+    name: "Broccoli",
     emoji: "🥦",
     category: "legume",
     ageGroup: "6-8",

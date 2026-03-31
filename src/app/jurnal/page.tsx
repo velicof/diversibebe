@@ -117,6 +117,7 @@ function JurnalInner() {
   const [dateStr, setDateStr] = useState(todayISO);
   const [timeStr, setTimeStr] = useState(nowTime);
   const [reaction, setReaction] = useState<FoodEntry["reaction"]>(null);
+  const [quantityGrams, setQuantityGrams] = useState("");
   const [portion, setPortion] = useState<FoodEntry["portion"]>(null);
   const [babyMood, setBabyMood] = useState<FoodEntry["babyMood"]>(null);
   const [symptoms, setSymptoms] = useState<string[]>([]);
@@ -267,6 +268,9 @@ function JurnalInner() {
         symptoms: entry.symptoms || [],
         portion: entry.portion || null,
         baby_mood: entry.babyMood || null,
+        quantity_grams: quantityGrams.trim()
+          ? Number.parseInt(quantityGrams, 10)
+          : null,
       });
 
     if (journalError) {
@@ -525,6 +529,22 @@ function JurnalInner() {
               );
             })}
           </div>
+        </section>
+
+        <section className="mt-6">
+          <p className="text-[14px] font-semibold text-[#3D2C3E]">
+            Cantitate mâncată (g)
+          </p>
+          <input
+            type="number"
+            min={1}
+            max={500}
+            value={quantityGrams}
+            onChange={(e) => setQuantityGrams(e.target.value)}
+            placeholder="ex: 150"
+            className="mt-2 w-full rounded-[12px] px-4 py-3 text-[14px] outline-none"
+            style={{ backgroundColor: "#F5F0F8", color: "#3D2C3E" }}
+          />
         </section>
 
         <section className="mt-6">

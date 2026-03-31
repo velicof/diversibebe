@@ -135,6 +135,7 @@ export async function addFoodJournalEntry(input: {
   reaction: string | null;
   notes: string;
   loggedAt: string;
+  quantityGrams?: number | null;
 }): Promise<boolean> {
   const userId = await getCurrentUserId();
   const baby = await getCurrentBaby();
@@ -149,6 +150,7 @@ export async function addFoodJournalEntry(input: {
     reaction: input.reaction,
     notes: input.notes,
     logged_at: input.loggedAt,
+    quantity_grams: input.quantityGrams ?? null,
   });
   return !error;
 }
@@ -162,6 +164,7 @@ export async function listFoodJournal(limit?: number): Promise<
     reaction: string | null;
     notes: string | null;
     logged_at: string;
+    quantity_grams?: number | null;
   }>
 > {
   const userId = await getCurrentUserId();
@@ -182,6 +185,7 @@ export async function listFoodJournal(limit?: number): Promise<
     reaction: string | null;
     notes: string | null;
     logged_at: string;
+    quantity_grams?: number | null;
   }>;
 }
 
