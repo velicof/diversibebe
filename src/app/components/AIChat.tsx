@@ -19,6 +19,22 @@ interface Message {
   content: string;
 }
 
+const SUPPORT_AUTO_MESSAGE = `Bună! 👋 Sunt BebeAsist, asistentul tău pentru diversificare.
+
+Sunt aici să te ajut cu orice întrebare despre aplicație sau despre alimentația bebelușului tău. Iată cum te pot ajuta:
+
+🍽️ **Rețete și alimente** — Ce poate mânca bebelușul la vârsta lui? Ce rețete sunt potrivite?
+
+📅 **Planul săptămânal** — Cum funcționează planificatorul de mese?
+
+📓 **Jurnalul alimentar** — Cum înregistrez o masă sau o reacție?
+
+⚠️ **Alergii** — Cum urmăresc alergiile și reacțiile?
+
+💬 **Orice altceva** — Scrie-mi orice întrebare și îți răspund imediat!
+
+Cu ce te pot ajuta azi?`;
+
 type PersistedUser = {
   email?: string;
   parentName?: string;
@@ -104,7 +120,21 @@ export default function AIChat() {
   const [babyContext, setBabyContext] = useState("");
   const [babyName, setBabyName] = useState("bebelușul");
   const [headerBabyName, setHeaderBabyName] = useState("bebelușul tău");
+  const [supportAutoOpen, setSupportAutoOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      const mode = localStorage.getItem("bebeAsistAutoOpen");
+      if (mode === "support") {
+        localStorage.removeItem("bebeAsistAutoOpen");
+        setSupportAutoOpen(true);
+        setIsOpen(true);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -234,9 +264,12 @@ Numele părintelui: ${user?.parentName || "Părintele"}
           setMessages([
             {
               role: "assistant",
-              content: `Bună! 🍼 Sunt BebeAsist, asistentul tău personal pentru diversificarea lui ${nm || "bebelușului tău"}. Știu că ${nm || "bebelușul"} are ${ageMonths} luni și am acces la istoricul său alimentar. Cu ce te pot ajuta azi?`,
+              content: supportAutoOpen
+                ? SUPPORT_AUTO_MESSAGE
+                : `Bună! 🍼 Sunt BebeAsist, asistentul tău personal pentru diversificarea lui ${nm || "bebelușului tău"}. Știu că ${nm || "bebelușul"} are ${ageMonths} luni și am acces la istoricul său alimentar. Cu ce te pot ajuta azi?`,
             },
           ]);
+          if (supportAutoOpen) setSupportAutoOpen(false);
         }
       } else if (resolvedHeaderName) {
         if (!cancelled) {
@@ -245,9 +278,12 @@ Numele părintelui: ${user?.parentName || "Părintele"}
           setMessages([
             {
               role: "assistant",
-              content: `Bună! 🍼 Sunt BebeAsist, asistentul tău personal pentru diversificarea lui ${resolvedHeaderName}. Cu ce te pot ajuta azi?`,
+              content: supportAutoOpen
+                ? SUPPORT_AUTO_MESSAGE
+                : `Bună! 🍼 Sunt BebeAsist, asistentul tău personal pentru diversificarea lui ${resolvedHeaderName}. Cu ce te pot ajuta azi?`,
             },
           ]);
+          if (supportAutoOpen) setSupportAutoOpen(false);
         }
       } else {
         if (!cancelled) {
@@ -257,10 +293,12 @@ Numele părintelui: ${user?.parentName || "Părintele"}
           setMessages([
             {
               role: "assistant",
-              content:
-                "Bună! 🍼 Sunt BebeAsist, asistentul tău pentru diversificarea bebelușului. Cu ce te pot ajuta azi?",
+              content: supportAutoOpen
+                ? SUPPORT_AUTO_MESSAGE
+                : "Bună! 🍼 Sunt BebeAsist, asistentul tău pentru diversificarea bebelușului. Cu ce te pot ajuta azi?",
             },
           ]);
+          if (supportAutoOpen) setSupportAutoOpen(false);
         }
       }
     } catch {
@@ -271,10 +309,12 @@ Numele părintelui: ${user?.parentName || "Părintele"}
         setMessages([
           {
             role: "assistant",
-            content:
-              "Bună! 🍼 Sunt BebeAsist. Cu ce te pot ajuta cu diversificarea bebelușului?",
+            content: supportAutoOpen
+              ? SUPPORT_AUTO_MESSAGE
+              : "Bună! 🍼 Sunt BebeAsist. Cu ce te pot ajuta cu diversificarea bebelușului?",
           },
         ]);
+        if (supportAutoOpen) setSupportAutoOpen(false);
       }
     }
     })();
@@ -282,7 +322,7 @@ Numele părintelui: ${user?.parentName || "Părintele"}
     return () => {
       cancelled = true;
     };
-  }, [isOpen, userId]);
+  }, [isOpen, userId, supportAutoOpen]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

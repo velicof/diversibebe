@@ -25,6 +25,7 @@ type Row = {
 };
 
 type JournalRow = {
+  date?: string | null;
   food_name: string | null;
   meal_type: string | null;
   reaction: string | null;
@@ -78,6 +79,15 @@ function filterRowsByPeriod(rows: JournalRow[], periodId: PeriodId): JournalRow[
   });
 }
 
+function startDateForPeriod(periodId: PeriodId): string | null {
+  const period = PERIOD_OPTIONS.find((p) => p.id === periodId);
+  if (!period || period.days == null) return null;
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - (period.days - 1));
+  return d.toISOString().slice(0, 10);
+}
+
 function buildJournalPdf({
   rows,
   babyName,
@@ -87,105 +97,102 @@ function buildJournalPdf({
   babyName: string;
   periodLabel: string;
 }) {
-  const pdf = new jsPDF({ unit: "pt", format: "a4" });
-  const pageW = pdf.internal.pageSize.getWidth();
-  const pageH = pdf.internal.pageSize.getHeight();
-  const left = 40;
-  let y = 48;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  let y = 20;
 
-  const ensureSpace = (needed: number) => {
-    if (y + needed < pageH - 52) return;
-    pdf.addPage();
-    y = 48;
-  };
+  doc.setFontSize(20);
+  doc.setTextColor(212, 132, 154);
+  doc.text("Jurnal alimentar", 20, 20);
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(18);
-  pdf.setTextColor(212, 132, 154);
-  pdf.text(`Jurnal alimentar — ${babyName}`, left, y);
-  y += 22;
+  doc.setFontSize(11);
+  doc.setTextColor(139, 122, 142);
+  doc.text(`Bebeluș: ${babyName}`, 20, 30);
+  doc.text(`Perioadă: ${periodLabel}`, 20, 37);
+  doc.text(`Generat: ${new Date().toLocaleDateString("ro-RO")}`, 20, 44);
 
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(10);
-  pdf.setTextColor(120, 120, 130);
-  pdf.text(`Perioadă: ${periodLabel}`, left, y);
-  y += 14;
-  pdf.text(
-    `Data generării: ${new Date().toLocaleDateString("ro-RO")}`,
-    left,
-    y
-  );
-  y += 18;
+  doc.setDrawColor(212, 132, 154);
+  doc.line(20, 48, 190, 48);
+  y = 56;
 
   const grouped = new Map<string, JournalRow[]>();
   for (const row of rows) {
-    const dt = new Date(row.logged_at);
-    if (Number.isNaN(dt.getTime())) continue;
-    const key = dt.toISOString().slice(0, 10);
+    const key = (row.date || row.logged_at?.slice(0, 10) || "").trim();
+    if (!key) continue;
     const arr = grouped.get(key) ?? [];
     arr.push(row);
     grouped.set(key, arr);
   }
 
   const keys = Array.from(grouped.keys()).sort((a, b) => a.localeCompare(b));
-  pdf.setTextColor(61, 44, 62);
+
+  const ensureSpace = (needed: number) => {
+    if (y + needed <= 260) return;
+    doc.addPage();
+    y = 20;
+  };
 
   if (keys.length === 0) {
-    ensureSpace(40);
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(11);
-    pdf.text("Nu există înregistrări în perioada selectată.", left, y);
+    doc.setFontSize(11);
+    doc.setTextColor(139, 122, 142);
+    doc.text("Nu există înregistrări în perioada selectată.", 20, y);
   }
 
   for (const dayKey of keys) {
-    const dayRows = grouped.get(dayKey) ?? [];
-    ensureSpace(28);
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(12);
-    pdf.setTextColor(212, 132, 154);
-    pdf.text(formatLongDateRo(dayKey), left, y);
-    y += 16;
+    ensureSpace(12);
+    doc.setFontSize(12);
+    doc.setTextColor(61, 44, 62);
+    doc.text(formatLongDateRo(dayKey), 20, y);
+    y += 7;
 
-    dayRows.sort((a, b) => {
-      return new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime();
-    });
+    const dayRows = (grouped.get(dayKey) ?? []).sort((a, b) =>
+      String(a.logged_at || "").localeCompare(String(b.logged_at || ""))
+    );
 
     for (const row of dayRows) {
       const meal = MEAL_TYPE_LABELS[row.meal_type ?? ""] ?? "prânz";
-      const title = `${row.food_name || "Masă"} · ${meal} · ${reactionLabel(
-        row.reaction
-      )}`;
-      const note = row.notes?.trim();
+      const reaction =
+        row.reaction === "pozitiv" || row.reaction === "loved"
+          ? "✓ Pozitiv"
+          : row.reaction === "neutru" || row.reaction === "ok"
+            ? "— Neutru"
+            : row.reaction === "negativ" ||
+                row.reaction === "disliked" ||
+                row.reaction === "refused"
+              ? "✗ Negativ"
+              : row.reaction === "alergie"
+                ? "⚠ Alergie"
+                : "— Neutru";
+      const line = `${row.food_name || "Masă"} | ${meal} | ${reaction}`;
 
-      ensureSpace(note ? 44 : 28);
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(10);
-      pdf.setTextColor(61, 44, 62);
-      const titleLines = pdf.splitTextToSize(`• ${title}`, pageW - left * 2);
-      pdf.text(titleLines, left, y);
-      y += titleLines.length * 12;
+      ensureSpace(8);
+      doc.setFontSize(10);
+      doc.setTextColor(61, 44, 62);
+      const lineWrap = doc.splitTextToSize(line, pageW - 40);
+      doc.text(lineWrap, 20, y);
+      y += lineWrap.length * 5;
 
-      if (note) {
-        pdf.setTextColor(120, 120, 130);
-        const noteLines = pdf.splitTextToSize(`Notițe: ${note}`, pageW - left * 2 - 10);
-        pdf.text(noteLines, left + 10, y);
-        y += noteLines.length * 12;
+      if (row.notes?.trim()) {
+        ensureSpace(7);
+        doc.setTextColor(139, 122, 142);
+        const notesWrap = doc.splitTextToSize(`Notițe: ${row.notes.trim()}`, pageW - 44);
+        doc.text(notesWrap, 24, y);
+        y += notesWrap.length * 5;
       }
-      y += 2;
+      y += 1;
     }
-    y += 6;
+    y += 2;
   }
 
-  const pages = pdf.getNumberOfPages();
+  const pages = doc.getNumberOfPages();
   for (let p = 1; p <= pages; p++) {
-    pdf.setPage(p);
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(9);
-    pdf.setTextColor(120, 120, 130);
-    pdf.text("Generat de DiversiBebe · diversibebe.com", left, pageH - 20);
+    doc.setPage(p);
+    doc.setFontSize(9);
+    doc.setTextColor(180, 180, 180);
+    doc.text("Generat de DiversiBebe · diversibebe.com", 20, 285);
   }
 
-  return pdf;
+  return doc;
 }
 
 function RowView({ row }: { row: Row }) {
@@ -302,8 +309,9 @@ export default function ProfilPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
-  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showPeriodModal, setShowPeriodModal] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodId>("7d");
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -343,34 +351,48 @@ export default function ProfilPage() {
   };
 
   const handleExportClick = () => {
-    if (!premium) {
-      setShowPremiumModal(true);
-      return;
-    }
+    setExportNotice(null);
     setShowPeriodModal(true);
   };
 
-  const exportJournalPdf = async (periodId: PeriodId) => {
+  const exportJournalPdf = async () => {
     if (!userId || exportingPdf) return;
     setShowPeriodModal(false);
     setExportingPdf(true);
     try {
       const supabase = createClient();
-      const { data } = await supabase
+      const startDate = startDateForPeriod(selectedPeriod);
+      let query = supabase
         .from("food_journal")
-        .select("food_name, meal_type, reaction, notes, logged_at")
-        .eq("user_id", userId)
-        .order("logged_at", { ascending: true });
+        .select("*")
+        .eq("user_id", userId);
+      if (startDate) {
+        query = query.gte("date", startDate);
+      }
+      const { data } = await query.order("date", { ascending: true });
 
-      const rows = filterRowsByPeriod((data as JournalRow[]) ?? [], periodId);
+      let rows = (data as JournalRow[]) ?? [];
+      if (!rows.length && startDate) {
+        const { data: fallback } = await supabase
+          .from("food_journal")
+          .select("*")
+          .eq("user_id", userId)
+          .order("logged_at", { ascending: true });
+        rows = filterRowsByPeriod((fallback as JournalRow[]) ?? [], selectedPeriod);
+      }
+      if (!rows.length) {
+        setExportNotice("Nu există înregistrări pentru această perioadă");
+        return;
+      }
       const periodLabel =
-        PERIOD_OPTIONS.find((p) => p.id === periodId)?.label ?? "Toate înregistrările";
+        PERIOD_OPTIONS.find((p) => p.id === selectedPeriod)?.label ??
+        "Toate înregistrările";
       const pdf = buildJournalPdf({
         rows,
         babyName: babyName || "bebeluș",
         periodLabel,
       });
-      pdf.save("jurnal-alimentar-diversibebe.pdf");
+      pdf.save(`jurnal-${babyName}-${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch {
       // silent fail
     } finally {
@@ -396,7 +418,19 @@ export default function ProfilPage() {
   ];
 
   const altele: Row[] = [
-    { key: "support", emoji: "❓", text: "Ajutor & suport" },
+    {
+      key: "support",
+      emoji: "❓",
+      text: "Ajutor & suport",
+      onClick: () => {
+        try {
+          localStorage.setItem("bebeAsistAutoOpen", "support");
+        } catch {
+          // ignore
+        }
+        router.push("/dashboard");
+      },
+    },
     { key: "rate", emoji: "⭐", text: "Evaluează aplicația" },
     {
       key: "logout",
@@ -483,54 +517,13 @@ export default function ProfilPage() {
 
         <CardSection title="CONTUL MEU" rows={contulMeu} />
         <CardSection title="SETĂRI" rows={setari} />
+        {exportNotice ? (
+          <p className="mt-3 text-[13px] text-[#8B7A8E] text-center">
+            {exportNotice}
+          </p>
+        ) : null}
         <CardSection title="ALTELE" rows={altele} />
       </main>
-
-      {showPremiumModal ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center px-6"
-          style={{ background: "rgba(0,0,0,0.4)" }}
-          onClick={() => setShowPremiumModal(false)}
-        >
-          <div
-            className="w-full max-w-[360px]"
-            style={{
-              background: "#FFF8F6",
-              borderRadius: 16,
-              padding: 24,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-[18px] font-extrabold text-[#3D2C3E]">
-              Funcționalitate Premium
-            </h3>
-            <p className="mt-2 text-[13px] text-[#8B7A8E] leading-relaxed">
-              Exportul jurnalului în PDF este disponibil pentru utilizatorii premium.
-            </p>
-            <div className="mt-5 flex gap-2">
-              <button
-                type="button"
-                className="flex-1 h-10 rounded-full text-white font-bold cursor-pointer"
-                style={{ background: "#D4849A" }}
-                onClick={() => {
-                  setShowPremiumModal(false);
-                  router.push("/abonament");
-                }}
-              >
-                Upgrade
-              </button>
-              <button
-                type="button"
-                className="flex-1 h-10 rounded-full font-semibold cursor-pointer"
-                style={{ background: "#EDE7F6", color: "#8B7A8E" }}
-                onClick={() => setShowPremiumModal(false)}
-              >
-                Anulare
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       {showPeriodModal ? (
         <div
@@ -539,32 +532,47 @@ export default function ProfilPage() {
           onClick={() => setShowPeriodModal(false)}
         >
           <div
-            className="w-full max-w-[360px]"
+            className="w-full max-w-[360px] rounded-2xl border border-[#EDE7F6]"
             style={{
               background: "#FFF8F6",
-              borderRadius: 16,
               padding: 24,
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-[18px] font-extrabold text-[#3D2C3E]">
-              Selectează perioada
+              Exportă jurnalul
             </h3>
+            <p className="mt-1 text-[13px] text-[#8B7A8E]">
+              Alege perioada dorită
+            </p>
             <div className="mt-4 flex flex-col gap-2">
               {PERIOD_OPTIONS.map((period) => (
                 <button
                   key={period.id}
                   type="button"
                   className="h-10 rounded-full font-semibold cursor-pointer"
-                  style={{ background: "#EDE7F6", color: "#8B7A8E" }}
-                  onClick={() => {
-                    void exportJournalPdf(period.id);
-                  }}
+                  style={
+                    selectedPeriod === period.id
+                      ? { background: "#D4849A", color: "#FFFFFF" }
+                      : { background: "#EDE7F6", color: "#8B7A8E" }
+                  }
+                  onClick={() => setSelectedPeriod(period.id)}
                 >
                   {period.label}
                 </button>
               ))}
             </div>
+            <button
+              type="button"
+              className="mt-4 w-full h-10 rounded-full text-white font-bold cursor-pointer disabled:opacity-70"
+              style={{ background: "#D4849A" }}
+              onClick={() => {
+                void exportJournalPdf();
+              }}
+              disabled={exportingPdf}
+            >
+              {exportingPdf ? "Se generează PDF..." : "Generează PDF"}
+            </button>
             <button
               type="button"
               className="mt-4 w-full h-10 rounded-full font-semibold cursor-pointer"
