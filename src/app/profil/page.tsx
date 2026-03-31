@@ -223,7 +223,7 @@ export default function ProfilPage() {
           ←
         </button>
         <div className="flex flex-col items-center pt-6 pb-4 gap-2">
-          <div className="relative w-24 h-24 flex-shrink-0">
+          <div className="relative w-24 h-24 flex-shrink-0 overflow-hidden rounded-full">
             <div className={`${uploading ? "opacity-60" : ""}`}>
               <BabyAvatar avatarUrl={avatarUrl} size={96} />
             </div>

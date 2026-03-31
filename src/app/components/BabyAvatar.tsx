@@ -13,23 +13,34 @@ export default function BabyAvatar({
   size = 40,
   showEmoji = true,
 }: BabyAvatarProps) {
+  const wrapperStyle = {
+    width: size,
+    height: size,
+    borderRadius: "50%",
+    overflow: "hidden",
+    flexShrink: 0,
+    display: "block",
+  } as const;
+
   if (avatarUrl) {
     return (
-      <Image
-        src={avatarUrl}
-        alt="Avatar bebeluș"
-        width={size}
-        height={size}
-        unoptimized
-        className="rounded-full object-cover"
-      />
+      <div style={wrapperStyle}>
+        <Image
+          src={avatarUrl}
+          alt="Avatar bebeluș"
+          width={size}
+          height={size}
+          unoptimized
+          className="w-full h-full object-cover"
+        />
+      </div>
     );
   }
 
   return (
     <div
-      className="rounded-full flex items-center justify-center"
-      style={{ width: size, height: size, background: "#D4849A" }}
+      className="flex items-center justify-center"
+      style={{ ...wrapperStyle, background: "#D4849A" }}
     >
       {showEmoji ? (
         <span style={{ fontSize: Math.round(size * 0.5), lineHeight: 1 }}>👶</span>
