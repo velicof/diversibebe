@@ -40,6 +40,7 @@ export async function middleware(request: NextRequest) {
     "/alergii",
     "/ghid",
     "/notificari",
+    "/ajutor",
   ];
   const isProtected = protectedRoutes.some((r) => pathname.startsWith(r));
 
