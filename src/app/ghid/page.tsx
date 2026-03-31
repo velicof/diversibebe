@@ -257,7 +257,11 @@ export default function GhidPage() {
               Studiile arată că introducerea timpurie (6-12 luni) REDUCE riscul de alergii.
             </p>
             <ul className="space-y-1">
-              <li>🥚 Ou: gălbenuș la 6 luni, albuș la 8 luni. Observă 48-72h.</li>
+              <li>
+                🥚 Oul: se poate introduce întreg (atât albușul cât și gălbenușul) de la
+                6 luni, începând cu o cantitate mică (1/8 din ou) și crescând treptat.
+                Nu există dovezi că separarea albușului de gălbenuș reduce riscul alergic.
+              </li>
               <li>🐟 Pește: somon/cod la 8 luni. Verifică oasele! Observă 48-72h.</li>
               <li>
                 🥜 Arahide: pastă fină la 8-10 luni dacă fără risc. NU întregi niciodată

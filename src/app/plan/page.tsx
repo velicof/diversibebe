@@ -292,13 +292,16 @@ export default function PlanPage() {
   }, [userId, storeVersion]);
 
   const ageMonths = supabaseBabyAge;
+  const futureAgeMonths =
+    supabaseBabyAge + (currentWeek > 0 ? Math.floor(currentWeek / 4) : 0);
 
   useEffect(() => {
     if (!babyAgeLoaded) return;
-    setSelectedAgeMonths((prev) => prev ?? ageMonths);
-  }, [ageMonths, babyAgeLoaded]);
+    setSelectedAgeMonths(futureAgeMonths);
+  }, [futureAgeMonths, babyAgeLoaded]);
 
-  const effectiveAgeMonths = selectedAgeMonths ?? ageMonths;
+  const effectiveAgeMonths = selectedAgeMonths ?? futureAgeMonths;
+  const isFutureWeekPreview = futureAgeMonths > supabaseBabyAge;
   const isReadOnlyPreview = effectiveAgeMonths !== ageMonths;
 
   useEffect(() => {
@@ -592,6 +595,19 @@ export default function PlanPage() {
             >
               Vizualizezi planul pentru {effectiveAgeMonths} luni · Planul tău activ
               {" "}este pentru {ageMonths} luni
+            </div>
+          ) : null}
+          {isFutureWeekPreview ? (
+            <div
+              className="mt-2 rounded-lg"
+              style={{
+                background: "#FFF3CD",
+                color: "#8B6914",
+                fontSize: 12,
+                padding: "8px 12px",
+              }}
+            >
+              Plan previzualizare pentru {futureAgeMonths} luni
             </div>
           ) : null}
           {isRegeneratingPreview ? (

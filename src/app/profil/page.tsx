@@ -452,7 +452,8 @@ export default function ProfilPage() {
           </div>
           {!avatarUrl ? (
             <p
-              className="text-center"
+              onClick={handlePickAvatar}
+              className="text-center cursor-pointer"
               style={{ color: "#D4849A", fontSize: 11 }}
             >
               Adaugă foto

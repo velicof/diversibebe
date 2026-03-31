@@ -516,7 +516,8 @@ export const FOODS_DATABASE: Food[] = [
     emoji: "🥚",
     category: "proteine",
     ageGroup: "6-8",
-    preparation: "6-8 luni: doar gălbenușul fiert tare. 10+ luni: ou întreg. Niciodată crud!",
+    preparation:
+      "Se poate introduce întreg de la 6 luni, începând cu 1/8 din ou și crescând treptat. Niciodată crud.",
     allergenInfo: "ALERGEN COMUN. Introduceți cu atenție, monitorizați 3-5 zile.",
     nutrients: ["Proteine", "Vitamina D", "Colină"],
     relatedRecipes: [],
