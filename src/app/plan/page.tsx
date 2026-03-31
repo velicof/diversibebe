@@ -245,6 +245,7 @@ export default function PlanPage() {
   const [weekSeedOffset, setWeekSeedOffset] = useState(0);
   const [supabaseBabyAge, setSupabaseBabyAge] = useState<number>(0);
   const [supabaseBabyName, setSupabaseBabyName] = useState<string>("");
+  const [babyAgeLoaded, setBabyAgeLoaded] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [overrideTick, setOverrideTick] = useState(0);
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
@@ -256,10 +257,13 @@ export default function PlanPage() {
     if (!userId) {
       setSupabaseBabyAge(0);
       setSupabaseBabyName("");
+      setSelectedAgeMonths(0);
+      setBabyAgeLoaded(true);
       setBabyAvatarUrl(null);
       setHydrated(true);
       return;
     }
+    setBabyAgeLoaded(false);
     setHydrated(false);
     const supabase = createClient();
     void (async () => {
@@ -274,8 +278,12 @@ export default function PlanPage() {
         if (data?.birthdate) {
           const age = calculateBabyAge(data.birthdate);
           setSupabaseBabyAge(age.months);
+          setSelectedAgeMonths(age.months);
+          setBabyAgeLoaded(true);
         } else {
           setSupabaseBabyAge(0);
+          setSelectedAgeMonths(0);
+          setBabyAgeLoaded(true);
         }
       } finally {
         setHydrated(true);
@@ -286,8 +294,9 @@ export default function PlanPage() {
   const ageMonths = supabaseBabyAge;
 
   useEffect(() => {
+    if (!babyAgeLoaded) return;
     setSelectedAgeMonths((prev) => prev ?? ageMonths);
-  }, [ageMonths]);
+  }, [ageMonths, babyAgeLoaded]);
 
   const effectiveAgeMonths = selectedAgeMonths ?? ageMonths;
   const isReadOnlyPreview = effectiveAgeMonths !== ageMonths;
@@ -419,6 +428,14 @@ export default function PlanPage() {
     },
     [sheet, isReadOnlyPreview]
   );
+
+  if (!babyAgeLoaded) {
+    return (
+      <div className="min-h-screen bg-[#FFF8F6] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-4 border-[#D4849A] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   if (!hydrated) {
     return (
