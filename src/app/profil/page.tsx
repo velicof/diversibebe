@@ -132,6 +132,7 @@ export default function ProfilPage() {
   const parentName = currentUser?.parentName || "Maria Popescu";
   const premium = currentUser?.isPremium ?? true;
   const age = calculateBabyAge(currentUser?.baby.birthDate || "");
+  const profileSubtitle = `mama lui ${babyName} · ${age.display}`;
   const [babyId, setBabyId] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -221,10 +222,10 @@ export default function ProfilPage() {
         >
           ←
         </button>
-        <div className="pt-6 flex flex-col items-center text-center">
-          <div className="relative w-[80px] h-[80px]">
+        <div className="flex flex-col items-center pt-6 pb-4 gap-2">
+          <div className="relative w-24 h-24 flex-shrink-0">
             <div className={`${uploading ? "opacity-60" : ""}`}>
-              <BabyAvatar avatarUrl={avatarUrl} size={80} />
+              <BabyAvatar avatarUrl={avatarUrl} size={96} />
             </div>
             <button
               type="button"
@@ -246,11 +247,11 @@ export default function ProfilPage() {
             />
           </div>
 
-          <h1 className="mt-5 text-[20px] font-extrabold text-[#3D2C3E]">
+          <h2 className="text-xl font-bold text-gray-800" style={{ color: "#3D2C3E" }}>
             {parentName}
-          </h1>
-          <p className="mt-2 text-[13px] font-normal text-[#8B7A8E]">
-            {`mama lui ${babyName} · ${age.display}`}
+          </h2>
+          <p className="text-sm text-gray-500" style={{ color: "#8B7A8E" }}>
+            {profileSubtitle}
           </p>
 
           {premium ? (
