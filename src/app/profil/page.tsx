@@ -246,10 +246,10 @@ export default function ProfilPage() {
             />
           </div>
 
-          <h1 className="mt-4 text-[20px] font-extrabold text-[#3D2C3E]">
+          <h1 className="mt-5 text-[20px] font-extrabold text-[#3D2C3E]">
             {parentName}
           </h1>
-          <p className="mt-1 text-[13px] font-normal text-[#8B7A8E]">
+          <p className="mt-2 text-[13px] font-normal text-[#8B7A8E]">
             {`mama lui ${babyName} · ${age.display}`}
           </p>
 

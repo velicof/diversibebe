@@ -11,6 +11,7 @@ import { getRecipes, parseDate, type MealType } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 import { useUser } from "@/lib/useUser";
 import { createClient } from "@/lib/supabase/client";
+import BabyAvatar from "../components/BabyAvatar";
 
 type AgeFilterId = "all" | "6" | "7" | "8" | "10" | "12";
 type MealFilterId = "all" | MealType | "favorite";
@@ -74,6 +75,7 @@ export default function RetetePage() {
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState<
     string[] | null
   >(null);
+  const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
   const ageFilter = manualAgeFilter ?? profileAgeFilter;
   const prevBirthKey = useRef<string | null>(null);
 
@@ -122,6 +124,7 @@ export default function RetetePage() {
   useEffect(() => {
     if (!userId) {
       setFavoriteRecipeIds([]);
+      setBabyAvatarUrl(null);
       return;
     }
     const supabase = createClient();
@@ -133,6 +136,17 @@ export default function RetetePage() {
       .then(({ data }) => {
         setFavoriteRecipeIds((data ?? []).map((d: any) => d.recipe_id));
       });
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const supabase = createClient();
+    supabase
+      .from("babies")
+      .select("avatar_url")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => setBabyAvatarUrl(data?.avatar_url ?? null));
   }, [userId]);
 
   useEffect(() => {
@@ -207,12 +221,19 @@ export default function RetetePage() {
         style={{ fontFamily: '"Nunito", sans-serif' }}
       >
         <header className="pt-6">
-          <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
-            Rețete 📖
-          </h1>
-          <p className="mt-1 text-[13px] font-normal text-[#8B7A8E]">
-            Rețete simple și sănătoase
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
+                Rețete 📖
+              </h1>
+              <p className="mt-1 text-[13px] font-normal text-[#8B7A8E]">
+                Rețete simple și sănătoase
+              </p>
+            </div>
+            <Link href="/profil" className="shrink-0 cursor-pointer" aria-label="Profil">
+              <BabyAvatar avatarUrl={babyAvatarUrl} size={40} />
+            </Link>
+          </div>
         </header>
 
         <div className="relative mt-5 w-full">

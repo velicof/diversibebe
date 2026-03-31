@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
 import { useUser } from "@/lib/useUser";
 import { supabaseClient } from "@/lib/supabaseClient";
+import BabyAvatar from "../components/BabyAvatar";
 import {
   getAllFoods,
   getFoodStatus,
@@ -84,6 +85,7 @@ function AlimentePageInner() {
   const [triedLoading, setTriedLoading] = useState(false);
   const [triedAuthMissing, setTriedAuthMissing] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
 
   const groupFromUrl = searchParams.get("group");
   const triedOnly = searchParams.get("filter") === "incercate";
@@ -179,6 +181,19 @@ function AlimentePageInner() {
       active = false;
     };
   }, [triedOnly, authLoading, userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setBabyAvatarUrl(null);
+      return;
+    }
+    supabaseClient
+      .from("babies")
+      .select("avatar_url")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => setBabyAvatarUrl(data?.avatar_url ?? null));
+  }, [userId]);
 
   useEffect(() => {
     const handler = (ev: Event) => {
@@ -320,14 +335,21 @@ function AlimentePageInner() {
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center transition-colors">
       <main className="w-full max-w-[393px] px-6 pb-[128px]">
         <header className="pt-6">
-          <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
-            {triedOnly ? "Alimente încercate 🥄" : "Calendarul alimentar 🥄"}
-          </h1>
-          <p className="mt-1 text-[13px] font-normal text-[#8B7A8E]">
-            {triedOnly
-              ? "Doar alimentele deja încercate și jurnalizate pentru bebeluș"
-              : "Alimente recomandate pe grupe de vârstă"}
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
+                {triedOnly ? "Alimente încercate 🥄" : "Calendarul alimentar 🥄"}
+              </h1>
+              <p className="mt-1 text-[13px] font-normal text-[#8B7A8E]">
+                {triedOnly
+                  ? "Doar alimentele deja încercate și jurnalizate pentru bebeluș"
+                  : "Alimente recomandate pe grupe de vârstă"}
+              </p>
+            </div>
+            <Link href="/profil" className="shrink-0 cursor-pointer" aria-label="Profil">
+              <BabyAvatar avatarUrl={babyAvatarUrl} size={40} />
+            </Link>
+          </div>
           {triedOnly ? (
             <Link
               href="/alimente"

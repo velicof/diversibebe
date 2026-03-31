@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
+import BabyAvatar from "../components/BabyAvatar";
 import {
   generateSmartWeekPlan,
   getRecipeTags,
@@ -264,6 +265,7 @@ export default function PlanPage() {
   const [hydrated, setHydrated] = useState(false);
   const [overrideTick, setOverrideTick] = useState(0);
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
+  const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setBirthDate(readBirthDateFromStorage());
@@ -280,6 +282,19 @@ export default function PlanPage() {
       .then(({ data }) => {
         if (data?.birthdate) setBirthDate(data.birthdate);
       });
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setBabyAvatarUrl(null);
+      return;
+    }
+    supabaseClient
+      .from("babies")
+      .select("avatar_url")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => setBabyAvatarUrl(data?.avatar_url ?? null));
   }, [userId]);
 
   const ageMonths = useMemo(() => {
@@ -481,21 +496,26 @@ export default function PlanPage() {
         style={{ fontFamily: '"Nunito", sans-serif' }}
       >
         <header className="pt-6">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="cursor-pointer leading-none"
-            style={{
-              color: "#D4849A",
-              fontSize: 20,
-              padding: 8,
-              background: "none",
-              border: "none",
-            }}
-            aria-label="Înapoi"
-          >
-            ←
-          </button>
+          <div className="flex items-start justify-between">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="cursor-pointer leading-none"
+              style={{
+                color: "#D4849A",
+                fontSize: 20,
+                padding: 8,
+                background: "none",
+                border: "none",
+              }}
+              aria-label="Înapoi"
+            >
+              ←
+            </button>
+            <Link href="/profil" className="shrink-0 cursor-pointer" aria-label="Profil">
+              <BabyAvatar avatarUrl={babyAvatarUrl} size={40} />
+            </Link>
+          </div>
           <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
             Plan săptămânal 📅
           </h1>

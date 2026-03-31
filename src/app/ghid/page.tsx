@@ -1,8 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Navbar from "../components/Navbar";
+import BabyAvatar from "../components/BabyAvatar";
+import Link from "next/link";
+import { useUser } from "@/lib/useUser";
+import { createClient } from "@/lib/supabase/client";
 
 function AccordionCard({
   title,
@@ -57,6 +61,23 @@ function AccordionCard({
 
 export default function GhidPage() {
   const router = useRouter();
+  const { userId } = useUser();
+  const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      setBabyAvatarUrl(null);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from("babies")
+      .select("avatar_url")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => setBabyAvatarUrl(data?.avatar_url ?? null));
+  }, [userId]);
+
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
       <main
@@ -64,21 +85,26 @@ export default function GhidPage() {
         style={{ fontFamily: '"Nunito", sans-serif' }}
       >
         <header className="pt-6">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="cursor-pointer leading-none"
-            style={{
-              color: "#D4849A",
-              fontSize: 20,
-              padding: 8,
-              background: "none",
-              border: "none",
-            }}
-            aria-label="Înapoi"
-          >
-            ←
-          </button>
+          <div className="flex items-start justify-between">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="cursor-pointer leading-none"
+              style={{
+                color: "#D4849A",
+                fontSize: 20,
+                padding: 8,
+                background: "none",
+                border: "none",
+              }}
+              aria-label="Înapoi"
+            >
+              ←
+            </button>
+            <Link href="/profil" className="shrink-0 cursor-pointer" aria-label="Profil">
+              <BabyAvatar avatarUrl={babyAvatarUrl} size={40} />
+            </Link>
+          </div>
           <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
             Ghid de diversificare 📚
           </h1>

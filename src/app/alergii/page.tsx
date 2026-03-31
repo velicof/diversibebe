@@ -7,6 +7,8 @@ import Navbar from "../components/Navbar";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { getAllFoods } from "../lib/store";
 import type { FoodCatalogItem } from "../lib/store";
+import Link from "next/link";
+import BabyAvatar from "../components/BabyAvatar";
 
 const MANUAL_SYMPTOMS = [
   "Roșeață",
@@ -32,6 +34,7 @@ export default function AlergiiPage() {
   const router = useRouter();
   const { userId } = useUser();
   const [allergies, setAllergies] = useState<any[]>([]);
+  const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
   const foods = useMemo(() => getAllFoods(), []);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -68,6 +71,19 @@ export default function AlergiiPage() {
       .then(({ data }) => setAllergies(data || []));
   }, [userId]);
 
+  useEffect(() => {
+    if (!userId) {
+      setBabyAvatarUrl(null);
+      return;
+    }
+    supabaseClient
+      .from("babies")
+      .select("avatar_url")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => setBabyAvatarUrl(data?.avatar_url ?? null));
+  }, [userId]);
+
   const saveManual = async () => {
     if (!picked || symSel.length === 0) return;
     if (!userId) {
@@ -99,21 +115,26 @@ export default function AlergiiPage() {
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
       <main className="w-full max-w-[393px] px-6 pb-[128px]" style={{ fontFamily: '"Nunito", sans-serif' }}>
         <header className="pt-6">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="cursor-pointer leading-none"
-            style={{
-              color: "#D4849A",
-              fontSize: 20,
-              padding: 8,
-              background: "none",
-              border: "none",
-            }}
-            aria-label="Înapoi"
-          >
-            ←
-          </button>
+          <div className="flex items-start justify-between">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="cursor-pointer leading-none"
+              style={{
+                color: "#D4849A",
+                fontSize: 20,
+                padding: 8,
+                background: "none",
+                border: "none",
+              }}
+              aria-label="Înapoi"
+            >
+              ←
+            </button>
+            <Link href="/profil" className="shrink-0 cursor-pointer" aria-label="Profil">
+              <BabyAvatar avatarUrl={babyAvatarUrl} size={40} />
+            </Link>
+          </div>
           <h1 className="text-[22px] font-extrabold text-[#3D2C3E]">
             Jurnal alergii 🛡️
           </h1>
