@@ -5,14 +5,15 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
 import { useUser } from "@/lib/useUser";
+import { createClient } from "@/lib/supabase/client";
 import { supabaseClient } from "@/lib/supabaseClient";
 import BabyAvatar from "../components/BabyAvatar";
 import {
+  calculateBabyAge,
   getAllFoods,
   getFoodStatus,
   getFoodStatusMeta,
   getFoodsByAgeGroup,
-  parseDate,
   TRIED_FOODS_UPDATED_EVENT,
   type FoodStatus,
   type TriedFoodsOptimisticDetail,
@@ -86,6 +87,7 @@ function AlimentePageInner() {
   const [triedAuthMissing, setTriedAuthMissing] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
+  const [supabaseBabyAge, setSupabaseBabyAge] = useState<number>(0);
 
   const groupFromUrl = searchParams.get("group");
   const triedOnly = searchParams.get("filter") === "incercate";
@@ -104,35 +106,31 @@ function AlimentePageInner() {
 
   useEffect(() => {
     if (groupFromUrl && AGE_TAB_IDS.has(groupFromUrl)) return;
-    try {
-      const data = JSON.parse(
-        localStorage.getItem("diversibebe_data") || "{}"
-      ) as {
-        appState?: { currentUser?: { baby?: { birthDate?: string } } };
-        currentUser?: { baby?: { birthDate?: string } };
-      };
-      const birthDate =
-        data.appState?.currentUser?.baby?.birthDate ??
-        data.currentUser?.baby?.birthDate;
-      const d = birthDate ? parseDate(birthDate) : null;
-      const ageMonths =
-        d && !Number.isNaN(d.getTime())
-          ? Math.floor(
-              (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-            )
-          : 0;
-      let tab: AgeTabId = "12+";
-      if (ageMonths < 6) tab = "sub-6";
-      else if (ageMonths < 7) tab = "6-7";
-      else if (ageMonths < 8) tab = "7-8";
-      else if (ageMonths < 10) tab = "8-10";
-      else if (ageMonths < 12) tab = "10-12";
-      else tab = "12+";
-      setActiveTab(tab);
-    } catch {
-      /* ignore */
-    }
-  }, [groupFromUrl, storeVersion]);
+    let tab: AgeTabId = "12+";
+    if (supabaseBabyAge < 6) tab = "sub-6";
+    else if (supabaseBabyAge < 7) tab = "6-7";
+    else if (supabaseBabyAge < 8) tab = "7-8";
+    else if (supabaseBabyAge < 10) tab = "8-10";
+    else if (supabaseBabyAge < 12) tab = "10-12";
+    else tab = "12+";
+    setActiveTab(tab);
+  }, [groupFromUrl, storeVersion, supabaseBabyAge]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const supabase = createClient();
+    supabase
+      .from("babies")
+      .select("birthdate")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.birthdate) {
+          const age = calculateBabyAge(data.birthdate);
+          setSupabaseBabyAge(age.months);
+        }
+      });
+  }, [userId]);
 
   useEffect(() => {
     let active = true;

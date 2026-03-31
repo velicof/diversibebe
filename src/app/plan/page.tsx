@@ -12,7 +12,6 @@ import {
 import {
   ageBandLabelRo,
   ageMonthsToAgeBand,
-  calendarMonthsFromBirthdateString,
   formatApproxBabyServingsRo,
   formatRecipePortionLineRo,
   inferTotalYieldGrams,
@@ -22,8 +21,9 @@ import {
   type MealType,
   type RecipeCatalogItem,
 } from "../lib/recipesDatabase";
+import { calculateBabyAge } from "../lib/store";
 import { useUser } from "@/lib/useUser";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { createClient } from "@/lib/supabase/client";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 
 const RO_MONTHS_LONG = [
@@ -243,7 +243,8 @@ export default function PlanPage() {
   const [currentWeek, setCurrentWeek] = useState(0);
   const [mode, setMode] = useState<"normal" | "cu-fibre">("normal");
   const [weekSeedOffset, setWeekSeedOffset] = useState(0);
-  const [realBabyAge, setRealBabyAge] = useState<number | null>(null);
+  const [supabaseBabyAge, setSupabaseBabyAge] = useState<number>(0);
+  const [supabaseBabyName, setSupabaseBabyName] = useState<string>("");
   const [hydrated, setHydrated] = useState(false);
   const [overrideTick, setOverrideTick] = useState(0);
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
@@ -253,24 +254,28 @@ export default function PlanPage() {
 
   useEffect(() => {
     if (!userId) {
-      setRealBabyAge(null);
+      setSupabaseBabyAge(0);
+      setSupabaseBabyName("");
       setBabyAvatarUrl(null);
       setHydrated(true);
       return;
     }
     setHydrated(false);
+    const supabase = createClient();
     void (async () => {
       try {
-        const { data } = await supabaseClient
+        const { data } = await supabase
           .from("babies")
           .select("birthdate, name, avatar_url")
           .eq("user_id", userId)
           .maybeSingle();
         setBabyAvatarUrl(data?.avatar_url ?? null);
+        setSupabaseBabyName(data?.name || "");
         if (data?.birthdate) {
-          setRealBabyAge(calendarMonthsFromBirthdateString(data.birthdate));
+          const age = calculateBabyAge(data.birthdate);
+          setSupabaseBabyAge(age.months);
         } else {
-          setRealBabyAge(null);
+          setSupabaseBabyAge(0);
         }
       } finally {
         setHydrated(true);
@@ -278,7 +283,7 @@ export default function PlanPage() {
     })();
   }, [userId, storeVersion]);
 
-  const ageMonths = realBabyAge ?? 0;
+  const ageMonths = supabaseBabyAge;
 
   useEffect(() => {
     setSelectedAgeMonths((prev) => prev ?? ageMonths);
@@ -444,7 +449,7 @@ export default function PlanPage() {
     );
   }
 
-  if (realBabyAge === null) {
+  if (!supabaseBabyName && !supabaseBabyAge) {
     return (
       <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
         <main
