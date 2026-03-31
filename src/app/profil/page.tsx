@@ -198,6 +198,7 @@ function buildJournalPdf({
 function RowView({ row }: { row: Row }) {
   const arrowColor = row.red ? "#B8A9BB" : "#B8A9BB";
   const textColor = row.red ? "#E88B8B" : "#3D2C3E";
+  const rowLayoutClass = "w-full flex items-center gap-3 px-[16px] py-[14px]";
 
   if (row.comingSoon) {
     return (
@@ -240,7 +241,7 @@ function RowView({ row }: { row: Row }) {
     return (
       <Link
         href={row.href}
-        className="w-full flex items-center gap-3 px-[16px] py-[14px] cursor-pointer"
+        className={`${rowLayoutClass} cursor-pointer`}
       >
         {content}
       </Link>
@@ -251,7 +252,7 @@ function RowView({ row }: { row: Row }) {
     return (
       <button
         type="button"
-        className="w-full flex items-center gap-3 px-[16px] py-[14px] cursor-pointer"
+        className={`${rowLayoutClass} cursor-pointer`}
         onClick={row.onClick}
       >
         {content}
@@ -259,7 +260,7 @@ function RowView({ row }: { row: Row }) {
     );
   }
 
-  return <div className="w-full flex items-center gap-3 px-[16px] py-[14px]">{content}</div>;
+  return <div className={rowLayoutClass}>{content}</div>;
 }
 
 function CardSection({
@@ -303,8 +304,10 @@ export default function ProfilPage() {
   const babyName = currentUser?.baby.name || "Andrei";
   const parentName = currentUser?.parentName || "Maria Popescu";
   const premium = currentUser?.isPremium ?? true;
-  const age = calculateBabyAge(currentUser?.baby.birthDate || "");
-  const profileSubtitle = `mama lui ${babyName} · ${age.display}`;
+  const [profileAgeDisplay, setProfileAgeDisplay] = useState(
+    calculateBabyAge(currentUser?.baby.birthDate || "").display
+  );
+  const profileSubtitle = `Profilul lui ${babyName} · ${profileAgeDisplay}`;
   const [babyId, setBabyId] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -323,12 +326,13 @@ export default function ProfilPage() {
     const supabase = createClient();
     supabase
       .from("babies")
-      .select("id, avatar_url")
+      .select("id, name, birthdate, avatar_url")
       .eq("user_id", userId)
       .maybeSingle()
       .then(({ data }) => {
         setBabyId(data?.id ?? null);
         setAvatarUrl(data?.avatar_url ?? null);
+        setProfileAgeDisplay(calculateBabyAge(data?.birthdate || "").display);
       });
   }, [userId, storeVersion]);
 
@@ -489,6 +493,14 @@ export default function ProfilPage() {
               }}
             />
           </div>
+          {!avatarUrl ? (
+            <p
+              className="text-center"
+              style={{ color: "#D4849A", fontSize: 11 }}
+            >
+              Adaugă foto
+            </p>
+          ) : null}
 
           <h2 className="text-xl font-bold text-gray-800" style={{ color: "#3D2C3E" }}>
             {parentName}

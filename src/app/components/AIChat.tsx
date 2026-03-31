@@ -23,15 +23,11 @@ const SUPPORT_AUTO_MESSAGE = `Bună! 👋 Sunt BebeAsist, asistentul tău pentru
 
 Sunt aici să te ajut cu orice întrebare despre aplicație sau despre alimentația bebelușului tău. Iată cum te pot ajuta:
 
-🍽️ **Rețete și alimente** — Ce poate mânca bebelușul la vârsta lui? Ce rețete sunt potrivite?
-
-📅 **Planul săptămânal** — Cum funcționează planificatorul de mese?
-
-📓 **Jurnalul alimentar** — Cum înregistrez o masă sau o reacție?
-
-⚠️ **Alergii** — Cum urmăresc alergiile și reacțiile?
-
-💬 **Orice altceva** — Scrie-mi orice întrebare și îți răspund imediat!
+🍽️ Rețete și alimente — Ce poate mânca bebelușul la vârsta lui?
+📅 Planul săptămânal — Cum funcționează planificatorul de mese?
+📓 Jurnalul alimentar — Cum înregistrez o masă sau o reacție?
+⚠️ Alergii — Cum urmăresc alergiile și reacțiile?
+💬 Orice altceva — Scrie-mi orice întrebare!
 
 Cu ce te pot ajuta azi?`;
 

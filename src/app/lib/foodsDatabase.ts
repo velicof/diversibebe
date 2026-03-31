@@ -26,7 +26,7 @@ export const FOODS_DATABASE: Food[] = [
   // === LEGUME (Veggies) ===
   {
     id: "dovleac-butternut",
-    name: "Dovleac butternut",
+    name: "Dovleac plăcintar",
     emoji: "🎃",
     category: "legume",
     ageGroup: "6-8",

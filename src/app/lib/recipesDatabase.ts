@@ -498,7 +498,7 @@ const MIC_DEJUN_RECIPES: RecipeCatalogItem[] = [
     difficulty: "Mediu",
     servings: "1-2",
     ingredients: [
-      "¼ cană dovleac butternut cuburi",
+      "¼ cană dovleac plăcintar cuburi",
       "¼ cană broccoli buchețele",
       "1 ardei gras roșu mic",
       "2 lingurițe ulei de măsline",
@@ -1343,7 +1343,7 @@ const PRANZ_LUNCH_RECIPES: RecipeCatalogItem[] = [
       "4 căței usturoi",
       "4 ardei grași (diverse culori)",
       "1 dovlecel",
-      "1 cană dovleac butternut cuburi",
+      "1 cană dovleac plăcintar cuburi",
       "2 căni fasole verde",
       "4 linguri ulei de măsline",
       "1½ cană roșii pasate",

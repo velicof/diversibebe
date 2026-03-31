@@ -39,8 +39,13 @@ export default function BabyAvatar({
 
   return (
     <div
-      className="flex items-center justify-center"
-      style={{ ...wrapperStyle, background: "#D4849A" }}
+      style={{
+        ...wrapperStyle,
+        background: "#D4849A",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
     >
       {showEmoji ? (
         <span style={{ fontSize: Math.round(size * 0.5), lineHeight: 1 }}>👶</span>
