@@ -9,7 +9,7 @@ import {
   clearSupabaseDataCache,
   uploadBabyAvatar,
 } from "@/app/lib/supabaseData";
-import { calculateBabyAge, getCurrentUser, logoutUser } from "../lib/store";
+import { calculateBabyAge, logoutUser } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 import { useUser } from "@/lib/useUser";
 import BabyAvatar from "../components/BabyAvatar";
@@ -223,7 +223,7 @@ function RowView({ row }: { row: Row }) {
     <>
       <span className="text-[18px] leading-none">{row.emoji}</span>
       <span
-        className="text-[14px] font-normal leading-none flex-1"
+        className="text-[14px] font-normal leading-none flex-1 text-left"
         style={{ color: textColor, fontWeight: row.red ? 600 : 400 }}
       >
         {row.text}
@@ -300,14 +300,15 @@ export default function ProfilPage() {
   const storeVersion = useStoreRefresh();
   const router = useRouter();
   const { userId } = useUser();
-  const currentUser = getCurrentUser();
-  const babyName = currentUser?.baby.name || "Andrei";
-  const parentName = currentUser?.parentName || "Maria Popescu";
-  const premium = currentUser?.isPremium ?? true;
-  const [profileAgeDisplay, setProfileAgeDisplay] = useState(
-    calculateBabyAge(currentUser?.baby.birthDate || "").display
-  );
-  const profileSubtitle = `Profilul lui ${babyName} · ${profileAgeDisplay}`;
+  const premium = true;
+  const [babyData, setBabyData] = useState<{
+    name: string;
+    birthdate: string;
+    avatar_url: string | null;
+  } | null>(null);
+  const babyName = babyData?.name || "";
+  const age = calculateBabyAge(babyData?.birthdate || "");
+  const profileSubtitle = `Profilul lui ${babyName} · ${age.display}`;
   const [babyId, setBabyId] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -321,6 +322,7 @@ export default function ProfilPage() {
     if (!userId) {
       setBabyId(null);
       setAvatarUrl(null);
+      setBabyData(null);
       return;
     }
     const supabase = createClient();
@@ -330,9 +332,17 @@ export default function ProfilPage() {
       .eq("user_id", userId)
       .maybeSingle()
       .then(({ data }) => {
+        if (data) {
+          setBabyData({
+            name: data.name || "",
+            birthdate: data.birthdate || "",
+            avatar_url: data.avatar_url || null,
+          });
+        } else {
+          setBabyData(null);
+        }
         setBabyId(data?.id ?? null);
         setAvatarUrl(data?.avatar_url ?? null);
-        setProfileAgeDisplay(calculateBabyAge(data?.birthdate || "").display);
       });
   }, [userId, storeVersion]);
 
@@ -502,9 +512,6 @@ export default function ProfilPage() {
             </p>
           ) : null}
 
-          <h2 className="text-xl font-bold text-gray-800" style={{ color: "#3D2C3E" }}>
-            {parentName}
-          </h2>
           <p className="text-sm text-gray-500" style={{ color: "#8B7A8E" }}>
             {profileSubtitle}
           </p>

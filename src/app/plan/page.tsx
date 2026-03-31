@@ -68,25 +68,6 @@ const MEAL_CHIP_LABEL: Partial<Record<MealType, string>> = {
   cina: "Cină",
 };
 
-type PersistedShape = {
-  appState?: {
-    currentUser?: { baby?: { birthDate?: string } } | null;
-  };
-};
-
-function readBirthDateFromStorage(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem("diversibebe_data");
-    if (!raw) return null;
-    const data = JSON.parse(raw) as PersistedShape;
-    const bd = data?.appState?.currentUser?.baby?.birthDate;
-    return typeof bd === "string" && bd.trim() ? bd.trim() : null;
-  } catch {
-    return null;
-  }
-}
-
 function recipeMinAgeTier(age: string): number {
   const s = age.trim();
   const plus = s.match(/^(\d+)\s*\+/);
@@ -262,7 +243,7 @@ export default function PlanPage() {
   const [currentWeek, setCurrentWeek] = useState(0);
   const [mode, setMode] = useState<"normal" | "cu-fibre">("normal");
   const [weekSeedOffset, setWeekSeedOffset] = useState(0);
-  const [birthDate, setBirthDate] = useState<string | null>(null);
+  const [realBabyAge, setRealBabyAge] = useState<number | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [overrideTick, setOverrideTick] = useState(0);
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
@@ -271,39 +252,33 @@ export default function PlanPage() {
   const [isRegeneratingPreview, setIsRegeneratingPreview] = useState(false);
 
   useEffect(() => {
-    setBirthDate(readBirthDateFromStorage());
-    setHydrated(true);
-  }, [storeVersion]);
-
-  useEffect(() => {
-    if (!userId) return;
-    supabaseClient
-      .from("babies")
-      .select("birthdate")
-      .eq("user_id", userId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.birthdate) setBirthDate(data.birthdate);
-      });
-  }, [userId]);
-
-  useEffect(() => {
     if (!userId) {
+      setRealBabyAge(null);
       setBabyAvatarUrl(null);
+      setHydrated(true);
       return;
     }
-    supabaseClient
-      .from("babies")
-      .select("avatar_url")
-      .eq("user_id", userId)
-      .maybeSingle()
-      .then(({ data }) => setBabyAvatarUrl(data?.avatar_url ?? null));
-  }, [userId]);
+    setHydrated(false);
+    void (async () => {
+      try {
+        const { data } = await supabaseClient
+          .from("babies")
+          .select("birthdate, name, avatar_url")
+          .eq("user_id", userId)
+          .maybeSingle();
+        setBabyAvatarUrl(data?.avatar_url ?? null);
+        if (data?.birthdate) {
+          setRealBabyAge(calendarMonthsFromBirthdateString(data.birthdate));
+        } else {
+          setRealBabyAge(null);
+        }
+      } finally {
+        setHydrated(true);
+      }
+    })();
+  }, [userId, storeVersion]);
 
-  const ageMonths = useMemo(() => {
-    if (!birthDate) return 0;
-    return calendarMonthsFromBirthdateString(birthDate);
-  }, [birthDate]);
+  const ageMonths = realBabyAge ?? 0;
 
   useEffect(() => {
     setSelectedAgeMonths((prev) => prev ?? ageMonths);
@@ -469,7 +444,7 @@ export default function PlanPage() {
     );
   }
 
-  if (!birthDate) {
+  if (realBabyAge === null) {
     return (
       <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
         <main
