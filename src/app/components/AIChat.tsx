@@ -109,6 +109,9 @@ function pillLabelForPath(pathname: string): string {
 export default function AIChat() {
   const pathname = usePathname();
   const { userId } = useUser();
+  // State-uri reale BebeAsist găsite în cod:
+  // - deschidere chat: isOpen / setIsOpen
+  // - mesaje chat: messages / setMessages
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");

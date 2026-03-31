@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import jsPDF from "jspdf";
 import {
   clearSupabaseDataCache,
   uploadBabyAvatar,
@@ -27,6 +26,7 @@ type Row = {
 type JournalRow = {
   date?: string | null;
   food_name: string | null;
+  recipe_name?: string | null;
   meal_type: string | null;
   reaction: string | null;
   notes: string | null;
@@ -41,159 +41,6 @@ const PERIOD_OPTIONS: Array<{ id: PeriodId; label: string; days: number | null }
   { id: "30d", label: "Ultima lună", days: 30 },
   { id: "all", label: "Toate înregistrările", days: null },
 ];
-
-const MEAL_TYPE_LABELS: Record<string, string> = {
-  "mic-dejun": "mic dejun",
-  pranz: "prânz",
-  cina: "cină",
-  gustare: "gustare",
-};
-
-function reactionLabel(value: string | null) {
-  if (value === "pozitiv" || value === "loved") return "pozitiv ✓";
-  if (value === "neutru" || value === "ok") return "neutru —";
-  if (value === "negativ" || value === "disliked" || value === "refused") return "negativ ✗";
-  if (value === "alergie") return "alergie ⚠";
-  return "neutru —";
-}
-
-function formatLongDateRo(iso: string) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("ro-RO", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function filterRowsByPeriod(rows: JournalRow[], periodId: PeriodId): JournalRow[] {
-  const period = PERIOD_OPTIONS.find((p) => p.id === periodId);
-  if (!period || period.days == null) return rows;
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - (period.days - 1));
-  return rows.filter((row) => {
-    const d = new Date(row.logged_at);
-    return !Number.isNaN(d.getTime()) && d >= start;
-  });
-}
-
-function startDateForPeriod(periodId: PeriodId): string | null {
-  const period = PERIOD_OPTIONS.find((p) => p.id === periodId);
-  if (!period || period.days == null) return null;
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - (period.days - 1));
-  return d.toISOString().slice(0, 10);
-}
-
-function buildJournalPdf({
-  rows,
-  babyName,
-  periodLabel,
-}: {
-  rows: JournalRow[];
-  babyName: string;
-  periodLabel: string;
-}) {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const pageW = doc.internal.pageSize.getWidth();
-  let y = 20;
-
-  doc.setFontSize(20);
-  doc.setTextColor(212, 132, 154);
-  doc.text("Jurnal alimentar", 20, 20);
-
-  doc.setFontSize(11);
-  doc.setTextColor(139, 122, 142);
-  doc.text(`Bebeluș: ${babyName}`, 20, 30);
-  doc.text(`Perioadă: ${periodLabel}`, 20, 37);
-  doc.text(`Generat: ${new Date().toLocaleDateString("ro-RO")}`, 20, 44);
-
-  doc.setDrawColor(212, 132, 154);
-  doc.line(20, 48, 190, 48);
-  y = 56;
-
-  const grouped = new Map<string, JournalRow[]>();
-  for (const row of rows) {
-    const key = (row.date || row.logged_at?.slice(0, 10) || "").trim();
-    if (!key) continue;
-    const arr = grouped.get(key) ?? [];
-    arr.push(row);
-    grouped.set(key, arr);
-  }
-
-  const keys = Array.from(grouped.keys()).sort((a, b) => a.localeCompare(b));
-
-  const ensureSpace = (needed: number) => {
-    if (y + needed <= 260) return;
-    doc.addPage();
-    y = 20;
-  };
-
-  if (keys.length === 0) {
-    doc.setFontSize(11);
-    doc.setTextColor(139, 122, 142);
-    doc.text("Nu există înregistrări în perioada selectată.", 20, y);
-  }
-
-  for (const dayKey of keys) {
-    ensureSpace(12);
-    doc.setFontSize(12);
-    doc.setTextColor(61, 44, 62);
-    doc.text(formatLongDateRo(dayKey), 20, y);
-    y += 7;
-
-    const dayRows = (grouped.get(dayKey) ?? []).sort((a, b) =>
-      String(a.logged_at || "").localeCompare(String(b.logged_at || ""))
-    );
-
-    for (const row of dayRows) {
-      const meal = MEAL_TYPE_LABELS[row.meal_type ?? ""] ?? "prânz";
-      const reaction =
-        row.reaction === "pozitiv" || row.reaction === "loved"
-          ? "✓ Pozitiv"
-          : row.reaction === "neutru" || row.reaction === "ok"
-            ? "— Neutru"
-            : row.reaction === "negativ" ||
-                row.reaction === "disliked" ||
-                row.reaction === "refused"
-              ? "✗ Negativ"
-              : row.reaction === "alergie"
-                ? "⚠ Alergie"
-                : "— Neutru";
-      const line = `${row.food_name || "Masă"} | ${meal} | ${reaction}`;
-
-      ensureSpace(8);
-      doc.setFontSize(10);
-      doc.setTextColor(61, 44, 62);
-      const lineWrap = doc.splitTextToSize(line, pageW - 40);
-      doc.text(lineWrap, 20, y);
-      y += lineWrap.length * 5;
-
-      if (row.notes?.trim()) {
-        ensureSpace(7);
-        doc.setTextColor(139, 122, 142);
-        const notesWrap = doc.splitTextToSize(`Notițe: ${row.notes.trim()}`, pageW - 44);
-        doc.text(notesWrap, 24, y);
-        y += notesWrap.length * 5;
-      }
-      y += 1;
-    }
-    y += 2;
-  }
-
-  const pages = doc.getNumberOfPages();
-  for (let p = 1; p <= pages; p++) {
-    doc.setPage(p);
-    doc.setFontSize(9);
-    doc.setTextColor(180, 180, 180);
-    doc.text("Generat de DiversiBebe · diversibebe.com", 20, 285);
-  }
-
-  return doc;
-}
 
 function RowView({ row }: { row: Row }) {
   const arrowColor = row.red ? "#B8A9BB" : "#B8A9BB";
@@ -371,46 +218,146 @@ export default function ProfilPage() {
 
   const exportJournalPdf = async () => {
     if (!userId || exportingPdf) return;
-    setShowPeriodModal(false);
     setExportingPdf(true);
     try {
+      const periodMap: Record<PeriodId, "week" | "2weeks" | "month" | "all"> = {
+        "7d": "week",
+        "14d": "2weeks",
+        "30d": "month",
+        all: "all",
+      };
+      const period = periodMap[selectedPeriod];
+      const now = new Date();
+      let startDate = new Date();
+      if (period === "week") startDate.setDate(now.getDate() - 7);
+      else if (period === "2weeks") startDate.setDate(now.getDate() - 14);
+      else if (period === "month") startDate.setMonth(now.getMonth() - 1);
+      else startDate = new Date("2000-01-01");
+
       const supabase = createClient();
-      const startDate = startDateForPeriod(selectedPeriod);
-      let query = supabase
+      const { data } = await supabase
         .from("food_journal")
         .select("*")
-        .eq("user_id", userId);
-      if (startDate) {
-        query = query.gte("date", startDate);
-      }
-      const { data } = await query.order("date", { ascending: true });
+        .eq("user_id", userId)
+        .gte("date", startDate.toISOString().split("T")[0])
+        .order("date", { ascending: true });
 
-      let rows = (data as JournalRow[]) ?? [];
-      if (!rows.length && startDate) {
-        const { data: fallback } = await supabase
-          .from("food_journal")
-          .select("*")
-          .eq("user_id", userId)
-          .order("logged_at", { ascending: true });
-        rows = filterRowsByPeriod((fallback as JournalRow[]) ?? [], selectedPeriod);
-      }
-      if (!rows.length) {
-        setExportNotice("Nu există înregistrări pentru această perioadă");
+      const entries = (data as JournalRow[] | null) ?? [];
+      if (!entries.length) {
+        alert("Nu există înregistrări pentru această perioadă.");
         return;
       }
-      const periodLabel =
-        PERIOD_OPTIONS.find((p) => p.id === selectedPeriod)?.label ??
-        "Toate înregistrările";
-      const pdf = buildJournalPdf({
-        rows,
-        babyName: babyName || "bebeluș",
-        periodLabel,
-      });
-      pdf.save(`jurnal-${babyName}-${new Date().toISOString().slice(0, 10)}.pdf`);
+
+      const byDay: Record<string, JournalRow[]> = {};
+      for (const e of entries) {
+        const day = e.date?.slice(0, 10) || e.logged_at?.slice(0, 10) || "necunoscut";
+        if (!byDay[day]) byDay[day] = [];
+        byDay[day].push(e);
+      }
+
+      const reactionMap: Record<string, string> = {
+        pozitiv: "✓ Pozitiv",
+        neutru: "— Neutru",
+        negativ: "✗ Negativ",
+        alergie: "⚠ Alergie",
+      };
+      const mealMap: Record<string, string> = {
+        "mic-dejun": "Mic dejun",
+        pranz: "Prânz",
+        cina: "Cină",
+      };
+      const periodLabels: Record<string, string> = {
+        week: "Ultima săptămână",
+        "2weeks": "Ultimele 2 săptămâni",
+        month: "Ultima lună",
+        all: "Toate înregistrările",
+      };
+      const formatDate = (dateStr: string) => {
+        const d = new Date(`${dateStr}T12:00:00`);
+        return d.toLocaleDateString("ro-RO", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+      };
+      const escapeHtml = (v: unknown) =>
+        String(v ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+
+      const htmlContent = `<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title>Jurnal alimentar</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; color: #3D2C3E; padding: 40px; font-size: 14px; }
+    .header { margin-bottom: 24px; }
+    .header h1 { color: #D4849A; font-size: 24px; margin-bottom: 8px; }
+    .header p { color: #8B7A8E; font-size: 13px; line-height: 1.6; }
+    .divider { border: none; border-top: 1px solid #D4849A; margin: 16px 0 24px; }
+    .day-section { margin-bottom: 24px; }
+    .day-title { font-size: 16px; font-weight: bold; color: #3D2C3E; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid #EDE7F6; }
+    .meal-row { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid #FFF0F3; font-size: 13px; }
+    .meal-name { font-weight: 600; flex: 2; }
+    .meal-type { color: #8B7A8E; flex: 1; }
+    .meal-reaction { flex: 1; }
+    .meal-notes { color: #8B7A8E; flex: 2; font-style: italic; }
+    .footer { margin-top: 40px; font-size: 11px; color: #B8A9BB; text-align: center; }
+    @media print { body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Jurnal alimentar</h1>
+    <p>Bebeluș: ${escapeHtml(babyName || "—")}</p>
+    <p>Perioadă: ${escapeHtml(periodLabels[period] || period)}</p>
+    <p>Generat: ${new Date().toLocaleDateString("ro-RO")}</p>
+  </div>
+  <hr class="divider"/>
+  ${Object.entries(byDay)
+    .map(
+      ([day, dayEntries]) => `
+    <div class="day-section">
+      <div class="day-title">${escapeHtml(formatDate(day))}</div>
+      ${dayEntries
+        .map(
+          (e) => `
+        <div class="meal-row">
+          <span class="meal-name">${escapeHtml(e.food_name || e.recipe_name || "—")}</span>
+          <span class="meal-type">${escapeHtml(mealMap[e.meal_type || ""] || e.meal_type || "—")}</span>
+          <span class="meal-reaction">${escapeHtml(reactionMap[e.reaction || ""] || e.reaction || "—")}</span>
+          ${e.notes ? `<span class="meal-notes">${escapeHtml(e.notes)}</span>` : ""}
+        </div>
+      `
+        )
+        .join("")}
+    </div>
+  `
+    )
+    .join("")}
+  <div class="footer">Generat de DiversiBebe · diversibebe.com</div>
+</body>
+</html>`;
+
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      }
     } catch {
       // silent fail
     } finally {
       setExportingPdf(false);
+      setShowPeriodModal(false);
     }
   };
 
