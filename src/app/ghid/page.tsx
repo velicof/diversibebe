@@ -148,8 +148,8 @@ export default function GhidPage() {
                 </thead>
                 <tbody>
                   {[
-                    ["6-8 luni", "1 masă", "700-800ml", "3-4 ore"],
-                    ["6-8 luni", "2 mese", "600-700ml", "3-4 ore"],
+                    ["6-7 luni", "1 masă", "700-800ml", "3-4 ore"],
+                    ["7-8 luni", "2 mese", "600-700ml", "3-4 ore"],
                     ["8-10 luni", "3 mese", "500-600ml", "3 ore"],
                     ["10-12 luni", "3-4 mese", "400-500ml", "3 ore"],
                     ["12+ luni", "4 mese", "300-400ml", "2.5-3 ore"],

@@ -37,25 +37,15 @@ const REACTION_OPTIONS: Array<{
   { key: "refused", label: "A refuzat", emoji: "🙅" },
 ];
 
-const PORTION_OPTIONS: Array<{
-  key: NonNullable<FoodEntry["portion"]>;
-  label: string;
-  sub: string;
-  emoji: string;
-}> = [
-  { key: "putin", label: "Puțin", sub: "câteva lingurițe", emoji: "🤏" },
-  { key: "jumatate", label: "Jumătate", sub: "porție medie", emoji: "🍽️" },
-  { key: "tot", label: "Tot", sub: "porție completă", emoji: "😋" },
-];
-
 const MOOD_OPTIONS: Array<{
   key: NonNullable<FoodEntry["babyMood"]>;
   label: string;
   emoji: string;
 }> = [
+  { key: "normal", label: "Normal", emoji: "😊" },
   { key: "fericit", label: "Fericit", emoji: "😄" },
   { key: "obosit", label: "Obosit", emoji: "😴" },
-  { key: "agitat", label: "Agitat", emoji: "😤" },
+  { key: "agitat", label: "Agitat", emoji: "😣" },
 ];
 
 type Selection =
@@ -548,37 +538,10 @@ function JurnalInner() {
         </section>
 
         <section className="mt-6">
-          <p className="text-[14px] font-semibold text-[#3D2C3E]">Cât a mâncat?</p>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {PORTION_OPTIONS.map((option) => {
-              const active = portion === option.key;
-              return (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() => setPortion(option.key)}
-                  className="rounded-[12px] border p-2 text-center cursor-pointer"
-                  style={{
-                    borderColor: active ? "#D4849A" : "#EDE7F6",
-                    background: active ? "#FFF0F5" : "#FFFFFF",
-                  }}
-                >
-                  <div className="text-[18px]">{option.emoji}</div>
-                  <div className="mt-1 text-[11px] font-bold text-[#3D2C3E]">
-                    {option.label}
-                  </div>
-                  <div className="text-[9px] text-[#8B7A8E] leading-tight">{option.sub}</div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="mt-6">
           <p className="text-[14px] font-semibold text-[#3D2C3E]">
             Cum era {babyName} după masă?
           </p>
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             {MOOD_OPTIONS.map((option) => {
               const active = babyMood === option.key;
               return (

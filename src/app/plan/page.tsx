@@ -52,6 +52,7 @@ const DAY_NAMES = [
 ] as const;
 
 const DAY_LETTERS = ["L", "M", "M", "J", "V", "S", "D"] as const;
+const PLAN_AGE_OPTIONS = Array.from({ length: 19 }, (_, i) => i + 6);
 
 const MEAL_TIME_LABEL: Partial<Record<MealType, string>> = {
   "mic-dejun": "08:00",
@@ -266,6 +267,8 @@ export default function PlanPage() {
   const [overrideTick, setOverrideTick] = useState(0);
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
   const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
+  const [selectedAgeMonths, setSelectedAgeMonths] = useState<number | null>(null);
+  const [isRegeneratingPreview, setIsRegeneratingPreview] = useState(false);
 
   useEffect(() => {
     setBirthDate(readBirthDateFromStorage());
@@ -302,14 +305,34 @@ export default function PlanPage() {
     return calendarMonthsFromBirthdateString(birthDate);
   }, [birthDate]);
 
+  useEffect(() => {
+    setSelectedAgeMonths((prev) => prev ?? ageMonths);
+  }, [ageMonths]);
+
+  const effectiveAgeMonths = selectedAgeMonths ?? ageMonths;
+  const isReadOnlyPreview = effectiveAgeMonths !== ageMonths;
+
+  useEffect(() => {
+    if (!hydrated || selectedAgeMonths === null) return;
+    setIsRegeneratingPreview(true);
+    const timer = window.setTimeout(() => setIsRegeneratingPreview(false), 220);
+    return () => window.clearTimeout(timer);
+  }, [hydrated, selectedAgeMonths]);
+
+  useEffect(() => {
+    if (isReadOnlyPreview && sheet) {
+      setSheet(null);
+    }
+  }, [isReadOnlyPreview, sheet]);
+
   const meals = useMemo(
     () =>
-      (ageMonths < 7
+      (effectiveAgeMonths < 7
         ? ["pranz"]
-        : ageMonths === 7
+        : effectiveAgeMonths === 7
           ? ["mic-dejun", "pranz"]
           : ["mic-dejun", "pranz", "cina"]) as MealType[],
-    [ageMonths]
+    [effectiveAgeMonths]
   );
 
   const headerText = useMemo(
@@ -318,8 +341,8 @@ export default function PlanPage() {
   );
 
   const ageFilteredRecipes = useMemo(
-    () => filterRecipesByBabyAge(RECIPES, ageMonths),
-    [ageMonths]
+    () => filterRecipesByBabyAge(RECIPES, effectiveAgeMonths),
+    [effectiveAgeMonths]
   );
 
   const monday = useMemo(() => getMonday(currentWeek), [currentWeek]);
@@ -340,12 +363,12 @@ export default function PlanPage() {
     () =>
       generateSmartWeekPlan(
         smartRecipes,
-        ageGroupFromMonths(ageMonths),
+        ageGroupFromMonths(effectiveAgeMonths),
         meals,
         weekNumber + weekSeedOffset,
         mode
       ),
-    [smartRecipes, ageMonths, meals, weekNumber, weekSeedOffset, mode]
+    [smartRecipes, effectiveAgeMonths, meals, weekNumber, weekSeedOffset, mode]
   );
 
   const weekPlan = useMemo(() => {
@@ -356,7 +379,9 @@ export default function PlanPage() {
       meals.forEach((mealType, mealIndex) => {
         const pool = recipesForMealType(ageFilteredRecipes, mealType);
         let recipe = (smartPlan[dayName]?.[mealType] ?? null) as RecipeCatalogItem | null;
-        const overrideId = readPlanOverride(weekKey, dayIndex, mealIndex);
+        const overrideId = isReadOnlyPreview
+          ? null
+          : readPlanOverride(weekKey, dayIndex, mealIndex);
         if (overrideId && pool.length > 0) {
           const found = pool.find((r) => r.id === overrideId);
           if (found) recipe = found;
@@ -366,7 +391,7 @@ export default function PlanPage() {
       days.push(dayMeals);
     }
     return days;
-  }, [smartPlan, meals, ageFilteredRecipes, weekKey, overrideTick]);
+  }, [smartPlan, meals, ageFilteredRecipes, weekKey, overrideTick, isReadOnlyPreview]);
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -402,7 +427,7 @@ export default function PlanPage() {
 
   const selectAlternative = useCallback(
     (recipe: RecipeCatalogItem) => {
-      if (!sheet) return;
+      if (!sheet || isReadOnlyPreview) return;
       writePlanOverride(
         sheet.weekKey,
         sheet.dayIndex,
@@ -412,7 +437,7 @@ export default function PlanPage() {
       setSheet(null);
       setOverrideTick((t) => t + 1);
     },
-    [sheet]
+    [sheet, isReadOnlyPreview]
   );
 
   if (!hydrated) {
@@ -520,7 +545,8 @@ export default function PlanPage() {
             Plan săptămânal 📅
           </h1>
           <p className="mt-2 text-[13px] font-semibold leading-snug text-[#534AB7]">
-            {ageMonths} luni · {ageBandLabelRo(ageMonthsToAgeBand(ageMonths))} ·{" "}
+            {effectiveAgeMonths} luni ·{" "}
+            {ageBandLabelRo(ageMonthsToAgeBand(effectiveAgeMonths))} ·{" "}
             {meals.length}{" "}
             {meals.length === 1
               ? "masă planificată/zi"
@@ -531,6 +557,49 @@ export default function PlanPage() {
               ? "Plan echilibrat: mic dejun → gustare → prânz → cină (după vârstă)."
               : "Plan cu Fibre: mai multe fibre & rețete ușoare, adaptate vârstei."}
           </p>
+          <div className="mt-3 flex justify-end">
+            <label className="flex items-center gap-2 text-[13px] text-[#3D2C3E]">
+              <span>Vârstă:</span>
+              <select
+                value={effectiveAgeMonths}
+                onChange={(e) => setSelectedAgeMonths(Number(e.target.value))}
+                className="rounded-[12px] border bg-white px-3 py-2 text-[13px] text-[#3D2C3E] outline-none"
+                style={{
+                  borderColor: "#EDE7F6",
+                  fontFamily: '"Nunito", sans-serif',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "#D4849A";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "#EDE7F6";
+                }}
+              >
+                {PLAN_AGE_OPTIONS.map((age) => (
+                  <option key={age} value={age}>
+                    {age} luni{age === ageMonths ? " (vârsta ta)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {isReadOnlyPreview ? (
+            <div
+              className="mt-2 rounded-lg"
+              style={{
+                background: "#FFF3CD",
+                color: "#8B6914",
+                fontSize: 12,
+                padding: "8px 12px",
+              }}
+            >
+              Vizualizezi planul pentru {effectiveAgeMonths} luni · Planul tău activ
+              {" "}este pentru {ageMonths} luni
+            </div>
+          ) : null}
+          {isRegeneratingPreview ? (
+            <p className="mt-2 text-[12px] text-[#8B7A8E]">Se generează...</p>
+          ) : null}
           <div className="mt-3 flex items-center justify-between gap-2">
             <button
               type="button"
@@ -567,11 +636,13 @@ export default function PlanPage() {
             <button
               type="button"
               onClick={() => setMode("normal")}
+              disabled={isReadOnlyPreview}
               className="rounded-[20px] border px-4 py-1.5 text-[13px] font-semibold"
               style={{
                 backgroundColor: mode === "normal" ? "#D4849A" : "#FFFFFF",
                 color: mode === "normal" ? "#FFFFFF" : "#D4849A",
                 borderColor: "#D4849A",
+                opacity: isReadOnlyPreview ? 0.6 : 1,
               }}
             >
               📅 Plan Normal
@@ -579,11 +650,13 @@ export default function PlanPage() {
             <button
               type="button"
               onClick={() => setMode("cu-fibre")}
+              disabled={isReadOnlyPreview}
               className="rounded-[20px] border px-4 py-1.5 text-[13px] font-semibold"
               style={{
                 backgroundColor: mode === "cu-fibre" ? "#A8DCD1" : "#FFFFFF",
                 color: "#0F6E56",
                 borderColor: "#A8DCD1",
+                opacity: isReadOnlyPreview ? 0.6 : 1,
               }}
             >
               🥦 Plan cu Fibre
@@ -594,6 +667,8 @@ export default function PlanPage() {
             <button
               type="button"
               className="rounded-[20px] bg-[#D4849A] px-3.5 py-1 text-[12px] text-white"
+              disabled={isReadOnlyPreview}
+              style={{ opacity: isReadOnlyPreview ? 0.6 : 1 }}
               onClick={() => setWeekSeedOffset((v) => v + 1)}
             >
               Regenerează 🔄
@@ -733,9 +808,14 @@ export default function PlanPage() {
                           <button
                             type="button"
                             className="shrink-0 cursor-pointer border-0 bg-transparent p-1 text-[14px] leading-none"
-                            style={{ color: "#C4B5E0" }}
+                            style={{
+                              color: "#C4B5E0",
+                              opacity: isReadOnlyPreview ? 0.6 : 1,
+                            }}
                             aria-label="Alege altă rețetă"
+                            disabled={isReadOnlyPreview}
                             onClick={(e) => {
+                              if (isReadOnlyPreview) return;
                               e.stopPropagation();
                               openAlternatives({
                                 weekKey,
@@ -751,7 +831,7 @@ export default function PlanPage() {
                         </div>
                         {recipe ? (
                           <p className="mt-1.5 pl-[84px] pr-2 text-[10px] leading-snug text-[#0F6E56]">
-                            {formatRecipePortionLineRo(recipe, ageMonths)}
+                            {formatRecipePortionLineRo(recipe, effectiveAgeMonths)}
                           </p>
                         ) : null}
                       </div>

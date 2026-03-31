@@ -37,7 +37,7 @@ export interface FoodEntry {
   portion: "putin" | "jumatate" | "tot" | null;
   symptoms: string[];
   notes: string;
-  babyMood: "fericit" | "obosit" | "agitat" | null;
+  babyMood: "normal" | "fericit" | "obosit" | "agitat" | null;
 }
 
 /** @deprecated Legacy global allergies key; migrated into per-user storage. */
@@ -224,6 +224,7 @@ function migrateFoodEntry(raw: Record<string, unknown>): FoodEntry | null {
     symptoms,
     notes: typeof raw.notes === "string" ? raw.notes : "",
     babyMood:
+      raw.babyMood === "normal" ||
       raw.babyMood === "fericit" ||
       raw.babyMood === "obosit" ||
       raw.babyMood === "agitat"
