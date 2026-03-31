@@ -25,7 +25,53 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { pathname } = request.nextUrl;
+
+  const protectedRoutes = [
+    "/dashboard",
+    "/profil",
+    "/jurnal",
+    "/plan",
+    "/alimente",
+    "/retete",
+    "/alergii",
+    "/ghid",
+    "/notificari",
+  ];
+  const isProtected = protectedRoutes.some((r) => pathname.startsWith(r));
+
+  if (!user && isProtected) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (user && pathname === "/onboarding") {
+    const { data: baby } = await supabase
+      .from("babies")
+      .select("id, name, birthdate")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (baby?.name && baby?.birthdate) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+  }
+
+  if (user && (pathname === "/login" || pathname === "/register" || pathname === "/")) {
+    const { data: baby } = await supabase
+      .from("babies")
+      .select("id, name, birthdate")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (baby?.name && baby?.birthdate) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
+    return NextResponse.redirect(new URL("/onboarding", request.url));
+  }
 
   return supabaseResponse;
 }

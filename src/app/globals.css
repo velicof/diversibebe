@@ -49,3 +49,18 @@ input:-webkit-autofill:focus {
 input[type="date"] {
   color-scheme: light;
 }
+
+/* Fix text visibility on mobile for date inputs */
+input[type="date"],
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="password"] {
+  color: #3D2C3E;
+  -webkit-text-fill-color: #3D2C3E;
+}
+
+input::placeholder {
+  color: #B8A9BB;
+  -webkit-text-fill-color: #B8A9BB;
+}

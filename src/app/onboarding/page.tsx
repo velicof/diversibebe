@@ -32,7 +32,9 @@ export default function OnboardingPage() {
           .eq("user_id", userId)
           .maybeSingle();
         if (data?.name && data?.birthdate) {
+          await new Promise((r) => setTimeout(r, 100));
           router.replace("/dashboard");
+          return;
         } else {
           setChecking(false);
         }
@@ -40,6 +42,13 @@ export default function OnboardingPage() {
         setChecking(false);
       }
     })();
+  }, [userId, loading, router]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!loading && !userId) router.replace("/login");
+    }, 3000);
+    return () => clearTimeout(timeout);
   }, [userId, loading, router]);
 
   const canSubmit =
@@ -61,7 +70,12 @@ export default function OnboardingPage() {
     router.push("/dashboard");
   }
 
-  if (checking) return null;
+  if (checking)
+    return (
+      <div className="min-h-screen w-full bg-[#FFF8F6] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-4 border-[#D4849A] border-t-transparent animate-spin" />
+      </div>
+    );
 
   return (
     <div
@@ -84,6 +98,7 @@ export default function OnboardingPage() {
             placeholder="Numele bebelușului"
             type="text"
             autoComplete="off"
+            style={{ color: "#3D2C3E" }}
           />
 
           <input
@@ -91,6 +106,8 @@ export default function OnboardingPage() {
             onChange={(e) => setBirthDate(e.target.value)}
             className="h-12 w-full rounded-2xl border border-[#EDE7F6] bg-white px-4 text-[14px] outline-none"
             type="date"
+            max={new Date().toISOString().split("T")[0]}
+            style={{ color: "#3D2C3E" }}
           />
 
           <div className="grid grid-cols-2 gap-3">
@@ -102,6 +119,7 @@ export default function OnboardingPage() {
                   ? "bg-[#A8D8E8] border-[#A8D8E8] text-white"
                   : "bg-white border-[#EDE7F6] text-[#3D2C3E]"
               }`}
+              style={{ color: gender === "boy" ? "#FFFFFF" : "#3D2C3E" }}
             >
               Băiat
             </button>
@@ -113,6 +131,7 @@ export default function OnboardingPage() {
                   ? "bg-[#E8B4D0] border-[#E8B4D0] text-white"
                   : "bg-white border-[#EDE7F6] text-[#3D2C3E]"
               }`}
+              style={{ color: gender === "girl" ? "#FFFFFF" : "#3D2C3E" }}
             >
               Fată
             </button>
@@ -126,6 +145,7 @@ export default function OnboardingPage() {
                 ? "bg-[#D4849A] cursor-pointer"
                 : "bg-[#D4849A] opacity-50 cursor-not-allowed"
             }`}
+            style={{ color: "#FFFFFF" }}
           >
             Hai să începem! 🚀
           </button>
