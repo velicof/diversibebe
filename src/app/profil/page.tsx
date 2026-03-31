@@ -383,16 +383,7 @@ export default function ProfilPage() {
       key: "support",
       emoji: "❓",
       text: "Ajutor & suport",
-      onClick: () => {
-        try {
-          localStorage.setItem("bebeAsistAutoOpen", "support");
-        } catch {
-          // ignore
-        }
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 50);
-      },
+      href: "/ajutor",
     },
     { key: "rate", emoji: "⭐", text: "Evaluează aplicația" },
     {
