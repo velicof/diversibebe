@@ -21,7 +21,12 @@ export default function ProfilBebelusPage() {
   const [birthDate, setBirthDate] = useState("");
   const [weight, setWeight] = useState("");
   const [gender, setGender] = useState<Gender>("boy");
+  const [allergies, setAllergies] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAllergies(current?.baby.allergies ?? []);
+  }, [current?.baby.allergies]);
 
   useEffect(() => {
     if (!userId) return;
@@ -50,15 +55,15 @@ export default function ProfilBebelusPage() {
 
   const allergyTags = useMemo(
     () => [
-      {
-        key: "cartof-dulce",
-        text: current?.baby.allergies?.[0] || "Cartof dulce",
+      ...allergies.map((allergy) => ({
+        key: allergy,
+        text: allergy,
         bg: "#FAEEDA",
         color: "#854F0B",
-      },
+      })),
       { key: "add", text: "+ Adaugă", bg: "#FFFFFF", color: "#B8A9BB", dashed: true },
     ],
-    [current?.baby.allergies]
+    [allergies]
   );
 
   const handleSave = async () => {
