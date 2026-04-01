@@ -107,7 +107,11 @@ export default function OnboardingPage() {
             className="h-12 w-full rounded-2xl border border-[#EDE7F6] bg-white px-4 text-[14px] outline-none"
             type="date"
             max={new Date().toISOString().split("T")[0]}
-            style={{ color: "#3D2C3E" }}
+            style={{
+              color: "#3D2C3E",
+              WebkitTextFillColor: "#3D2C3E",
+              opacity: 1,
+            }}
           />
 
           <div className="grid grid-cols-2 gap-3">

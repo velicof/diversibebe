@@ -402,9 +402,7 @@ Numele părintelui: ${user?.parentName || "Părintele"}
   const pillBottomPx =
     pathname === "/dashboard"
       ? 176
-      : pathname === "/jurnal" || pathname.startsWith("/jurnal/")
-        ? 132
-        : 92;
+      : 160;
 
   return (
     <>
@@ -462,7 +460,7 @@ Numele părintelui: ${user?.parentName || "Părintele"}
           <div
             style={{
               position: "fixed",
-              bottom: 0,
+              bottom: `calc(160px + env(safe-area-inset-bottom, 0px))`,
               left: "50%",
               transform: "translateX(-50%)",
               width: "100%",
