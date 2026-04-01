@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { FOODS_DATABASE } from "@/app/lib/foodsDatabase";
 import SocialLoginButtons from "../../components/SocialLoginButtons";
 
 type Gender = "boy" | "girl" | null;
@@ -19,6 +20,8 @@ export default function RegisterStep2Page() {
     "not_started" | "started"
   >("not_started");
   const [divStartDate, setDivStartDate] = useState("");
+  const [selectedFoods, setSelectedFoods] = useState<string[]>([]);
+  const [foodSearch, setFoodSearch] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
   const [toastFading, setToastFading] = useState(false);
   const [nameBlurred, setNameBlurred] = useState(false);
@@ -177,12 +180,77 @@ export default function RegisterStep2Page() {
               </button>
             </div>
             {diversificationMode === "started" ? (
-              <input
-                type="date"
-                value={divStartDate}
-                onChange={(e) => setDivStartDate(e.target.value)}
-                className="mt-2 h-12 w-full rounded-2xl border border-[#EDE7F6] bg-white px-4 text-[14px] outline-none"
-              />
+              <>
+                <input
+                  type="date"
+                  value={divStartDate}
+                  onChange={(e) => setDivStartDate(e.target.value)}
+                  className="mt-2 h-12 w-full rounded-2xl border border-[#EDE7F6] bg-white px-4 text-[14px] outline-none"
+                />
+                <div className="text-left mt-2">
+                  <p className="text-[13px] font-semibold text-[#3D2C3E] mb-2">
+                    Ce alimente a incercat deja? (optional)
+                  </p>
+                  <p className="text-[11px] text-[#8B7A8E] mb-3">
+                    Bifeaza alimentele pe care le-a gustat pana acum
+                  </p>
+                  <input
+                    type="text"
+                    value={foodSearch}
+                    onChange={(e) => setFoodSearch(e.target.value)}
+                    placeholder="Cauta aliment... (ex: morcov, ou)"
+                    className="mb-2 h-10 w-full rounded-xl border border-[#EDE7F6] bg-white px-3 text-[13px] placeholder:text-[#B8A9BB] outline-none"
+                    style={{ color: "#3D2C3E" }}
+                  />
+                  <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto bg-white rounded-2xl border border-[#EDE7F6] p-3">
+                    {FOODS_DATABASE
+                      .filter((f) => {
+                        const ageMax =
+                          f.ageGroup === "6-7" || f.ageGroup === "6-8"
+                            ? 8
+                            : f.ageGroup === "7-8"
+                              ? 8
+                              : f.ageGroup === "8-10"
+                                ? 10
+                                : 12;
+                        return (
+                          ageMax <= 12 &&
+                          (foodSearch.trim() === "" ||
+                            f.name.toLowerCase().includes(foodSearch.toLowerCase()))
+                        );
+                      })
+                      .sort((a, b) => a.name.localeCompare(b.name, "ro"))
+                      .map((food) => {
+                        const isSelected = selectedFoods.includes(food.id);
+                        return (
+                          <button
+                            key={food.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedFoods((prev) =>
+                                isSelected
+                                  ? prev.filter((id) => id !== food.id)
+                                  : [...prev, food.id]
+                              );
+                            }}
+                            className={`h-8 px-3 rounded-full text-[12px] font-semibold border transition-colors ${
+                              isSelected
+                                ? "bg-[#D4849A] border-[#D4849A] text-white"
+                                : "bg-white border-[#EDE7F6] text-[#3D2C3E]"
+                            }`}
+                          >
+                            {food.emoji} {food.name}
+                          </button>
+                        );
+                      })}
+                  </div>
+                  {selectedFoods.length > 0 ? (
+                    <p className="mt-2 text-[11px] text-[#D4849A] font-semibold">
+                      {selectedFoods.length} alimente selectate
+                    </p>
+                  ) : null}
+                </div>
+              </>
             ) : null}
           </div>
 
@@ -291,15 +359,35 @@ export default function RegisterStep2Page() {
 
                 const userId = data.user?.id;
                 if (userId) {
-                  await supabase.from("babies").insert({
-                    user_id: userId,
-                    name: nameTrim,
-                    birthdate: birthDate.trim(),
-                    gender: gender,
-                    weight_kg: birthWeight
-                      ? parseFloat(birthWeight.replace(",", "."))
-                      : null,
-                  });
+                  const { data: babyData } = await supabase
+                    .from("babies")
+                    .insert({
+                      user_id: userId,
+                      name: nameTrim,
+                      birthdate: birthDate.trim(),
+                      gender: gender,
+                      weight_kg: birthWeight
+                        ? parseFloat(birthWeight.replace(",", "."))
+                        : null,
+                    })
+                    .select("id")
+                    .single();
+
+                  if (selectedFoods.length > 0) {
+                    const triedFoodsToInsert = selectedFoods.map((foodId) => {
+                      const food = FOODS_DATABASE.find((f) => f.id === foodId);
+                      return {
+                        user_id: userId,
+                        baby_id: babyData?.id || null,
+                        food_id: foodId,
+                        food_name: food?.name || foodId,
+                        first_tried_at: new Date().toISOString(),
+                        try_count: 1,
+                      };
+                    });
+
+                    await supabase.from("tried_foods").insert(triedFoodsToInsert);
+                  }
                 }
 
                 localStorage.removeItem("register_step1");

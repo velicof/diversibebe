@@ -413,7 +413,7 @@ export default function DashboardPage() {
           <p className="mt-2 text-[20px] font-bold text-[#3D2C3E]">
             {isVisitor
               ? "3 din 5 alimente noi"
-              : div.startDate
+              : div.startDate || triedCount > 0
                 ? `${userName?.trim() ? userName : "Bebelușul tău"} a încercat ${triedCount} alimente`
                 : "Începe diversificarea când ești gata"}
           </p>
@@ -422,7 +422,7 @@ export default function DashboardPage() {
             <div
               className="h-full rounded-full bg-[#D4849A] transition-[width] duration-[1000ms] ease-in-out"
               style={{
-                width: `${isVisitor || div.startDate ? progress : 0}%`,
+                width: `${isVisitor || div.startDate || triedCount > 0 ? progress : 0}%`,
               }}
             />
           </div>
@@ -439,7 +439,7 @@ export default function DashboardPage() {
                 Creează cont →
               </Link>
             </div>
-          ) : !div.startDate ? (
+          ) : !div.startDate && triedCount === 0 ? (
             <div className="mt-4 pt-3 border-t border-[#EDE7F6] flex items-center justify-between gap-3">
               <p className="text-[12px] font-normal text-[#534AB7] leading-tight">
                 Bine ai venit! Începe diversificarea când ești gata
