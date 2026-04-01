@@ -61,17 +61,24 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && (pathname === "/login" || pathname === "/register" || pathname === "/")) {
-    const { data: baby } = await supabase
-      .from("babies")
-      .select("id, name, birthdate")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    try {
+      const { data: baby } = await supabase
+        .from("babies")
+        .select("id, name, birthdate")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-    if (baby?.name && baby?.birthdate) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      if (baby?.name && baby?.birthdate) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      } else {
+        // Baby nu există → onboarding
+        return NextResponse.redirect(new URL("/onboarding", request.url));
+      }
+    } catch {
+      // Dacă query-ul eșuează, NU redirecționa la onboarding
+      // Lasă userul să continue — onboarding/page.tsx va gestiona
+      return supabaseResponse;
     }
-
-    return NextResponse.redirect(new URL("/onboarding", request.url));
   }
 
   return supabaseResponse;
