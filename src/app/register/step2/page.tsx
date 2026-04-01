@@ -305,7 +305,15 @@ export default function RegisterStep2Page() {
                 localStorage.removeItem("register_step1");
                 localStorage.removeItem("diversibebe_register_step1");
 
-                router.push("/register/confirm");
+                // Verifică dacă userul are sesiune activă (email confirmation dezactivat)
+                const { data: sessionData } = await supabase.auth.getSession();
+                if (sessionData.session) {
+                  // Userul e deja autentificat → du-l direct la dashboard
+                  router.push("/dashboard");
+                } else {
+                  // Userul trebuie să confirme emailul → pagina de confirmare
+                  router.push("/register/confirm");
+                }
               } catch (err) {
                 console.error("Registration error:", err);
                 alert("A apărut o eroare. Te rugăm să încerci din nou.");

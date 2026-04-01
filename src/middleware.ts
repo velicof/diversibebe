@@ -44,6 +44,10 @@ export async function middleware(request: NextRequest) {
   ];
   const isProtected = protectedRoutes.some((r) => pathname.startsWith(r));
 
+  if (pathname.startsWith("/register")) {
+    return supabaseResponse; // lasă toate sub-rutele /register libere
+  }
+
   if (!user && isProtected) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
