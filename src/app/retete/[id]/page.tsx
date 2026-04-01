@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
 import { useUser } from "@/lib/useUser";
 import { estimateRecipeNutrition, getServingSuggestion } from "@/app/lib/nutrition";
+import { createClient } from "@/lib/supabase/client";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { markRecipeCooked } from "@/app/lib/supabaseData";
 import {
@@ -97,6 +98,7 @@ export default function RecipeDetailPage({
   const router = useRouter();
   const { id } = use(params);
   const recipe = useMemo(() => getRecipeById(id), [id]);
+  const supabase = createClient();
   const [babyAgeMonths, setBabyAgeMonths] = useState<number | null>(null);
   const [isCooked, setIsCooked] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);

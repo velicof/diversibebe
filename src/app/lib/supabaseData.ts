@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { FOODS_DATABASE } from "./foodsDatabase";
 
 const supabase = createClient();
 
@@ -311,16 +312,25 @@ export async function markRecipeCooked(
 ): Promise<boolean> {
   const userId = await getCurrentUserId();
   if (!userId) return false;
-  const { error } = await supabase.from("cooked_recipes").insert({
-    user_id: userId,
-    recipe_id: recipeId,
-    cooked_at: new Date().toISOString(),
-  });
-  if (error) return false;
+  const { error } = await supabase.from("cooked_recipes").upsert(
+    {
+      user_id: userId,
+      recipe_id: recipeId,
+      cooked_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,recipe_id", ignoreDuplicates: false }
+  );
+  if (error && !error.message.includes("duplicate") && !error.message.includes("unique")) {
+    return false;
+  }
 
   if (relatedFoods && relatedFoods.length > 0) {
     for (const foodId of relatedFoods) {
-      await upsertTriedFood({ foodId, foodName: foodId });
+      const foodData = FOODS_DATABASE.find((f) => f.id === foodId);
+      await upsertTriedFood({
+        foodId,
+        foodName: foodData?.name || foodId,
+      });
     }
   }
 
