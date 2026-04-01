@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
 import Navbar from "../components/Navbar";
 import type { FoodEntry } from "../lib/store";
+import { RECIPES } from "../lib/recipesDatabase";
 
 const RO_MONTHS_LONG = [
   "ianuarie",
@@ -81,6 +82,14 @@ type FoodJournalRow = {
   portion: string | null;
   baby_mood: string | null;
   quantity_grams?: number | null;
+};
+
+type CookedRecipeRow = {
+  id: string;
+  recipe_id: string;
+  cooked_at: string;
+  recipe_name?: string | null;
+  recipe_emoji?: string | null;
 };
 
 function dbReactionToFoodReaction(db: string | null): FoodEntry["reaction"] {
@@ -315,12 +324,15 @@ export default function IstoricPage() {
   const router = useRouter();
   const { userId } = useUser();
   const [journalRows, setJournalRows] = useState<FoodJournalRow[]>([]);
+  const [cookedRecipes, setCookedRecipes] = useState<CookedRecipeRow[]>([]);
+  const [activeTab, setActiveTab] = useState<"jurnal" | "retete">("jurnal");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sheetEntry, setSheetEntry] = useState<FoodEntry | null>(null);
 
   useEffect(() => {
     if (!userId) {
       setJournalRows([]);
+      setCookedRecipes([]);
       return;
     }
     const supabase = createClient();
@@ -332,6 +344,27 @@ export default function IstoricPage() {
       .eq("user_id", userId)
       .order("logged_at", { ascending: false })
       .then(({ data }) => setJournalRows((data as FoodJournalRow[]) || []));
+
+    supabase
+      .from("cooked_recipes")
+      .select("id, recipe_id, cooked_at")
+      .eq("user_id", userId)
+      .order("cooked_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          const enriched = (data as CookedRecipeRow[]).map((row) => {
+            const recipe = RECIPES.find((r) => r.id === row.recipe_id);
+            return {
+              ...row,
+              recipe_name: recipe?.name || row.recipe_id,
+              recipe_emoji: recipe?.emoji || "🍳",
+            };
+          });
+          setCookedRecipes(enriched);
+        } else {
+          setCookedRecipes([]);
+        }
+      });
   }, [userId]);
 
   const allEntries = useMemo(
@@ -441,6 +474,33 @@ export default function IstoricPage() {
           </p>
         </header>
 
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("jurnal")}
+            className={`flex-1 h-10 rounded-full text-[13px] font-bold border transition-colors ${
+              activeTab === "jurnal"
+                ? "bg-[#D4849A] border-[#D4849A] text-white"
+                : "bg-white border-[#EDE7F6] text-[#8B7A8E]"
+            }`}
+          >
+            📓 Jurnal mese
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("retete")}
+            className={`flex-1 h-10 rounded-full text-[13px] font-bold border transition-colors ${
+              activeTab === "retete"
+                ? "bg-[#D4849A] border-[#D4849A] text-white"
+                : "bg-white border-[#EDE7F6] text-[#8B7A8E]"
+            }`}
+          >
+            👨‍🍳 Rețete gătite
+          </button>
+        </div>
+
+        {activeTab === "jurnal" && (
+          <>
         <div className="mt-4 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {chips.map((c) => {
             const active = filter === c.key;
@@ -602,6 +662,59 @@ export default function IstoricPage() {
               </div>
             ))}
           </section>
+        )}
+          </>
+        )}
+
+        {activeTab === "retete" && (
+          <div className="mt-4">
+            {cookedRecipes.length === 0 ? (
+              <div className="mt-10 flex flex-col items-center text-center px-4">
+                <span className="text-[40px]">👨‍🍳</span>
+                <p className="mt-3 text-[14px] text-[#8B7A8E]">
+                  Nicio rețetă gătită încă
+                </p>
+                <p className="mt-1 text-[13px] text-[#B0A0B8]">
+                  Apasă "Am gătit" pe orice rețetă din catalog
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {cookedRecipes.map((recipe) => {
+                  const d = new Date(recipe.cooked_at);
+                  const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
+                  const when =
+                    diff === 0 ? "Azi" : diff === 1 ? "Ieri" : `Acum ${diff} zile`;
+
+                  return (
+                    <div
+                      key={recipe.id}
+                      className="flex items-center gap-3 rounded-[12px] bg-white py-3 pl-[14px] pr-3"
+                      style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}
+                    >
+                      <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] text-[20px]"
+                        style={{ background: "#FFF0F5" }}
+                      >
+                        {recipe.recipe_emoji}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[14px] font-bold text-[#3D2C3E] truncate">
+                          {recipe.recipe_name}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-[#8B7A8E]">
+                          ✅ Gătită
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-[11px] text-[#B0A0B8]">
+                        {when}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
       </main>
 

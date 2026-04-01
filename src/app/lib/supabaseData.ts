@@ -305,7 +305,10 @@ export async function deleteAllergyRecord(id: string): Promise<void> {
     .eq("id", id);
 }
 
-export async function markRecipeCooked(recipeId: string): Promise<boolean> {
+export async function markRecipeCooked(
+  recipeId: string,
+  relatedFoods?: string[]
+): Promise<boolean> {
   const userId = await getCurrentUserId();
   if (!userId) return false;
   const { error } = await supabase.from("cooked_recipes").insert({
@@ -313,7 +316,15 @@ export async function markRecipeCooked(recipeId: string): Promise<boolean> {
     recipe_id: recipeId,
     cooked_at: new Date().toISOString(),
   });
-  return !error;
+  if (error) return false;
+
+  if (relatedFoods && relatedFoods.length > 0) {
+    for (const foodId of relatedFoods) {
+      await upsertTriedFood({ foodId, foodName: foodId });
+    }
+  }
+
+  return true;
 }
 
 export async function isRecipeFavorited(recipeId: string): Promise<boolean> {

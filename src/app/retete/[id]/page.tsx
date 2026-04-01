@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
 import { useUser } from "@/lib/useUser";
 import { estimateRecipeNutrition, getServingSuggestion } from "@/app/lib/nutrition";
-import { createClient } from "@/lib/supabase/client";
 import { supabaseClient } from "@/lib/supabaseClient";
+import { markRecipeCooked } from "@/app/lib/supabaseData";
 import {
   ageBandLabelRo,
   ageMonthsToAgeBand,
@@ -545,18 +545,13 @@ export default function RecipeDetailPage({
                     return;
                   }
 
-                  const supabase = createClient();
+                  const cookedOk = await markRecipeCooked(
+                    recipe.id,
+                    recipe.relatedFoods || []
+                  );
 
-                  const { error: cookedError } = await supabase
-                    .from("cooked_recipes")
-                    .insert({
-                      user_id: userId,
-                      recipe_id: recipe.id,
-                      cooked_at: new Date().toISOString(),
-                    });
-
-                  if (cookedError && cookedError.code !== "23505") {
-                    alert("Eroare: " + cookedError.message);
+                  if (!cookedOk) {
+                    alert("Eroare la marcarea rețetei ca gătită.");
                     return;
                   }
 
