@@ -108,8 +108,8 @@ export default function OnboardingPage() {
             type="date"
             max={new Date().toISOString().split("T")[0]}
             style={{
-              color: "#3D2C3E",
-              WebkitTextFillColor: "#3D2C3E",
+              color: '#3D2C3E',
+              WebkitTextFillColor: '#3D2C3E',
               opacity: 1,
             }}
           />

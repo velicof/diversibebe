@@ -47,7 +47,6 @@ input:-webkit-autofill:focus {
 }
 
 input[type="date"] {
-  color-scheme: light;
   color: #3D2C3E;
   -webkit-text-fill-color: #3D2C3E;
   opacity: 1;
@@ -60,10 +59,14 @@ input[type="date"]::-webkit-datetime-edit {
 
 input[type="date"]::-webkit-datetime-edit-fields-wrapper {
   color: #3D2C3E;
+  -webkit-text-fill-color: #3D2C3E;
 }
 
-/* Fix text visibility on mobile for date inputs */
-input[type="date"],
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
+
+/* Fix text visibility on mobile for form inputs */
 input[type="text"],
 input[type="email"],
 input[type="number"],

@@ -110,8 +110,8 @@ export default function RegisterStep2Page() {
               className="h-12 w-full rounded-2xl border border-[#EDE7F6] bg-white px-4 text-[14px] outline-none"
               type="date"
               style={{
-                color: "#3D2C3E",
-                WebkitTextFillColor: "#3D2C3E",
+                color: '#3D2C3E',
+                WebkitTextFillColor: '#3D2C3E',
                 opacity: 1,
               }}
             />
