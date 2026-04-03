@@ -112,7 +112,7 @@ export default function RegisterStep2Page() {
               style={{
                 color: '#3D2C3E',
                 WebkitTextFillColor: '#3D2C3E',
-                opacity: 1,
+                opacity: 1
               }}
             />
             {showBirthError ? (

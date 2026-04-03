@@ -46,26 +46,6 @@ input:-webkit-autofill:focus {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-input[type="date"] {
-  color: #3D2C3E;
-  -webkit-text-fill-color: #3D2C3E;
-  opacity: 1;
-}
-
-input[type="date"]::-webkit-datetime-edit {
-  color: #3D2C3E;
-  -webkit-text-fill-color: #3D2C3E;
-}
-
-input[type="date"]::-webkit-datetime-edit-fields-wrapper {
-  color: #3D2C3E;
-  -webkit-text-fill-color: #3D2C3E;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator {
-  opacity: 1;
-}
-
 /* Fix text visibility on mobile for form inputs */
 input[type="text"],
 input[type="email"],
@@ -78,4 +58,37 @@ input[type="password"] {
 input::placeholder {
   color: #B8A9BB;
   -webkit-text-fill-color: #B8A9BB;
+}
+
+input[type="date"] {
+  color: #3D2C3E !important;
+  -webkit-text-fill-color: #3D2C3E !important;
+  opacity: 1 !important;
+}
+
+input[type="date"]::-webkit-datetime-edit {
+  color: #3D2C3E !important;
+  -webkit-text-fill-color: #3D2C3E !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color: #3D2C3E !important;
+  -webkit-text-fill-color: #3D2C3E !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-text {
+  color: #3D2C3E !important;
+  -webkit-text-fill-color: #3D2C3E !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #3D2C3E !important;
+  -webkit-text-fill-color: #3D2C3E !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 1 !important;
+  filter: invert(0) !important;
 }
