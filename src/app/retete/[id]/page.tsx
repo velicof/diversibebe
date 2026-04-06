@@ -262,7 +262,7 @@ export default function RecipeDetailPage({
                 {babyAgeMonths !== null ? (
                   <p className="mt-1 text-[12px] font-semibold text-[#534AB7]">
                     Vârstă profil: {babyAgeMonths} luni ·{" "}
-                    {ageBandLabelRo(ageMonthsToAgeBand(babyAgeMonths))}
+                    {ageBandLabelRo(ageMonthsToAgeBand(babyAgeMonths), babyAgeMonths)}
                   </p>
                 ) : (
                   <p className="mt-1 text-[12px] text-[#8B7A8E]">

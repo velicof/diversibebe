@@ -546,7 +546,7 @@ export default function PlanPage() {
           </h1>
           <p className="mt-2 text-[13px] font-semibold leading-snug text-[#534AB7]">
             {effectiveAgeMonths} luni ·{" "}
-            {ageBandLabelRo(ageMonthsToAgeBand(effectiveAgeMonths))} ·{" "}
+            {ageBandLabelRo(ageMonthsToAgeBand(effectiveAgeMonths), effectiveAgeMonths)} ·{" "}
             {meals.length}{" "}
             {meals.length === 1
               ? "masă planificată/zi"

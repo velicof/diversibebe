@@ -84,6 +84,28 @@ export default function RetetePage() {
   const ageFilter = manualAgeFilter ?? profileAgeFilter;
   const prevBirthKey = useRef<string | null>(null);
 
+  // Restaurează filtrele din sessionStorage la mount
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("retete_filters");
+      if (saved) {
+        const { meal, age } = JSON.parse(saved);
+        if (meal) setMealFilter(meal);
+        if (age) setManualAgeFilter(age);
+      }
+    } catch {}
+  }, []); // O singură dată la mount
+
+  // Salvează filtrele în sessionStorage când se schimbă
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        "retete_filters",
+        JSON.stringify({ meal: mealFilter, age: manualAgeFilter })
+      );
+    } catch {}
+  }, [mealFilter, manualAgeFilter]);
+
   /* eslint-disable react-hooks/set-state-in-effect -- mirror baby birthDate from localStorage into filter state */
   useEffect(() => {
     try {

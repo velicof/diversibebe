@@ -12,10 +12,14 @@ export function ageMonthsToAgeBand(ageMonths: number): AgeBandId {
   if (ageMonths < 7) return "6-7";
   if (ageMonths < 8) return "7-8";
   if (ageMonths < 10) return "8-10";
-  return "10-12";
+  if (ageMonths < 12) return "10-12";
+  return "10-12"; // 12+ folosește aceeași bandă de porții
 }
 
-export function ageBandLabelRo(band: AgeBandId): string {
+export function ageBandLabelRo(band: AgeBandId, ageMonths?: number): string {
+  if (band === "10-12" && typeof ageMonths === "number" && ageMonths >= 12) {
+    return "12+ luni";
+  }
   const m: Record<AgeBandId, string> = {
     "6-7": "6–7 luni",
     "7-8": "7–8 luni",
