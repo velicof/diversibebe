@@ -13,6 +13,8 @@ import {
   PRANZ_8_10_RECIPES,
   GUSTARE_RECIPES,
 } from "./pranzSiGustariNoi";
+import { PRANZ_12PLUS_RECIPES } from "./pranz12PlusRecipes";
+import { GUSTARI_12PLUS_RECIPES } from "./gustari12PlusRecipes";
 
 export type MealType = "mic-dejun" | "pranz" | "cina" | "gustare";
 
@@ -2712,5 +2714,7 @@ export const RECIPES: RecipeCatalogItem[] = [
   ...CINA_12PLUS_DINNER_RECIPES,
   ...PRANZ_6_8_RECIPES,
   ...PRANZ_8_10_RECIPES,
+  ...PRANZ_12PLUS_RECIPES,
   ...GUSTARE_RECIPES,
+  ...GUSTARI_12PLUS_RECIPES,
 ];
