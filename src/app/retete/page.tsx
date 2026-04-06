@@ -185,39 +185,16 @@ export default function RetetePage() {
         list = list.filter((r) => r.mealType === mealFilter);
       }
     }
-    if (ageFilter !== "all") {
-      const AGE_ORDER = ["6+", "7+", "8+", "10+", "12+"] as const;
-      const recipeMinAgeIndex = (age: string): number => {
-        const a = age.trim();
-        // Robustness for any legacy recipes still using 4+/5+.
-        if (a.startsWith("4") || a.startsWith("5")) return 0;
-        for (let i = 0; i < AGE_ORDER.length; i++) {
-          if (a.startsWith(AGE_ORDER[i])) return i;
-        }
-        // Fallback: parse first number.
-        const n = ageToMinMonths(a);
-        if (n >= 12) return 4;
-        if (n >= 10) return 3;
-        if (n >= 8) return 2;
-        if (n >= 7) return 1;
-        return 0;
-      };
-
-      const selectedIndex =
-        ageFilter === "6"
-          ? 0
-          : ageFilter === "7"
-            ? 1
-            : ageFilter === "8"
-              ? 2
-              : ageFilter === "10"
-                ? 3
-                : 4;
-
-      list = list.filter((r) => recipeMinAgeIndex(r.age) <= selectedIndex);
-    }
-    if (ageFilter === "all" && mealFilter !== "all" && mealFilter !== "favorite") {
+    if (ageFilter === "all") {
+      // Sortează toate rețetele crescător după vârstă
       list = [...list].sort((a, b) => extractMinAge(a.age) - extractMinAge(b.age));
+    } else {
+      // Afișează EXACT rețetele pentru vârsta selectată
+      const selectedMonths = Number(ageFilter);
+      list = list.filter((r) => {
+        const recipeAge = extractMinAge(r.age);
+        return recipeAge === selectedMonths;
+      });
     }
     return list;
   }, [searchTrim, mealFilter, ageFilter]);
