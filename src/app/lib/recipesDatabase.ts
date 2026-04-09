@@ -613,7 +613,7 @@ const MIC_DEJUN_RECIPES: RecipeCatalogItem[] = [
       "Servește 2-3 clătite cu dip-ul pe lângă. Răcește bine!",
     ],
     allergens: ["Lactoză", "Nucă de cocos", "Arahide"],
-    relatedFoods: ["banana", "naut", "unt-cocos", "unt-arahide", "clatite"],
+    relatedFoods: ["banana", "naut", "unt-cocos", "unt-arahide"],
     storage: "Clătitele se păstrează la frigider 2 zile sau congelator 2 luni.",
   },
   {
@@ -650,7 +650,7 @@ const MIC_DEJUN_RECIPES: RecipeCatalogItem[] = [
       "Servește 2-3 clătite cu ricotta și banană pe lângă.",
     ],
     allergens: ["Lactoză", "Ou", "Gluten", "Nuci (pecan)"],
-    relatedFoods: ["dovleac", "ou", "branza-vaci", "banana", "clatite"],
+    relatedFoods: ["dovleac", "ou", "branza-vaci", "banana"],
     storage: "Clătitele se păstrează la frigider 2 zile sau congelator 2 luni.",
   },
   {

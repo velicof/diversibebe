@@ -657,17 +657,6 @@ export const FOODS_DATABASE: Food[] = [
     nutrients: ["Carbohidrați", "Fibre", "Vitamine B"],
     relatedRecipes: [],
   },
-  {
-    id: "clatite",
-    name: "Clătite moi",
-    emoji: "🥞",
-    category: "cereale",
-    ageGroup: "10-12",
-    preparation: "Fă din banană+ou+făină. Gătește pe foc mic. Taie în bețișoare.",
-    allergenInfo: "Conține ou și posibil gluten.",
-    nutrients: ["Carbohidrați", "Proteine", "Potasiu"],
-    relatedRecipes: [],
-  },
 
   // === GRĂSIMI (Fats) ===
   {
