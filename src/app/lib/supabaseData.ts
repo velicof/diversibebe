@@ -114,16 +114,19 @@ export async function uploadBabyAvatar(
     const publicUrl = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
     if (!publicUrl) return null;
 
+    // Adaugă timestamp ca cache-buster ca să forțeze reload-ul pozei
+    const urlWithCacheBuster = `${publicUrl}?t=${Date.now()}`;
+
     const { data: updated, error: updateError } = await supabase
       .from("babies")
-      .update({ avatar_url: publicUrl })
+      .update({ avatar_url: urlWithCacheBuster })
       .eq("id", babyId)
       .select("*")
       .maybeSingle();
     if (updateError) return null;
 
     if (updated) cachedBaby = updated as DbBaby;
-    return publicUrl;
+    return urlWithCacheBuster;
   } catch {
     return null;
   }

@@ -33,6 +33,25 @@ export default function NotificariPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [cards, setCards] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [readIds, setReadIds] = useState<Set<string>>(() => {
+    try {
+      const saved = sessionStorage.getItem("read_notifications");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const markAsRead = (id: string) => {
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      try {
+        sessionStorage.setItem("read_notifications", JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
 
   const isSameDay = (a: Date, b: Date): boolean =>
     a.getFullYear() === b.getFullYear() &&
@@ -218,9 +237,8 @@ export default function NotificariPage() {
 
   const visibleCards = useMemo(() => {
     if (filter === "all") return cards;
-    const now = new Date();
-    return cards.filter((c) => isSameDay(c.createdAt, now));
-  }, [cards, filter]);
+    return cards.filter((c) => !readIds.has(c.id));
+  }, [cards, filter, readIds]);
 
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center transition-colors">
@@ -295,11 +313,16 @@ export default function NotificariPage() {
             visibleCards.map((c) => (
             <div
               key={c.id}
-              className="rounded-[16px] p-[14px] flex items-start gap-3 cursor-pointer bg-white border border-[#FDE8EE]"
+              className="relative rounded-[16px] p-[14px] flex items-start gap-3 cursor-pointer bg-white border"
+              style={{ borderColor: readIds.has(c.id) ? "#EDE7F6" : "#FDE8EE" }}
               onClick={() => {
+                markAsRead(c.id);
                 router.push(c.href);
               }}
             >
+              {!readIds.has(c.id) && (
+                <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-[#D4849A]" />
+              )}
               <div
                 className="w-[40px] h-[40px] rounded-full flex items-center justify-center"
                 style={{ backgroundColor: c.iconBg }}

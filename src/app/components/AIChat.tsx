@@ -460,12 +460,12 @@ Numele părintelui: ${user?.parentName || "Părintele"}
           <div
             style={{
               position: "fixed",
-              bottom: `calc(160px + env(safe-area-inset-bottom, 0px))`,
+              bottom: 0,
               left: "50%",
               transform: "translateX(-50%)",
               width: "100%",
               maxWidth: 393,
-              height: "85vh",
+              height: "calc(100vh - 72px)",
               background: "white",
               borderRadius: "24px 24px 0 0",
               boxShadow: "0 -4px 32px rgba(0,0,0,0.15)",
@@ -678,7 +678,7 @@ Numele părintelui: ${user?.parentName || "Părintele"}
 
             <div
               style={{
-                padding: "12px 16px 32px",
+                padding: "12px 16px 16px",
                 borderTop: "1px solid #F5F0F8",
                 display: "flex",
                 gap: 8,
