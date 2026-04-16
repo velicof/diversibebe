@@ -18,9 +18,22 @@ export function useUser() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       setLoading(false);
+
+      if (event === "SIGNED_IN" && session?.user?.id) {
+        void (async () => {
+          try {
+            await supabase.from("login_events").insert({
+              user_id: session.user.id,
+              platform: "web",
+            });
+          } catch {
+            /* nu blocăm fluxul principal */
+          }
+        })();
+      }
     });
 
     return () => subscription.unsubscribe();
