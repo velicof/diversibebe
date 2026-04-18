@@ -103,18 +103,36 @@ export default function RegisterStep2Page() {
           </div>
 
           <div className="text-left">
-            <input
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              onBlur={() => setBirthBlurred(true)}
-              className="h-12 w-full rounded-2xl border border-[#EDE7F6] bg-white px-4 text-[14px] outline-none"
-              type="date"
-              style={{
-                color: '#3D2C3E',
-                WebkitTextFillColor: '#3D2C3E',
-                opacity: 1
-              }}
-            />
+            <div className="relative flex h-12 w-full items-center rounded-2xl border border-[#EDE7F6] bg-white px-4">
+              {!birthDate ? (
+                <span className="pointer-events-none absolute left-4 top-1/2 max-w-[calc(100%-2.75rem)] -translate-y-1/2 truncate text-left text-[14px] text-[#B8A9BB]">
+                  Data nașterii bebelușului
+                </span>
+              ) : null}
+              <input
+                aria-label="Data nașterii bebelușului"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                onBlur={() => setBirthBlurred(true)}
+                className={`relative z-[1] h-full min-h-0 min-w-0 flex-1 cursor-pointer rounded-none border-0 bg-transparent py-0 text-[14px] outline-none ${
+                  birthDate
+                    ? "text-[#3D2C3E]"
+                    : "text-transparent [&::-webkit-datetime-edit]:text-transparent [&::-webkit-datetime-edit-fields-wrapper]:text-transparent [&::-webkit-datetime-edit-text]:text-transparent [&::-webkit-datetime-edit-month-field]:text-transparent [&::-webkit-datetime-edit-day-field]:text-transparent [&::-webkit-datetime-edit-year-field]:text-transparent"
+                }`}
+                type="date"
+                style={
+                  birthDate
+                    ? {
+                        color: "#3D2C3E",
+                        WebkitTextFillColor: "#3D2C3E",
+                      }
+                    : {
+                        color: "transparent",
+                        WebkitTextFillColor: "transparent",
+                      }
+                }
+              />
+            </div>
             {showBirthError ? (
               <p className="mt-1 text-[12px]" style={{ color: "#E74C3C" }}>
                 Data nașterii este obligatorie
