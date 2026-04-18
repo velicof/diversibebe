@@ -60,35 +60,38 @@ input::placeholder {
   -webkit-text-fill-color: #B8A9BB;
 }
 
+/* Vizibilitate dată pe iOS/Android (color-scheme evită text alb în dark mode OS) */
 input[type="date"] {
-  color: #3D2C3E !important;
-  -webkit-text-fill-color: #3D2C3E !important;
-  opacity: 1 !important;
+  color-scheme: light;
+  color: #1f2937;
+  -webkit-text-fill-color: #1f2937;
+  opacity: 1;
 }
 
 input[type="date"]::-webkit-datetime-edit {
-  color: #3D2C3E !important;
-  -webkit-text-fill-color: #3D2C3E !important;
+  color: #1f2937;
 }
 
 input[type="date"]::-webkit-datetime-edit-fields-wrapper {
-  color: #3D2C3E !important;
-  -webkit-text-fill-color: #3D2C3E !important;
+  color: #1f2937;
 }
 
 input[type="date"]::-webkit-datetime-edit-text {
-  color: #3D2C3E !important;
-  -webkit-text-fill-color: #3D2C3E !important;
+  color: #1f2937;
 }
 
-input[type="date"]::-webkit-datetime-edit-month-field,
-input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-month-field {
+  color: #1f2937;
+}
+
+input[type="date"]::-webkit-datetime-edit-day-field {
+  color: #1f2937;
+}
+
 input[type="date"]::-webkit-datetime-edit-year-field {
-  color: #3D2C3E !important;
-  -webkit-text-fill-color: #3D2C3E !important;
+  color: #1f2937;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
-  opacity: 1 !important;
-  filter: invert(0) !important;
+  opacity: 1;
 }
