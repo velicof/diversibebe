@@ -18,6 +18,9 @@ import { GUSTARI_12PLUS_RECIPES } from "./gustari12PlusRecipes";
 
 export type MealType = "mic-dejun" | "pranz" | "cina" | "gustare";
 
+/** Metodă de diversificare (filtru rețete). */
+export type RecipeMethod = "clasic" | "blw" | "mixt";
+
 /** Benzi de vârstă pentru porții recomandate (luni). */
 export type AgeBandId = "6-7" | "7-8" | "8-10" | "10-12";
 type LegacyAgeBandId = "6-8";
@@ -37,6 +40,8 @@ export type RecipeCatalogItem = {
   relatedFoods: string[];
   allergens: string[];
   storage: string;
+  /** Diversificare: piure/terci vs BLW vs adaptabil. Inferat dacă lipsește. */
+  method?: RecipeMethod;
   /**
    * Greutate aproximativă a preparatului gata (tot bolul / tava), în g.
    * Folosit pentru a calcula câte porții pentru bebe ies din rețetă.
@@ -2701,7 +2706,75 @@ const OLDER_BABY_RECIPES: RecipeCatalogItem[] = [
   },
 ];
 
-export const RECIPES: RecipeCatalogItem[] = [
+function normRecipeText(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Clasificare euristică pentru filtrul Clasic / BLW / Mixt. */
+export function inferRecipeMethod(recipe: RecipeCatalogItem): RecipeMethod {
+  const blob = normRecipeText(
+    `${recipe.id} ${recipe.name} ${recipe.steps.join(" ")} ${recipe.ingredients.join(" ")}`
+  );
+
+  if (
+    /\bscramble\b/.test(blob) ||
+    blob.includes("clatit") ||
+    /\bpancake\b/.test(blob)
+  ) {
+    return "mixt";
+  }
+
+  if (
+    blob.includes("piure") ||
+    blob.includes("terci") ||
+    blob.includes("budinca") ||
+    blob.includes("supa crema") ||
+    blob.includes("supa-crema") ||
+    ((blob.includes("supa") || blob.includes("ciorba")) &&
+      /paseaza|blender|pasat/.test(blob))
+  ) {
+    return "clasic";
+  }
+
+  if (
+    blob.includes("omleta") ||
+    blob.includes("frittata") ||
+    blob.includes("muffin") ||
+    blob.includes("briosa") ||
+    blob.includes("chiftel") ||
+    blob.includes("chifte") ||
+    blob.includes("nugget") ||
+    blob.includes("betisor") ||
+    blob.includes("crocant") ||
+    blob.includes("burger") ||
+    blob.includes("quesadilla") ||
+    blob.includes("wrap") ||
+    blob.includes("mini pizza") ||
+    blob.includes("gratin") ||
+    /\btoast\b/.test(blob) ||
+    blob.includes("paine moale") ||
+    blob.includes("mamaliga") ||
+    blob.includes("grissini") ||
+    blob.includes("lasagna") ||
+    blob.includes("pulpe") ||
+    blob.includes("la cuptor") ||
+    blob.includes("biban") ||
+    blob.includes("peris") ||
+    blob.includes("penne") ||
+    blob.includes("taitei") ||
+    blob.includes("bețișoare") ||
+    blob.includes("betisoare")
+  ) {
+    return "blw";
+  }
+
+  return "mixt";
+}
+
+const RECIPES_RAW: RecipeCatalogItem[] = [
   ...LEGACY_RECIPES,
   ...MIC_DEJUN_RECIPES,
   ...MIC_DEJUN_8PLUS_EXTRA,
@@ -2718,3 +2791,8 @@ export const RECIPES: RecipeCatalogItem[] = [
   ...GUSTARE_RECIPES,
   ...GUSTARI_12PLUS_RECIPES,
 ];
+
+export const RECIPES: RecipeCatalogItem[] = RECIPES_RAW.map((r) => ({
+  ...r,
+  method: r.method ?? inferRecipeMethod(r),
+}));

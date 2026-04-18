@@ -7,7 +7,12 @@ import {
   readBabyAgeMonthsFromStorage,
 } from "../lib/recipePortions";
 import Navbar from "../components/Navbar";
-import { getRecipes, parseDate, type MealType } from "../lib/store";
+import {
+  getRecipes,
+  parseDate,
+  type MealType,
+  type RecipeMethod,
+} from "../lib/store";
 import {
   formatRecommendedFoodName,
   useRecommendedRecipes,
@@ -19,6 +24,7 @@ import BabyAvatar from "../components/BabyAvatar";
 
 type AgeFilterId = "all" | "6" | "7" | "8" | "10" | "12";
 type MealFilterId = "all" | MealType | "favorite";
+type MethodFilterId = "toate" | RecipeMethod;
 
 const RECIPES = getRecipes();
 
@@ -79,6 +85,7 @@ export default function RetetePage() {
   const [manualAgeFilter, setManualAgeFilter] = useState<AgeFilterId | null>(
     null
   );
+  const [methodFilter, setMethodFilter] = useState<MethodFilterId>("toate");
   const [babyAgeMonths, setBabyAgeMonths] = useState<number | null>(null);
   const { userId } = useUser();
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState<
@@ -94,9 +101,17 @@ export default function RetetePage() {
     try {
       const saved = sessionStorage.getItem("retete_filters");
       if (saved) {
-        const { meal, age } = JSON.parse(saved);
+        const { meal, age, method } = JSON.parse(saved);
         if (meal) setMealFilter(meal);
         if (age) setManualAgeFilter(age);
+        if (
+          method === "toate" ||
+          method === "clasic" ||
+          method === "blw" ||
+          method === "mixt"
+        ) {
+          setMethodFilter(method);
+        }
       }
     } catch {}
   }, []); // O singură dată la mount
@@ -106,10 +121,14 @@ export default function RetetePage() {
     try {
       sessionStorage.setItem(
         "retete_filters",
-        JSON.stringify({ meal: mealFilter, age: manualAgeFilter })
+        JSON.stringify({
+          meal: mealFilter,
+          age: manualAgeFilter,
+          method: methodFilter,
+        })
       );
     } catch {}
-  }, [mealFilter, manualAgeFilter]);
+  }, [mealFilter, manualAgeFilter, methodFilter]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- mirror baby birthDate from localStorage into filter state */
   useEffect(() => {
@@ -197,9 +216,14 @@ export default function RetetePage() {
   const searchTrim = searchQuery.trim();
 
   const visible = useMemo(() => {
+    const byMethod = (r: (typeof RECIPES)[number]) =>
+      methodFilter === "toate" || r.method === methodFilter;
+
     if (searchTrim) {
       const q = normalizeForSearch(searchTrim);
-      return RECIPES.filter((r) => normalizeForSearch(r.name).includes(q));
+      return RECIPES.filter((r) => normalizeForSearch(r.name).includes(q)).filter(
+        byMethod
+      );
     }
     let list = RECIPES;
     if (mealFilter !== "all") {
@@ -223,8 +247,8 @@ export default function RetetePage() {
         return recipeAge === selectedMonths;
       });
     }
-    return list;
-  }, [searchTrim, mealFilter, ageFilter]);
+    return list.filter(byMethod);
+  }, [searchTrim, mealFilter, ageFilter, methodFilter, favoriteRecipeIds]);
 
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center transition-colors">
@@ -290,6 +314,32 @@ export default function RetetePage() {
         </div>
 
         <div className="mt-3">
+          <div className="flex gap-2 overflow-x-auto pb-1 mb-3">
+            {(
+              [
+                { value: "toate" as const, label: "🍽️ Toate" },
+                { value: "clasic" as const, label: "🥣 Clasic" },
+                { value: "blw" as const, label: "✋ BLW" },
+                { value: "mixt" as const, label: "🔀 Mixt" },
+              ] satisfies { value: MethodFilterId; label: string }[]
+            ).map(({ value, label }) => {
+              const isActive = methodFilter === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setMethodFilter(value)}
+                  className="cursor-pointer whitespace-nowrap font-bold text-[14px] px-4 py-[8px] rounded-full transition-colors"
+                  style={isActive ? pillActive : pillInactive}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-0">
           <div className="flex gap-2 overflow-x-auto pb-1">
             {AGE_FILTERS.map((t) => {
               const isActive = t.id === ageFilter;

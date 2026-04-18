@@ -1,7 +1,7 @@
 import { FOODS_DATABASE, type Food } from "./foodsDatabase";
 import { RECIPES, type RecipeCatalogItem } from "./recipesDatabase";
 
-export type { MealType, RecipeCatalogItem } from "./recipesDatabase";
+export type { MealType, RecipeCatalogItem, RecipeMethod } from "./recipesDatabase";
 
 export interface BabyProfile {
   name: string;
