@@ -315,11 +315,20 @@ export async function markRecipeCooked(
 ): Promise<boolean> {
   const userId = await getCurrentUserId();
   if (!userId) return false;
+
+  const { data: existingRow } = await supabase
+    .from("cooked_recipes")
+    .select("notes")
+    .eq("user_id", userId)
+    .eq("recipe_id", recipeId)
+    .maybeSingle();
+
   const { error } = await supabase.from("cooked_recipes").upsert(
     {
       user_id: userId,
       recipe_id: recipeId,
       cooked_at: new Date().toISOString(),
+      notes: existingRow?.notes ?? null,
     },
     { onConflict: "user_id,recipe_id", ignoreDuplicates: false }
   );

@@ -107,6 +107,9 @@ export default function RecipeDetailPage({
   const [isCooked, setIsCooked] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [authSaveMessage, setAuthSaveMessage] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [savedNote, setSavedNote] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
   const { userId } = useUser();
 
   useEffect(() => {
@@ -147,7 +150,7 @@ export default function RecipeDetailPage({
           .maybeSingle(),
         supabaseClient
           .from("cooked_recipes")
-          .select("id")
+          .select("id, notes")
           .eq("user_id", userId)
           .eq("recipe_id", recipe.id)
           .maybeSingle(),
@@ -156,6 +159,10 @@ export default function RecipeDetailPage({
       if (!active) return;
       setIsFavorite(Boolean(fav.data));
       setIsCooked(Boolean(cooked.data));
+      const rawNotes = (cooked.data as { notes?: string | null } | null)?.notes;
+      const n = typeof rawNotes === "string" ? rawNotes : "";
+      setSavedNote(n);
+      setNote(n);
     })();
 
     return () => {
@@ -675,6 +682,75 @@ export default function RecipeDetailPage({
                 </span>
               </button>
             </section>
+
+            <div className="mt-4">
+              <h3 className="font-semibold text-[#3D2C3E] mb-2 text-[15px]">
+                📝 Notițele mele
+              </h3>
+              {!userId ? (
+                <p className="text-[13px] text-[#8B7A8E] leading-relaxed">
+                  Autentifică-te pentru a salva notițe private despre această
+                  rețetă.
+                </p>
+              ) : (
+                <>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Ex: i-a plăcut foarte mult, data viitoare adaug mai puțin lapte..."
+                    className="w-full px-4 py-3 rounded-2xl border border-[#EDE7F6] bg-white text-[#1f2937] text-sm resize-none outline-none focus:border-[#D4849A]"
+                    rows={3}
+                    style={{ WebkitTextFillColor: "#1f2937", color: "#1f2937" }}
+                  />
+                  {note !== savedNote ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!userId || !recipe) return;
+                        setIsSavingNote(true);
+                        try {
+                          const { data: row } = await supabaseClient
+                            .from("cooked_recipes")
+                            .select("id")
+                            .eq("user_id", userId)
+                            .eq("recipe_id", recipe.id)
+                            .maybeSingle();
+                          const payload = { notes: note.trim() || null };
+                          if (row?.id) {
+                            await supabaseClient
+                              .from("cooked_recipes")
+                              .update(payload)
+                              .eq("id", row.id);
+                          } else {
+                            await supabaseClient.from("cooked_recipes").insert({
+                              user_id: userId,
+                              recipe_id: recipe.id,
+                              cooked_at: new Date().toISOString(),
+                              ...payload,
+                            });
+                          }
+                          setSavedNote(note.trim());
+                          setNote(note.trim());
+                        } finally {
+                          setIsSavingNote(false);
+                        }
+                      }}
+                      disabled={isSavingNote}
+                      className="mt-2 w-full py-3 rounded-2xl font-semibold text-sm text-white cursor-pointer disabled:opacity-60 border-0"
+                      style={{ backgroundColor: "#0F6E56" }}
+                    >
+                      {isSavingNote ? "Se salvează..." : "Salvează notița"}
+                    </button>
+                  ) : null}
+                  {note === savedNote && savedNote !== "" ? (
+                    <p className="text-xs text-[#B8A9BB] mt-2 text-center">
+                      ✓ Notița salvată
+                    </p>
+                  ) : null}
+                </>
+              )}
+            </div>
+
             {authSaveMessage ? (
               <p
                 className="mt-2 text-[13px] font-bold text-[#D4849A]"
