@@ -19,6 +19,10 @@ import {
 } from "@/app/lib/recipePortions";
 import Navbar from "../../components/Navbar";
 import { getRecipeById, type RecipeCatalogItem } from "../../lib/store";
+import {
+  lookupAllergenSubstitute,
+  type AllergenSubstituteBlock,
+} from "@/lib/allergenSubstitutes";
 
 type Pill = {
   label: string;
@@ -177,6 +181,19 @@ export default function RecipeDetailPage({
     recipe && babyAgeMonths !== null
       ? recipe.textureNoteByAgeBand?.[ageMonthsToAgeBand(babyAgeMonths)]
       : undefined;
+
+  const relevantSubstitutes = useMemo((): AllergenSubstituteBlock[] => {
+    if (!recipe?.allergens?.length) return [];
+    const seen = new Set<string>();
+    const out: AllergenSubstituteBlock[] = [];
+    for (const a of recipe.allergens) {
+      const sub = lookupAllergenSubstitute(a);
+      if (!sub || seen.has(sub.ingredient)) continue;
+      seen.add(sub.ingredient);
+      out.push(sub);
+    }
+    return out;
+  }, [recipe]);
 
   return (
     <div className="min-h-screen w-full bg-[#FFF8F6] flex flex-col items-center">
@@ -369,6 +386,50 @@ export default function RecipeDetailPage({
                   </div>
                 )}
               </div>
+
+              {relevantSubstitutes.length > 0 ? (
+                <div
+                  className="mt-4 p-4 rounded-2xl border"
+                  style={{
+                    backgroundColor: "rgba(196, 181, 224, 0.12)",
+                    borderColor: "rgba(196, 181, 224, 0.35)",
+                  }}
+                >
+                  <h3 className="font-semibold text-[#3D2C3E] mb-3 text-[15px]">
+                    💡 Înlocuitori pentru alergeni
+                  </h3>
+                  {relevantSubstitutes.map((sub) => (
+                    <div key={sub.ingredient} className="mb-3 last:mb-0">
+                      <p className="text-sm font-medium text-[#5c5260] mb-1">
+                        În loc de{" "}
+                        <span className="text-[#D4849A]">{sub.ingredient}</span>:
+                      </p>
+                      {sub.substitutes.map((s) => (
+                        <div
+                          key={`${sub.ingredient}-${s.name}`}
+                          className="flex items-start gap-2 mb-1 ml-2"
+                        >
+                          <span className="text-[#0F6E56] text-sm shrink-0">
+                            →
+                          </span>
+                          <div>
+                            <span className="text-sm font-medium text-[#3D2C3E]">
+                              {s.name}
+                            </span>
+                            <span className="text-sm text-[#8B7A8E]">
+                              {" "}
+                              ({s.ratio})
+                            </span>
+                            {s.note ? (
+                              <p className="text-xs text-[#B8A9BB]">{s.note}</p>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
 
               <div className="bg-white border border-[#EDE7F6] rounded-[16px] p-4">
                 <p className="text-[14px] font-bold text-[#3D2C3E]">
