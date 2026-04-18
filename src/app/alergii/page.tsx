@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useUser } from "@/lib/useUser";
 import Navbar from "../components/Navbar";
 import { supabaseClient } from "@/lib/supabaseClient";
+import { searchFoods } from "@/lib/searchUtils";
 import { getAllFoods } from "../lib/store";
 import type { FoodCatalogItem } from "../lib/store";
 import Link from "next/link";
@@ -43,9 +44,9 @@ export default function AlergiiPage() {
   const [symSel, setSymSel] = useState<string[]>([]);
 
   const filteredFoods = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (!q) return foods.slice(0, 8);
-    return foods.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 12);
+    return searchFoods(foods, q).slice(0, 12);
   }, [foods, search]);
 
   const openModal = () => {

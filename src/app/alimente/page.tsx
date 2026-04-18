@@ -19,6 +19,7 @@ import {
   type TriedFoodsOptimisticDetail,
 } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
+import { searchFoods } from "@/lib/searchUtils";
 
 type AgeTabId = "all" | "sub-6" | "6-7" | "7-8" | "8-10" | "10-12" | "12+";
 
@@ -60,13 +61,6 @@ const AGE_TAB_IDS = new Set<string>([
   "10-12",
   "12+",
 ]);
-
-function normalizeForSearch(s: string) {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
 
 type TriedFoodRow = {
   food_id: string;
@@ -261,10 +255,7 @@ function AlimentePageInner() {
   const foods = useMemo(() => {
     let list: ReturnType<typeof getAllFoods>;
     if (!searchTrim) list = foodsByCategory;
-    else {
-      const q = normalizeForSearch(searchTrim);
-      list = getAllFoods().filter((f) => normalizeForSearch(f.name).includes(q));
-    }
+    else list = searchFoods(getAllFoods(), searchTrim);
     if (!triedOnly) return list;
     return list.filter((f) => triedIdSet.has(f.id));
   }, [foodsByCategory, searchTrim, triedOnly, triedIdSet, storeVersion]);

@@ -17,6 +17,7 @@ import {
   formatRecommendedFoodName,
   useRecommendedRecipes,
 } from "../lib/useRecommendedRecipes";
+import { searchByNameNormalized } from "@/lib/searchUtils";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 import { useUser } from "@/lib/useUser";
 import { createClient } from "@/lib/supabase/client";
@@ -36,13 +37,6 @@ function ageToMinMonths(age: string) {
 function extractMinAge(ageStr: string): number {
   const match = ageStr.match(/(\d+)/);
   return match ? Number.parseInt(match[1], 10) : 99;
-}
-
-function normalizeForSearch(s: string) {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
 }
 
 const MEAL_LABELS: Record<MealType, string> = {
@@ -220,10 +214,7 @@ export default function RetetePage() {
       methodFilter === "toate" || r.method === methodFilter;
 
     if (searchTrim) {
-      const q = normalizeForSearch(searchTrim);
-      return RECIPES.filter((r) => normalizeForSearch(r.name).includes(q)).filter(
-        byMethod
-      );
+      return searchByNameNormalized(RECIPES, searchTrim).filter(byMethod);
     }
     let list = RECIPES;
     if (mealFilter !== "all") {

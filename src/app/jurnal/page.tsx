@@ -16,6 +16,7 @@ import {
 } from "../lib/store";
 import type { FoodCatalogItem } from "../lib/store";
 import type { RecipeCatalogItem } from "../lib/recipesDatabase";
+import { searchByNameNormalized, searchFoods } from "@/lib/searchUtils";
 
 const SYMPTOM_OPTIONS = [
   "Roșeață",
@@ -144,19 +145,15 @@ function JurnalInner() {
   }, [fromParams, foods]);
 
   const filteredFoods = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (!q) return foods.slice(0, 6);
-    return foods
-      .filter((f) => f.name.toLowerCase().includes(q))
-      .slice(0, 6);
+    return searchFoods(foods, q).slice(0, 6);
   }, [foods, search]);
 
   const filteredRecipes = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (!q) return recipes.slice(0, 6);
-    return recipes
-      .filter((r) => r.name.toLowerCase().includes(q))
-      .slice(0, 6);
+    return searchByNameNormalized(recipes, q).slice(0, 6);
   }, [recipes, search]);
 
   const toggleSymptom = useCallback((value: string) => {

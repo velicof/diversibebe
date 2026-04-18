@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { FOODS_DATABASE } from "@/app/lib/foodsDatabase";
+import {
+  FOODS_LIST,
+  REGISTER_FOOD_CATEGORY_ORDER,
+} from "@/app/lib/registerFoodsList";
+import { searchFoods } from "@/lib/searchUtils";
 import SocialLoginButtons from "../../components/SocialLoginButtons";
 
 type Gender = "boy" | "girl" | null;
@@ -22,6 +26,7 @@ export default function RegisterStep2Page() {
   const [divStartDate, setDivStartDate] = useState("");
   const [selectedFoods, setSelectedFoods] = useState<string[]>([]);
   const [foodSearch, setFoodSearch] = useState("");
+  const [foodCategoryTab, setFoodCategoryTab] = useState<"all" | string>("all");
   const [toastVisible, setToastVisible] = useState(false);
   const [toastFading, setToastFading] = useState(false);
   const [nameBlurred, setNameBlurred] = useState(false);
@@ -217,6 +222,33 @@ export default function RegisterStep2Page() {
                   <p className="text-[11px] text-[#8B7A8E] mb-3">
                     Bifeaza alimentele pe care le-a gustat pana acum
                   </p>
+                  <div className="flex gap-2 overflow-x-auto pb-1 mb-2 -mx-1 px-1">
+                    <button
+                      type="button"
+                      onClick={() => setFoodCategoryTab("all")}
+                      className={`shrink-0 h-9 px-3 rounded-full text-[12px] font-semibold border transition-colors ${
+                        foodCategoryTab === "all"
+                          ? "bg-[#FDE8EE] border-[#D4849A] text-[#D4849A]"
+                          : "bg-white border-[#EDE7F6] text-[#8B7A8E]"
+                      }`}
+                    >
+                      Toate
+                    </button>
+                    {REGISTER_FOOD_CATEGORY_ORDER.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setFoodCategoryTab(cat)}
+                        className={`shrink-0 h-9 px-3 rounded-full text-[12px] font-semibold border transition-colors whitespace-nowrap ${
+                          foodCategoryTab === cat
+                            ? "bg-[#FDE8EE] border-[#D4849A] text-[#D4849A]"
+                            : "bg-white border-[#EDE7F6] text-[#8B7A8E]"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
                   <input
                     type="text"
                     value={foodSearch}
@@ -226,22 +258,14 @@ export default function RegisterStep2Page() {
                     style={{ color: "#3D2C3E" }}
                   />
                   <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto bg-white rounded-2xl border border-[#EDE7F6] p-3">
-                    {FOODS_DATABASE
-                      .filter((f) => {
-                        const ageMax =
-                          f.ageGroup === "6-7" || f.ageGroup === "6-8"
-                            ? 8
-                            : f.ageGroup === "7-8"
-                              ? 8
-                              : f.ageGroup === "8-10"
-                                ? 10
-                                : 12;
-                        return (
-                          ageMax <= 12 &&
-                          (foodSearch.trim() === "" ||
-                            f.name.toLowerCase().includes(foodSearch.toLowerCase()))
-                        );
-                      })
+                    {searchFoods(
+                      FOODS_LIST.filter(
+                        (f) =>
+                          foodCategoryTab === "all" ||
+                          f.category === foodCategoryTab
+                      ),
+                      foodSearch.trim()
+                    )
                       .sort((a, b) => a.name.localeCompare(b.name, "ro"))
                       .map((food) => {
                         const isSelected = selectedFoods.includes(food.id);
@@ -398,7 +422,7 @@ export default function RegisterStep2Page() {
 
                   if (selectedFoods.length > 0) {
                     const triedFoodsToInsert = selectedFoods.map((foodId) => {
-                      const food = FOODS_DATABASE.find((f) => f.id === foodId);
+                      const food = FOODS_LIST.find((f) => f.id === foodId);
                       return {
                         user_id: userId,
                         baby_id: babyData?.id || null,
