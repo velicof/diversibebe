@@ -8,6 +8,10 @@ import {
 } from "../lib/recipePortions";
 import Navbar from "../components/Navbar";
 import { getRecipes, parseDate, type MealType } from "../lib/store";
+import {
+  formatRecommendedFoodName,
+  useRecommendedRecipes,
+} from "../lib/useRecommendedRecipes";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 import { useUser } from "@/lib/useUser";
 import { createClient } from "@/lib/supabase/client";
@@ -83,6 +87,7 @@ export default function RetetePage() {
   const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
   const ageFilter = manualAgeFilter ?? profileAgeFilter;
   const prevBirthKey = useRef<string | null>(null);
+  const recommended = useRecommendedRecipes();
 
   // Restaurează filtrele din sessionStorage la mount
   useEffect(() => {
@@ -302,6 +307,103 @@ export default function RetetePage() {
             })}
           </div>
         </div>
+
+        {!searchTrim &&
+        recommended.canShow &&
+        (recommended.loading || recommended.items.length > 0) ? (
+          <section className="mt-6" aria-label="Rețete recomandate">
+            <h2 className="text-[17px] font-extrabold text-[#3D2C3E] mb-3">
+              {recommended.babyName
+                ? `Rețete pentru ${recommended.babyName}`
+                : "Recomandate pentru tine"}
+            </h2>
+            {recommended.loading ? (
+              <div className="flex flex-col gap-[10px]">
+                {[0, 1, 2].map((idx) => (
+                  <div
+                    key={`rec-skel-${idx}`}
+                    className="rounded-[16px] p-[14px] bg-white border border-[#FDE8EE] animate-pulse"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-[52px] h-[52px] rounded-[16px] bg-[#F5F0F8]" />
+                      <div className="min-w-0 flex-1">
+                        <div className="h-4 w-44 rounded bg-[#F5F0F8]" />
+                        <div className="mt-2 h-3 w-24 rounded bg-[#F5F0F8]" />
+                        <div className="mt-3 h-3 w-full rounded bg-[#F5F0F8]" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-[10px]">
+                {recommended.items.map(({ recipe: r, newIngredient }) => (
+                  <Link
+                    key={`rec-${r.id}`}
+                    href={`/retete/${r.id}`}
+                    className="cursor-pointer"
+                    aria-label={`Deschide rețeta ${r.name}`}
+                  >
+                    <div
+                      className="relative bg-white rounded-[16px] p-[14px] border"
+                      style={{ borderColor: "#FDE8EE" }}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-[52px] h-[52px] rounded-[16px] flex items-center justify-center flex-shrink-0 bg-[#E0F5F0]">
+                          <span className="text-[28px] leading-none">{r.emoji}</span>
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[15px] font-bold text-[#3D2C3E] truncate">
+                            {r.name}
+                          </div>
+                          {newIngredient ? (
+                            <span
+                              className="mt-1 inline-block text-xs px-2 py-0.5 rounded-full"
+                              style={{
+                                background: "rgba(168, 220, 209, 0.2)",
+                                color: "#0F6E56",
+                              }}
+                            >
+                              ✨ Ingredient nou:{" "}
+                              {formatRecommendedFoodName(newIngredient)}
+                            </span>
+                          ) : null}
+                          <p className="mt-1 text-[11px] font-semibold text-[#D4849A]">
+                            {MEAL_LABELS[r.mealType]}
+                          </p>
+
+                          <div className="mt-2 flex gap-3 flex-wrap">
+                            <span className="text-[11px] text-[#8B7A8E] whitespace-nowrap">
+                              ⏱ {r.time}
+                            </span>
+                            <span className="text-[11px] text-[#8B7A8E] whitespace-nowrap">
+                              👶 {r.age}
+                            </span>
+                            <span className="text-[11px] text-[#8B7A8E] whitespace-nowrap">
+                              📊 {r.difficulty}
+                            </span>
+                          </div>
+                          {babyAgeMonths !== null ? (
+                            <p className="mt-2 text-[11px] font-semibold text-[#0F6E56] leading-snug">
+                              {formatRecipeCardHintRo(r, babyAgeMonths)
+                                .split("·")[0]
+                                .trim()}
+                            </p>
+                          ) : (
+                            <p className="mt-2 text-[10px] text-[#B8A9BB] leading-snug">
+                              Porție bebe: completează profilul pentru estimări
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
 
         {visible.length === 0 && searchTrim ? (
           <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
