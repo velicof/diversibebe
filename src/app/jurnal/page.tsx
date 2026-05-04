@@ -114,6 +114,7 @@ function JurnalInner() {
   const [symptoms, setSymptoms] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [toast, setToast] = useState<null | "success" | "auth">(null);
+  const [customFoods, setCustomFoods] = useState<FoodCatalogItem[]>([]);
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customFoodName, setCustomFoodName] = useState("");
   const [customFoodEmoji, setCustomFoodEmoji] = useState("🍽️");
@@ -147,11 +148,39 @@ function JurnalInner() {
     });
   }, [fromParams, foods]);
 
+  useEffect(() => {
+    if (!userId) return;
+    supabaseClient
+      .from("custom_foods")
+      .select("id, name, emoji")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          setCustomFoods(
+            data.map(
+              (d) =>
+                ({
+                  id: d.id,
+                  name: d.name,
+                  emoji: d.emoji,
+                }) as FoodCatalogItem
+            )
+          );
+        }
+      });
+  }, [userId]);
+
+  const allFoodsWithCustom = useMemo(
+    () => [...foods, ...customFoods],
+    [foods, customFoods]
+  );
+
   const filteredFoods = useMemo(() => {
     const q = search.trim();
-    if (!q) return foods.slice(0, 6);
-    return searchFoods(foods, q).slice(0, 6);
-  }, [foods, search]);
+    if (!q) return allFoodsWithCustom.slice(0, 6);
+    return searchFoods(allFoodsWithCustom, q).slice(0, 6);
+  }, [allFoodsWithCustom, search]);
 
   const filteredRecipes = useMemo(() => {
     const q = search.trim();
@@ -182,6 +211,30 @@ function JurnalInner() {
       : selection?.kind === "recipe"
         ? selection.recipe.emoji
         : "";
+
+  const handleSaveCustomFood = async () => {
+    if (!customFoodName.trim() || !userId) return;
+    const customId = `custom_${Date.now()}`;
+    const { error } = await supabaseClient.from("custom_foods").insert({
+      id: customId,
+      user_id: userId,
+      name: customFoodName.trim(),
+      emoji: customFoodEmoji,
+    });
+    if (error) {
+      alert("Eroare la salvare: " + error.message);
+      return;
+    }
+    const newFood: FoodCatalogItem = {
+      id: customId,
+      name: customFoodName.trim(),
+      emoji: customFoodEmoji,
+    } as FoodCatalogItem;
+    setCustomFoods((prev) => [newFood, ...prev]);
+    setSelection({ kind: "food", food: newFood });
+    setShowCustomModal(false);
+    setSearch("");
+  };
 
   const handleSave = async () => {
     if (!selection || reaction === null) return;
@@ -464,9 +517,10 @@ function JurnalInner() {
                 type="button"
                 onClick={() => {
                   setCustomFoodName(search.trim());
+                  setCustomFoodEmoji("🍽️");
                   setShowCustomModal(true);
                 }}
-                className="mt-2 w-full rounded-[14px] border-2 border-dashed border-[#D4849A] bg-white px-4 py-3 text-left text-[13px] font-semibold text-[#D4849A] cursor-pointer"
+                className="mt-3 w-full rounded-[14px] border-2 border-dashed border-[#D4849A] bg-white px-4 py-3 text-[13px] font-semibold text-[#D4849A] cursor-pointer text-left"
               >
                 + Adaugă „{search.trim()}" ca aliment nou
               </button>
@@ -648,7 +702,10 @@ function JurnalInner() {
       ) : null}
 
       {showCustomModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30" onClick={() => setShowCustomModal(false)}>
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/30"
+          onClick={() => setShowCustomModal(false)}
+        >
           <div
             className="w-full max-w-[393px] rounded-t-[24px] bg-[#FFF8F6] p-6 pb-10"
             onClick={(e) => e.stopPropagation()}
@@ -656,22 +713,26 @@ function JurnalInner() {
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[17px] font-extrabold text-[#3D2C3E]">Aliment nou 🥄</h2>
-              <button type="button" onClick={() => setShowCustomModal(false)} className="text-[#8B7A8E] text-[20px] leading-none cursor-pointer bg-none border-none">×</button>
+              <button
+                type="button"
+                onClick={() => setShowCustomModal(false)}
+                className="text-[#8B7A8E] text-[24px] leading-none cursor-pointer bg-transparent border-0"
+              >
+                ×
+              </button>
             </div>
-
-            <p className="text-[12px] text-[#8B7A8E] mb-3">Numele alimentului</p>
+            <p className="text-[12px] text-[#8B7A8E] mb-2">Numele alimentului</p>
             <input
               type="text"
               value={customFoodName}
               onChange={(e) => setCustomFoodName(e.target.value)}
-              placeholder="ex: Păstârnac, Gulie..."
+              placeholder="ex: Gulie, Păstârnac, Topinambur..."
               className="w-full rounded-[12px] px-4 py-3 text-[14px] text-[#3D2C3E] outline-none mb-4"
               style={{ backgroundColor: "#F5F0F8" }}
             />
-
-            <p className="text-[12px] text-[#8B7A8E] mb-3">Alege un emoji</p>
+            <p className="text-[12px] text-[#8B7A8E] mb-2">Alege un emoji</p>
             <div className="flex flex-wrap gap-2 mb-5">
-              {["🥦","🥕","🫑","🧅","🧄","🥔","🍠","🫚","🌽","🥒","🍅","🫛","🫒","🍋","🍊","🍎","🍇","🫐","🍓","🥑","🥚","🐟","🍗","🥩","🧀","🌾","🍽️"].map((em) => (
+              {["🥦","🥕","🫑","🧅","🧄","🥔","🍠","🌽","🥒","🍅","🫛","🫒","🍋","🍊","🍎","🍇","🫐","🍓","🥑","🥚","🐟","🍗","🥩","🧀","🌾","🍽️"].map((em) => (
                 <button
                   key={em}
                   type="button"
@@ -686,28 +747,17 @@ function JurnalInner() {
                 </button>
               ))}
             </div>
-
             <button
               type="button"
               disabled={!customFoodName.trim()}
-              onClick={() => {
-                if (!customFoodName.trim()) return;
-                const customId = `custom_${Date.now()}`;
-                setSelection({
-                  kind: "food",
-                  food: {
-                    id: customId,
-                    name: customFoodName.trim(),
-                    emoji: customFoodEmoji,
-                  } as FoodCatalogItem,
-                });
-                setShowCustomModal(false);
-                setSearch("");
+              onClick={handleSaveCustomFood}
+              className="w-full h-12 rounded-full font-bold text-[15px] cursor-pointer"
+              style={{
+                backgroundColor: customFoodName.trim() ? "#D4849A" : "#EDE7F6",
+                color: customFoodName.trim() ? "white" : "#8B7A8E",
               }}
-              className="w-full h-12 rounded-full font-bold text-white cursor-pointer"
-              style={{ backgroundColor: customFoodName.trim() ? "#D4849A" : "#EDE7F6", color: customFoodName.trim() ? "white" : "#8B7A8E" }}
             >
-              Selectează alimentul
+              Salvează și selectează
             </button>
           </div>
         </div>

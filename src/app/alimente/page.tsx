@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
 import { useUser } from "@/lib/useUser";
 import { createClient } from "@/lib/supabase/client";
@@ -15,6 +15,7 @@ import {
   getFoodStatusMeta,
   getFoodsByAgeGroup,
   TRIED_FOODS_UPDATED_EVENT,
+  type FoodCatalogItem,
   type FoodStatus,
   type TriedFoodsOptimisticDetail,
 } from "../lib/store";
@@ -30,7 +31,8 @@ type CategoryId =
   | "proteine"
   | "cereale"
   | "grasimi"
-  | "condimente";
+  | "condimente"
+  | "custom";
 
 const AGE_TABS: Array<{ id: AgeTabId; label: string }> = [
   { id: "all", label: "Toate" },
@@ -70,6 +72,7 @@ type TriedFoodRow = {
 };
 
 function AlimentePageInner() {
+  const router = useRouter();
   const storeVersion = useStoreRefresh();
   const searchParams = useSearchParams();
   const { userId, loading: authLoading } = useUser();
@@ -82,6 +85,10 @@ function AlimentePageInner() {
   const [mounted, setMounted] = useState(false);
   const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
   const [supabaseBabyAge, setSupabaseBabyAge] = useState<number>(0);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customFoodName, setCustomFoodName] = useState("");
+  const [customFoodEmoji, setCustomFoodEmoji] = useState("🍽️");
+  const [customFoods, setCustomFoods] = useState<Array<{ id: string; name: string; emoji: string }>>([]);
 
   const groupFromUrl = searchParams.get("group");
   const triedOnly = searchParams.get("filter") === "incercate";
@@ -229,6 +236,18 @@ function AlimentePageInner() {
     return () => window.removeEventListener(TRIED_FOODS_UPDATED_EVENT, handler);
   }, []);
 
+  useEffect(() => {
+    if (!userId) return;
+    supabaseClient
+      .from("custom_foods")
+      .select("id, name, emoji")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) setCustomFoods(data);
+      });
+  }, [userId]);
+
   const triedIdSet = useMemo(
     () => new Set(triedFoods.map((t) => t.food_id)),
     [triedFoods]
@@ -255,10 +274,53 @@ function AlimentePageInner() {
   const foods = useMemo(() => {
     let list: ReturnType<typeof getAllFoods>;
     if (!searchTrim) list = foodsByCategory;
-    else list = searchFoods(getAllFoods(), searchTrim);
+    else {
+      const catalogResults = searchFoods(getAllFoods(), searchTrim);
+      const customResults = customFoods.filter((cf) =>
+        cf.name.toLowerCase().includes(searchTrim.toLowerCase())
+      );
+      list = [
+        ...catalogResults,
+        ...customResults.map((cf) => ({
+          id: cf.id,
+          name: cf.name,
+          emoji: cf.emoji,
+          category: "custom" as CategoryId,
+          ageGroup: "6-7" as const,
+          nutrients: [],
+          preparation: "",
+          allergenInfo: "",
+          minAgeMonths: 6,
+          relatedRecipes: [],
+        })) as FoodCatalogItem[],
+      ];
+    }
     if (!triedOnly) return list;
     return list.filter((f) => triedIdSet.has(f.id));
-  }, [foodsByCategory, searchTrim, triedOnly, triedIdSet, storeVersion]);
+  }, [foodsByCategory, searchTrim, triedOnly, triedIdSet, storeVersion, customFoods]);
+
+  const handleSaveCustomFood = async () => {
+    if (!customFoodName.trim() || !userId) return;
+    const customId = `custom_${Date.now()}`;
+    const { error } = await supabaseClient.from("custom_foods").insert({
+      id: customId,
+      user_id: userId,
+      name: customFoodName.trim(),
+      emoji: customFoodEmoji,
+    });
+    if (error) {
+      alert("Eroare la salvare: " + error.message);
+      return;
+    }
+    setCustomFoods((prev) => [
+      { id: customId, name: customFoodName.trim(), emoji: customFoodEmoji },
+      ...prev,
+    ]);
+    setShowCustomModal(false);
+    router.push(
+      `/jurnal?foodId=${encodeURIComponent(customId)}&foodName=${encodeURIComponent(customFoodName.trim())}&emoji=${encodeURIComponent(customFoodEmoji)}`
+    );
+  };
 
   if (!mounted) {
     return (
@@ -463,15 +525,30 @@ function AlimentePageInner() {
               </p>
             </div>
           ) : searchTrim || triedOnly ? (
-            <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
-              {searchTrim ? (
-                <>Niciun aliment găsit pentru „{searchTrim}”</>
-              ) : (
-                <>
-                  Niciun aliment încercat încă. Jurnalizează prima masă!
-                </>
-              )}
-            </p>
+            searchTrim ? (
+              <div className="mt-4 flex flex-col items-center gap-3">
+                <p className="text-[14px] text-[#8B7A8E] text-center">
+                  Niciun aliment găsit pentru „{searchTrim}"
+                </p>
+                {userId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomFoodName(searchTrim);
+                      setCustomFoodEmoji("🍽️");
+                      setShowCustomModal(true);
+                    }}
+                    className="rounded-[14px] border-2 border-dashed border-[#D4849A] bg-white px-5 py-3 text-[13px] font-semibold text-[#D4849A] cursor-pointer"
+                  >
+                    + Adaugă „{searchTrim}" ca aliment nou
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="mt-5 text-[14px] text-[#8B7A8E] text-center leading-relaxed px-2">
+                Niciun aliment încercat încă. Jurnalizează prima masă!
+              </p>
+            )
           ) : null
         ) : (
           <div
@@ -541,6 +618,68 @@ function AlimentePageInner() {
           </div>
         )}
       </main>
+
+      {showCustomModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/30"
+          onClick={() => setShowCustomModal(false)}
+        >
+          <div
+            className="w-full max-w-[393px] rounded-t-[24px] bg-[#FFF8F6] p-6 pb-10"
+            onClick={(e) => e.stopPropagation()}
+            style={{ fontFamily: '"Nunito", sans-serif' }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[17px] font-extrabold text-[#3D2C3E]">Aliment nou 🥄</h2>
+              <button
+                type="button"
+                onClick={() => setShowCustomModal(false)}
+                className="text-[#8B7A8E] text-[24px] leading-none cursor-pointer bg-transparent border-0"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-[12px] text-[#8B7A8E] mb-2">Numele alimentului</p>
+            <input
+              type="text"
+              value={customFoodName}
+              onChange={(e) => setCustomFoodName(e.target.value)}
+              placeholder="ex: Gulie, Păstârnac, Topinambur..."
+              className="w-full rounded-[12px] px-4 py-3 text-[14px] text-[#3D2C3E] outline-none mb-4"
+              style={{ backgroundColor: "#F5F0F8" }}
+            />
+            <p className="text-[12px] text-[#8B7A8E] mb-2">Alege un emoji</p>
+            <div className="flex flex-wrap gap-2 mb-5">
+              {["🥦","🥕","🫑","🧅","🧄","🥔","🍠","🌽","🥒","🍅","🫛","🫒","🍋","🍊","🍎","🍇","🫐","🍓","🥑","🥚","🐟","🍗","🥩","🧀","🌾","🍽️"].map((em) => (
+                <button
+                  key={em}
+                  type="button"
+                  onClick={() => setCustomFoodEmoji(em)}
+                  className="text-[22px] rounded-[8px] w-10 h-10 flex items-center justify-center cursor-pointer border"
+                  style={{
+                    borderColor: customFoodEmoji === em ? "#D4849A" : "transparent",
+                    backgroundColor: customFoodEmoji === em ? "#FFF0F5" : "transparent",
+                  }}
+                >
+                  {em}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={!customFoodName.trim()}
+              onClick={handleSaveCustomFood}
+              className="w-full h-12 rounded-full font-bold text-[15px] cursor-pointer"
+              style={{
+                backgroundColor: customFoodName.trim() ? "#D4849A" : "#EDE7F6",
+                color: customFoodName.trim() ? "white" : "#8B7A8E",
+              }}
+            >
+              Salvează și jurnalizează
+            </button>
+          </div>
+        </div>
+      )}
 
       <Navbar activeTab="alimente" />
     </div>
