@@ -114,6 +114,9 @@ function JurnalInner() {
   const [symptoms, setSymptoms] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [toast, setToast] = useState<null | "success" | "auth">(null);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customFoodName, setCustomFoodName] = useState("");
+  const [customFoodEmoji, setCustomFoodEmoji] = useState("🍽️");
 
   const babyName = getCurrentUser()?.baby.name?.trim() || "bebe";
   const foods = useMemo(() => getAllFoods(), []);
@@ -456,6 +459,18 @@ function JurnalInner() {
                 )
               )}
             </div>
+            {pickerTab === "food" && search.trim().length > 1 && filteredFoods.length === 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomFoodName(search.trim());
+                  setShowCustomModal(true);
+                }}
+                className="mt-2 w-full rounded-[14px] border-2 border-dashed border-[#D4849A] bg-white px-4 py-3 text-left text-[13px] font-semibold text-[#D4849A] cursor-pointer"
+              >
+                + Adaugă „{search.trim()}" ca aliment nou
+              </button>
+            )}
           </section>
         ) : null}
 
@@ -631,6 +646,72 @@ function JurnalInner() {
           {toast === "auth" ? "Autentifică-te pentru a salva" : "✅ Jurnalizat cu succes!"}
         </div>
       ) : null}
+
+      {showCustomModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30" onClick={() => setShowCustomModal(false)}>
+          <div
+            className="w-full max-w-[393px] rounded-t-[24px] bg-[#FFF8F6] p-6 pb-10"
+            onClick={(e) => e.stopPropagation()}
+            style={{ fontFamily: '"Nunito", sans-serif' }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[17px] font-extrabold text-[#3D2C3E]">Aliment nou 🥄</h2>
+              <button type="button" onClick={() => setShowCustomModal(false)} className="text-[#8B7A8E] text-[20px] leading-none cursor-pointer bg-none border-none">×</button>
+            </div>
+
+            <p className="text-[12px] text-[#8B7A8E] mb-3">Numele alimentului</p>
+            <input
+              type="text"
+              value={customFoodName}
+              onChange={(e) => setCustomFoodName(e.target.value)}
+              placeholder="ex: Păstârnac, Gulie..."
+              className="w-full rounded-[12px] px-4 py-3 text-[14px] text-[#3D2C3E] outline-none mb-4"
+              style={{ backgroundColor: "#F5F0F8" }}
+            />
+
+            <p className="text-[12px] text-[#8B7A8E] mb-3">Alege un emoji</p>
+            <div className="flex flex-wrap gap-2 mb-5">
+              {["🥦","🥕","🫑","🧅","🧄","🥔","🍠","🫚","🌽","🥒","🍅","🫛","🫒","🍋","🍊","🍎","🍇","🫐","🍓","🥑","🥚","🐟","🍗","🥩","🧀","🌾","🍽️"].map((em) => (
+                <button
+                  key={em}
+                  type="button"
+                  onClick={() => setCustomFoodEmoji(em)}
+                  className="text-[22px] rounded-[8px] w-10 h-10 flex items-center justify-center cursor-pointer border"
+                  style={{
+                    borderColor: customFoodEmoji === em ? "#D4849A" : "transparent",
+                    backgroundColor: customFoodEmoji === em ? "#FFF0F5" : "transparent",
+                  }}
+                >
+                  {em}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              disabled={!customFoodName.trim()}
+              onClick={() => {
+                if (!customFoodName.trim()) return;
+                const customId = `custom_${Date.now()}`;
+                setSelection({
+                  kind: "food",
+                  food: {
+                    id: customId,
+                    name: customFoodName.trim(),
+                    emoji: customFoodEmoji,
+                  } as FoodCatalogItem,
+                });
+                setShowCustomModal(false);
+                setSearch("");
+              }}
+              className="w-full h-12 rounded-full font-bold text-white cursor-pointer"
+              style={{ backgroundColor: customFoodName.trim() ? "#D4849A" : "#EDE7F6", color: customFoodName.trim() ? "white" : "#8B7A8E" }}
+            >
+              Selectează alimentul
+            </button>
+          </div>
+        </div>
+      )}
 
       <Navbar activeTab="acasa" />
     </div>
