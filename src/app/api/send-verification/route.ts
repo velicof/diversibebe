@@ -6,7 +6,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(req: NextRequest) {
   const { email, token } = await req.json();
 
-  const verificationUrl = `http://localhost:3000/verify-email?token=${token}&email=${encodeURIComponent(
+  if (!email || typeof email !== "string" || !token || typeof token !== "string") {
+    return NextResponse.json({ error: "Missing email or token" }, { status: 400 });
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
+  const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(
     email
   )}`;
 

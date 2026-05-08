@@ -202,7 +202,8 @@ export default function AlergiiPage() {
                       await supabaseClient
                         .from("allergy_records")
                         .delete()
-                        .eq("id", a.id);
+                        .eq("id", a.id)
+                        .eq("user_id", userId);
                       setAllergies((prev) => prev.filter((x) => x.id !== a.id));
                     }}
                   >

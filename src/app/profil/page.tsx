@@ -239,8 +239,8 @@ export default function ProfilPage() {
         .from("food_journal")
         .select("*")
         .eq("user_id", userId)
-        .gte("date", startDate.toISOString().split("T")[0])
-        .order("date", { ascending: true });
+        .gte("logged_at", startDate.toISOString())
+        .order("logged_at", { ascending: true });
 
       const entries = (data as JournalRow[] | null) ?? [];
       if (!entries.length) {
