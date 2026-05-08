@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   formatRecipeCardHintRo,
   readBabyAgeMonthsFromStorage,
@@ -73,13 +74,22 @@ const pillInactive = {
 
 export default function RetetePage() {
   const storeVersion = useStoreRefresh();
-  const [mealFilter, setMealFilter] = useState<MealFilterId>("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Read initial filter state from URL params
+  const initialMeal = (searchParams.get("tip") ?? "all") as MealFilterId;
+  const initialAge = searchParams.get("varsta") as AgeFilterId | null;
+  const initialMethod = (searchParams.get("metoda") ?? "toate") as MethodFilterId;
+  const initialSearch = searchParams.get("search") ?? "";
+
+  const [mealFilter, setMealFilter] = useState<MealFilterId>(initialMeal);
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [profileAgeFilter, setProfileAgeFilter] = useState<AgeFilterId>("all");
   const [manualAgeFilter, setManualAgeFilter] = useState<AgeFilterId | null>(
-    null
+    initialAge
   );
-  const [methodFilter, setMethodFilter] = useState<MethodFilterId>("toate");
+  const [methodFilter, setMethodFilter] = useState<MethodFilterId>(initialMethod);
   const [babyAgeMonths, setBabyAgeMonths] = useState<number | null>(null);
   const { userId } = useUser();
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState<
@@ -90,39 +100,23 @@ export default function RetetePage() {
   const prevBirthKey = useRef<string | null>(null);
   const recommended = useRecommendedRecipes();
 
-  // Restaurează filtrele din sessionStorage la mount
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem("retete_filters");
-      if (saved) {
-        const { meal, age, method } = JSON.parse(saved);
-        if (meal) setMealFilter(meal);
-        if (age) setManualAgeFilter(age);
-        if (
-          method === "toate" ||
-          method === "clasic" ||
-          method === "blw" ||
-          method === "mixt"
-        ) {
-          setMethodFilter(method);
-        }
-      }
-    } catch {}
-  }, []); // O singură dată la mount
+  // Sync filter state TO URL params
+  const updateUrl = useCallback(
+    (meal: MealFilterId, age: AgeFilterId | null, method: MethodFilterId, search: string) => {
+      const params = new URLSearchParams();
+      if (meal !== "all") params.set("tip", meal);
+      if (age) params.set("varsta", age);
+      if (method !== "toate") params.set("metoda", method);
+      if (search.trim()) params.set("search", search.trim());
+      const qs = params.toString();
+      router.replace(`/retete${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [router]
+  );
 
-  // Salvează filtrele în sessionStorage când se schimbă
   useEffect(() => {
-    try {
-      sessionStorage.setItem(
-        "retete_filters",
-        JSON.stringify({
-          meal: mealFilter,
-          age: manualAgeFilter,
-          method: methodFilter,
-        })
-      );
-    } catch {}
-  }, [mealFilter, manualAgeFilter, methodFilter]);
+    updateUrl(mealFilter, manualAgeFilter, methodFilter, searchQuery);
+  }, [mealFilter, manualAgeFilter, methodFilter, searchQuery, updateUrl]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- mirror baby birthDate from localStorage into filter state */
   useEffect(() => {
@@ -213,32 +207,37 @@ export default function RetetePage() {
     const byMethod = (r: (typeof RECIPES)[number]) =>
       methodFilter === "toate" || r.method === methodFilter;
 
-    if (searchTrim) {
-      return searchByNameNormalized(RECIPES, searchTrim).filter(byMethod);
-    }
-    let list = RECIPES;
-    if (mealFilter !== "all") {
+    const byMeal = (r: (typeof RECIPES)[number]) => {
+      if (mealFilter === "all") return true;
       if (mealFilter === "favorite") {
         const favSet = new Set(favoriteRecipeIds ?? []);
-        list = favoriteRecipeIds
-          ? list.filter((r) => favSet.has(r.id))
-          : [];
-      } else {
-        list = list.filter((r) => r.mealType === mealFilter);
+        return favoriteRecipeIds ? favSet.has(r.id) : false;
       }
-    }
-    if (ageFilter === "all") {
-      // Sortează toate rețetele crescător după vârstă
-      list = [...list].sort((a, b) => extractMinAge(a.age) - extractMinAge(b.age));
-    } else {
-      // Afișează EXACT rețetele pentru vârsta selectată
+      return r.mealType === mealFilter;
+    };
+
+    const byAge = (r: (typeof RECIPES)[number]) => {
+      if (ageFilter === "all") return true;
       const selectedMonths = Number(ageFilter);
-      list = list.filter((r) => {
-        const recipeAge = extractMinAge(r.age);
-        return recipeAge === selectedMonths;
-      });
+      const recipeAge = extractMinAge(r.age);
+      // Show recipes AT or BELOW the selected age threshold
+      return recipeAge <= selectedMonths;
+    };
+
+    let list = RECIPES;
+
+    // Search combines with all filters
+    if (searchTrim) {
+      list = searchByNameNormalized(list, searchTrim);
     }
-    return list.filter(byMethod);
+
+    list = list.filter((r) => byMeal(r) && byAge(r) && byMethod(r));
+
+    if (ageFilter === "all" && !searchTrim) {
+      list = [...list].sort((a, b) => extractMinAge(a.age) - extractMinAge(b.age));
+    }
+
+    return list;
   }, [searchTrim, mealFilter, ageFilter, methodFilter, favoriteRecipeIds]);
 
   return (
