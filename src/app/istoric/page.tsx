@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
@@ -209,13 +209,48 @@ function formatFullDate(e: FoodEntry): string {
   return `${d} ${capMonth(RO_MONTHS_LONG[mo - 1])} ${y}`;
 }
 
+const EDIT_REACTION_OPTIONS: Array<{
+  key: NonNullable<FoodEntry["reaction"]>;
+  label: string;
+  emoji: string;
+}> = [
+  { key: "loved", label: "A adorat", emoji: "😍" },
+  { key: "ok", label: "Ok", emoji: "😊" },
+  { key: "disliked", label: "Nu a plăcut", emoji: "😕" },
+  { key: "refused", label: "A refuzat", emoji: "🙅" },
+];
+
+const mapReactionToDb = (r: string | null): string | null => {
+  if (!r) return null;
+  const map: Record<string, string> = {
+    loved: "pozitiv",
+    ok: "neutru",
+    disliked: "negativ",
+    refused: "negativ",
+  };
+  return map[r] ?? r;
+};
+
 function EntryDetailSheet({
   entry,
+  userId,
   onClose,
+  onDelete,
+  onUpdate,
 }: {
   entry: FoodEntry;
+  userId: string | null;
   onClose: () => void;
+  onDelete: (entryId: string) => void;
+  onUpdate: (entryId: string, reaction: FoodEntry["reaction"], notes: string) => void;
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editReaction, setEditReaction] = useState<FoodEntry["reaction"]>(entry.reaction);
+  const [editNotes, setEditNotes] = useState(entry.notes ?? "");
+
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -223,6 +258,45 @@ function EntryDetailSheet({
       document.body.style.overflow = prev;
     };
   }, []);
+
+  const handleDelete = async () => {
+    if (!userId) return;
+    setDeleting(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("food_journal")
+        .delete()
+        .eq("id", entry.id)
+        .eq("user_id", userId);
+      if (!error) {
+        onDelete(entry.id);
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!userId) return;
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("food_journal")
+        .update({
+          reaction: mapReactionToDb(editReaction),
+          notes: editNotes.trim() || null,
+        })
+        .eq("id", entry.id)
+        .eq("user_id", userId);
+      if (!error) {
+        onUpdate(entry.id, editReaction, editNotes.trim());
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const symptomsList = entry.symptoms.filter((s) => s !== "Nicio reacție");
 
@@ -240,7 +314,7 @@ function EntryDetailSheet({
       >
         <div className="flex items-start justify-between gap-3 mb-4">
           <p className="text-[16px] font-extrabold text-[#3D2C3E] pr-8">
-            Detalii intrare
+            {editing ? "Editează intrare" : "Detalii intrare"}
           </p>
           <button
             type="button"
@@ -274,9 +348,34 @@ function EntryDetailSheet({
             <dt className="text-[11px] font-bold uppercase text-[#B0A0B8]">
               Reacție
             </dt>
-            <dd className="mt-0.5 text-[#3D2C3E]">
-              {reactionLabel(entry.reaction)}
-            </dd>
+            {editing ? (
+              <dd className="mt-1.5 grid grid-cols-2 gap-2">
+                {EDIT_REACTION_OPTIONS.map((option) => {
+                  const active = editReaction === option.key;
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => setEditReaction(option.key)}
+                      className="rounded-[12px] border p-2.5 text-left cursor-pointer"
+                      style={{
+                        borderColor: active ? "#D4849A" : "#EDE7F6",
+                        background: active ? "#FFF0F5" : "#FFFFFF",
+                      }}
+                    >
+                      <span className="text-[16px]">{option.emoji}</span>
+                      <span className="ml-1.5 text-[12px] font-semibold text-[#3D2C3E]">
+                        {option.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </dd>
+            ) : (
+              <dd className="mt-0.5 text-[#3D2C3E]">
+                {reactionLabel(entry.reaction)}
+              </dd>
+            )}
           </div>
           <div>
             <dt className="text-[11px] font-bold uppercase text-[#B0A0B8]">
@@ -304,17 +403,107 @@ function EntryDetailSheet({
               {symptomsList.length ? symptomsList.join(", ") : "—"}
             </dd>
           </div>
-          {entry.notes?.trim() ? (
-            <div>
-              <dt className="text-[11px] font-bold uppercase text-[#B0A0B8]">
-                Note
-              </dt>
-              <dd className="mt-0.5 text-[#3D2C3E] whitespace-pre-wrap">
-                {entry.notes.trim()}
+          <div>
+            <dt className="text-[11px] font-bold uppercase text-[#B0A0B8]">
+              Note
+            </dt>
+            {editing ? (
+              <dd className="mt-1">
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  rows={3}
+                  placeholder="Adaugă note..."
+                  className="w-full resize-none rounded-[12px] p-3 text-[14px] text-[#3D2C3E] outline-none"
+                  style={{ backgroundColor: "#F5F0F8" }}
+                />
               </dd>
-            </div>
-          ) : null}
+            ) : (
+              <dd className="mt-0.5 text-[#3D2C3E] whitespace-pre-wrap">
+                {entry.notes?.trim() || "—"}
+              </dd>
+            )}
+          </div>
         </dl>
+
+        {/* Action buttons */}
+        <div className="mt-5 flex flex-col gap-2">
+          {editing ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(false);
+                  setEditReaction(entry.reaction);
+                  setEditNotes(entry.notes ?? "");
+                }}
+                className="flex-1 h-11 rounded-full border border-[#EDE7F6] text-[14px] font-semibold text-[#8B7A8E] cursor-pointer"
+              >
+                Anulează
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 h-11 rounded-full bg-[#D4849A] text-[14px] font-bold text-white cursor-pointer disabled:opacity-60"
+              >
+                {saving ? "Se salvează..." : "💾 Salvează"}
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="h-11 w-full rounded-full border border-[#D4849A] text-[14px] font-semibold text-[#D4849A] cursor-pointer"
+                style={{ background: "#FFF8F6" }}
+              >
+                ✏️ Editează
+              </button>
+              {confirmDelete ? (
+                <div
+                  className="rounded-[14px] border border-[#FFE5E5] p-4"
+                  style={{ background: "#FFF5F5" }}
+                >
+                  <p className="text-[13px] font-semibold text-[#3D2C3E] text-center">
+                    Ești sigur că vrei să ștergi această înregistrare?
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(false)}
+                      className="flex-1 h-10 rounded-full border border-[#EDE7F6] text-[13px] font-semibold text-[#8B7A8E] cursor-pointer"
+                    >
+                      Anulează
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="flex-1 h-10 rounded-full text-[13px] font-bold text-white cursor-pointer disabled:opacity-60"
+                      style={{ background: "#E74C3C" }}
+                    >
+                      {deleting ? "Se șterge..." : "🗑️ Confirmă ștergerea"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="h-11 w-full rounded-full border text-[14px] font-semibold cursor-pointer"
+                  style={{
+                    borderColor: "#FFE5E5",
+                    background: "#FFF5F5",
+                    color: "#E74C3C",
+                  }}
+                >
+                  🗑️ Șterge înregistrarea
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -328,6 +517,36 @@ export default function IstoricPage() {
   const [activeTab, setActiveTab] = useState<"jurnal" | "retete">("jurnal");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sheetEntry, setSheetEntry] = useState<FoodEntry | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  }, []);
+
+  const handleDeleteEntry = useCallback(
+    (entryId: string) => {
+      setJournalRows((prev) => prev.filter((r) => r.id !== entryId));
+      setSheetEntry(null);
+      showToast("✅ Înregistrare ștearsă cu succes");
+    },
+    [showToast]
+  );
+
+  const handleUpdateEntry = useCallback(
+    (entryId: string, reaction: FoodEntry["reaction"], notes: string) => {
+      setJournalRows((prev) =>
+        prev.map((r) =>
+          r.id === entryId
+            ? { ...r, reaction: mapReactionToDb(reaction), notes: notes || null }
+            : r
+        )
+      );
+      setSheetEntry(null);
+      showToast("✅ Înregistrare actualizată cu succes");
+    },
+    [showToast]
+  );
 
   useEffect(() => {
     if (!userId) {
@@ -721,8 +940,20 @@ export default function IstoricPage() {
       {sheetEntry ? (
         <EntryDetailSheet
           entry={sheetEntry}
+          userId={userId}
           onClose={() => setSheetEntry(null)}
+          onDelete={handleDeleteEntry}
+          onUpdate={handleUpdateEntry}
         />
+      ) : null}
+
+      {toast ? (
+        <div
+          className="fixed bottom-24 left-1/2 z-[110] -translate-x-1/2 rounded-[14px] px-5 py-3 text-[14px] font-bold text-[#3D2C3E] shadow-lg"
+          style={{ backgroundColor: "#A8DCD1" }}
+        >
+          {toast}
+        </div>
       ) : null}
 
       <Navbar activeTab="acasa" />
