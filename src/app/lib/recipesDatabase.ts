@@ -15,6 +15,7 @@ import {
 } from "./pranzSiGustariNoi";
 import { PRANZ_12PLUS_RECIPES } from "./pranz12PlusRecipes";
 import { GUSTARI_12PLUS_RECIPES } from "./gustari12PlusRecipes";
+import { RETETE_PESTE } from "./retetePeste";
 
 export type MealType = "mic-dejun" | "pranz" | "cina" | "gustare";
 
@@ -2790,6 +2791,7 @@ const RECIPES_RAW: RecipeCatalogItem[] = [
   ...PRANZ_12PLUS_RECIPES,
   ...GUSTARE_RECIPES,
   ...GUSTARI_12PLUS_RECIPES,
+  ...RETETE_PESTE,
 ];
 
 export const RECIPES: RecipeCatalogItem[] = RECIPES_RAW.map((r) => ({
