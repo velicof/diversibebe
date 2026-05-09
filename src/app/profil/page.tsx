@@ -12,6 +12,7 @@ import { calculateBabyAge, logoutUser } from "../lib/store";
 import { useStoreRefresh } from "../lib/useStoreRefresh";
 import { useUser } from "@/lib/useUser";
 import BabyAvatar from "../components/BabyAvatar";
+import FeedbackModal from "../components/FeedbackModal";
 
 type Row = {
   key: string;
@@ -163,6 +164,7 @@ export default function ProfilPage() {
   const [showPeriodModal, setShowPeriodModal] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodId>("7d");
   const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [showFeedback, setShowFeedback] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -482,6 +484,39 @@ export default function ProfilPage() {
             {exportNotice}
           </p>
         ) : null}
+
+        <section className="mt-6">
+          <div
+            className="rounded-[16px] p-[16px] border w-full"
+            style={{
+              background: "rgba(168, 220, 209, 0.12)",
+              borderColor: "#A8DCD1",
+            }}
+          >
+            <p className="text-[14px] font-bold text-[#3D2C3E]">
+              Cum te putem ajuta mai mult?
+            </p>
+            <p
+              className="mt-1 text-[12px] leading-relaxed"
+              style={{ color: "#8B7A8E" }}
+            >
+              Spune-ne ce ți-ai dori să găsești în DiversiBebe sau ce nu a mers cum te așteptai.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowFeedback(true)}
+              className="mt-3 w-full rounded-[14px] py-3 px-4 text-[13px] font-bold cursor-pointer border-0"
+              style={{
+                background: "#A8DCD1",
+                color: "#0F6E56",
+                fontFamily: "Nunito, sans-serif",
+              }}
+            >
+              Trimite feedback →
+            </button>
+          </div>
+        </section>
+
         <CardSection title="ALTELE" rows={altele} />
       </main>
 
@@ -544,6 +579,11 @@ export default function ProfilPage() {
           </div>
         </div>
       ) : null}
+
+      <FeedbackModal
+        isOpen={showFeedback}
+        onClose={() => setShowFeedback(false)}
+      />
     </div>
   );
 }

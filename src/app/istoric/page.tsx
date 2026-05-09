@@ -940,7 +940,7 @@ export default function IstoricPage() {
       {sheetEntry ? (
         <EntryDetailSheet
           entry={sheetEntry}
-          userId={userId}
+          userId={userId ?? null}
           onClose={() => setSheetEntry(null)}
           onDelete={handleDeleteEntry}
           onUpdate={handleUpdateEntry}

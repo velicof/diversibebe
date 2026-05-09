@@ -9,6 +9,14 @@ import BabyAvatar from "../../components/BabyAvatar";
 
 type Gender = "boy" | "girl";
 
+type AllergyTag = {
+  key: string;
+  text: string;
+  bg: string;
+  color: string;
+  dashed?: boolean;
+};
+
 function CameraIcon() {
   return <span style={{ fontSize: 14, lineHeight: 1 }}>📷</span>;
 }
@@ -53,18 +61,18 @@ export default function ProfilBebelusPage() {
       });
   }, [userId]);
 
-  const allergyTags = useMemo(
-    () => [
-      ...allergies.map((allergy) => ({
-        key: allergy,
-        text: allergy,
-        bg: "#FAEEDA",
-        color: "#854F0B",
-      })),
+  const allergyTags = useMemo((): AllergyTag[] => {
+    const fromAllergies: AllergyTag[] = allergies.map((allergy) => ({
+      key: allergy,
+      text: allergy,
+      bg: "#FAEEDA",
+      color: "#854F0B",
+    }));
+    return [
+      ...fromAllergies,
       { key: "add", text: "+ Adaugă", bg: "#FFFFFF", color: "#B8A9BB", dashed: true },
-    ],
-    [allergies]
-  );
+    ];
+  }, [allergies]);
 
   const handleSave = async () => {
     if (!userId) return;
@@ -209,9 +217,9 @@ export default function ProfilBebelusPage() {
                   key={t.key}
                   className="px-[14px] py-[6px] rounded-full text-[12px] font-semibold"
                   style={{
-                    background: t.dashed ? "#FFFFFF" : t.bg,
+                    background: t.dashed === true ? "#FFFFFF" : t.bg,
                     color: t.color,
-                    border: t.dashed ? "2px dashed #EDE7F6" : "none",
+                    border: t.dashed === true ? "2px dashed #EDE7F6" : "none",
                   }}
                 >
                   {t.text}

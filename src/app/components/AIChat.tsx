@@ -86,24 +86,30 @@ function toApiMessages(msgs: Message[]): { role: "user" | "assistant"; content: 
 function pillLabelForPath(pathname: string): string {
   const p = pathname || "";
   if (p === "/" || p === "/dashboard") {
-    return "🍼 Întreabă despre diversificare";
+    return "Întreabă BebeAsist";
   }
   if (p.startsWith("/foods") || p.startsWith("/alimente")) {
-    return "🥕 Întreabă despre alimente";
+    return "Întreabă despre alimente";
   }
   if (p.startsWith("/recipes") || p.startsWith("/retete")) {
-    return "🍳 Întreabă despre rețete";
+    return "Găsește o rețetă";
   }
   if (p.startsWith("/plan")) {
-    return "📅 Întreabă despre planul alimentar";
+    return "Ajutor cu planul săptămânal";
   }
   if (p.startsWith("/alergii")) {
-    return "🚨 Întreabă despre alergii";
+    return "Întreabă despre alergii";
+  }
+  if (p.startsWith("/jurnal") || p.startsWith("/istoric")) {
+    return "Întreabă despre jurnal";
   }
   if (p.startsWith("/ghid")) {
-    return "📖 Întreabă despre ghidul de diversificare";
+    return "Întreabă despre ghid";
   }
-  return "💬 BebeAsist - Întreabă orice";
+  if (p.startsWith("/profil")) {
+    return "Ajutor pentru cont";
+  }
+  return "Întreabă BebeAsist";
 }
 
 export default function AIChat() {
@@ -407,37 +413,60 @@ Numele părintelui: ${user?.parentName || "Părintele"}
   return (
     <>
       {!isOpen ? (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
+        <div
           style={{
             position: "fixed",
             bottom: `calc(${pillBottomPx}px + env(safe-area-inset-bottom, 0px))`,
-            left: "50%",
-            transform: "translateX(-50%)",
+            right: "calc(50% - 196px + 24px)",
             zIndex: 40,
-            width: "fit-content",
-            maxWidth: "min(320px, calc(100vw - 24px))",
-            background: "linear-gradient(135deg, #D4849A, #C4B5E0)",
-            borderRadius: 999,
-            padding: "8px 14px",
-            color: "white",
-            fontSize: 12,
-            fontWeight: 700,
-            border: "none",
-            cursor: "pointer",
             display: "flex",
             alignItems: "center",
-            gap: 6,
-            boxShadow: "0 3px 14px rgba(212,132,154,0.35)",
-            fontFamily: "Nunito, sans-serif",
-            whiteSpace: "nowrap",
-            lineHeight: 1.25,
+            gap: 8,
           }}
-          aria-label="Deschide BebeAsist"
         >
-          {pillLabelForPath(pathname)}
-        </button>
+          {/* Context label pill */}
+          <span
+            style={{
+              background: "white",
+              color: "#3D2C3E",
+              fontSize: 12,
+              fontWeight: 700,
+              padding: "6px 14px",
+              borderRadius: 999,
+              boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
+              fontFamily: "Nunito, sans-serif",
+              whiteSpace: "nowrap",
+              lineHeight: 1.25,
+              pointerEvents: "none",
+            }}
+          >
+            {pillLabelForPath(pathname)}
+          </span>
+
+          {/* Round FAB button */}
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              background: "#C4B5E0",
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 24,
+              boxShadow: "0 4px 16px rgba(196,181,224,0.45)",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              flexShrink: 0,
+            }}
+            aria-label="Deschide BebeAsist"
+          >
+            🤖
+          </button>
+        </div>
       ) : null}
 
       {isOpen ? (

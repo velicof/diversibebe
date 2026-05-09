@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
 import Navbar from "../components/Navbar";
 import BabyAvatar from "../components/BabyAvatar";
+import FeedbackModal from "../components/FeedbackModal";
 import type { FoodCatalogItem, FoodEntry, UserAccount } from "../lib/store";
 import { supabaseClient } from "@/lib/supabaseClient";
 import {
@@ -142,6 +143,7 @@ export default function DashboardPage() {
   const [babyName, setBabyName] = useState("");
   const [babyBirthdate, setBabyBirthdate] = useState("");
   const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   useEffect(() => {
     if (!userId) {
@@ -792,6 +794,44 @@ export default function DashboardPage() {
             </div>
           )}
         </section>
+
+        {/* Feedback card */}
+        <section className="mt-6 mb-2">
+          <div
+            className="rounded-[16px] p-[16px] border"
+            style={{
+              background: "rgba(168, 220, 209, 0.08)",
+              borderColor: "#A8DCD1",
+            }}
+          >
+            <p
+              className="text-[14px] font-bold"
+              style={{ color: "#3D2C3E" }}
+            >
+              Cum te putem ajuta mai mult?
+            </p>
+            <p
+              className="mt-1 text-[12px]"
+              style={{ color: "#8B7A8E", lineHeight: 1.5 }}
+            >
+              Spune-ne ce ți-ai dori să găsești în DiversiBebe.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowFeedback(true)}
+              className="mt-3 text-[13px] font-bold cursor-pointer"
+              style={{
+                color: "#0F6E56",
+                background: "none",
+                border: "none",
+                padding: 0,
+                fontFamily: "Nunito, sans-serif",
+              }}
+            >
+              Lasă-ne un mesaj →
+            </button>
+          </div>
+        </section>
       </main>
 
       <Link
@@ -804,6 +844,11 @@ export default function DashboardPage() {
       </Link>
 
       <Navbar activeTab="acasa" />
+
+      <FeedbackModal
+        isOpen={showFeedback}
+        onClose={() => setShowFeedback(false)}
+      />
     </div>
   );
 }
