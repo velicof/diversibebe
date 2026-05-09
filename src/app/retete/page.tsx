@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   formatRecipeCardHintRo,
   readBabyAgeMonthsFromStorage,
@@ -72,9 +72,8 @@ const pillInactive = {
   border: "1px solid #EDE7F6",
 };
 
-export default function RetetePage() {
+function RetetPageInner() {
   const storeVersion = useStoreRefresh();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   // Read initial filter state from URL params
@@ -98,25 +97,20 @@ export default function RetetePage() {
   const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
   const ageFilter = manualAgeFilter ?? profileAgeFilter;
   const prevBirthKey = useRef<string | null>(null);
+  const hasMountedRef = useRef(false);
   const recommended = useRecommendedRecipes();
 
-  // Sync filter state TO URL params
-  const updateUrl = useCallback(
-    (meal: MealFilterId, age: AgeFilterId | null, method: MethodFilterId, search: string) => {
-      const params = new URLSearchParams();
-      if (meal !== "all") params.set("tip", meal);
-      if (age) params.set("varsta", age);
-      if (method !== "toate") params.set("metoda", method);
-      if (search.trim()) params.set("search", search.trim());
-      const qs = params.toString();
-      router.replace(`/retete${qs ? `?${qs}` : ""}`, { scroll: false });
-    },
-    [router]
-  );
-
+  // Sync filter state TO URL params (using replaceState to avoid re-render loops)
   useEffect(() => {
-    updateUrl(mealFilter, manualAgeFilter, methodFilter, searchQuery);
-  }, [mealFilter, manualAgeFilter, methodFilter, searchQuery, updateUrl]);
+    const params = new URLSearchParams();
+    if (mealFilter !== "all") params.set("tip", mealFilter);
+    if (manualAgeFilter) params.set("varsta", manualAgeFilter);
+    if (methodFilter !== "toate") params.set("metoda", methodFilter);
+    if (searchQuery.trim()) params.set("search", searchQuery.trim());
+    const qs = params.toString();
+    const newUrl = `/retete${qs ? `?${qs}` : ""}`;
+    window.history.replaceState(null, "", newUrl);
+  }, [mealFilter, manualAgeFilter, methodFilter, searchQuery]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- mirror baby birthDate from localStorage into filter state */
   useEffect(() => {
@@ -133,7 +127,11 @@ export default function RetetePage() {
         "";
       if (prevBirthKey.current !== birthDate) {
         prevBirthKey.current = birthDate;
-        setManualAgeFilter(null);
+        // Only reset manual age filter if user has already interacted (not on first mount)
+        if (hasMountedRef.current) {
+          setManualAgeFilter(null);
+        }
+        hasMountedRef.current = true;
       }
       const d = birthDate ? parseDate(birthDate) : null;
       const ageMonths =
@@ -524,5 +522,22 @@ export default function RetetePage() {
 
       <Navbar activeTab="retete" />
     </div>
+  );
+}
+
+export default function RetetePage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="flex min-h-screen w-full items-center justify-center bg-[#FFF8F6]"
+          style={{ fontFamily: '"Nunito", sans-serif' }}
+        >
+          <p className="text-[14px] text-[#8B7A8E]">Se încarcă rețetele…</p>
+        </div>
+      }
+    >
+      <RetetPageInner />
+    </Suspense>
   );
 }
