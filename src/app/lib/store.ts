@@ -491,6 +491,7 @@ export function saveOnboardingBabyProfile(input: {
   name: string;
   birthDate: string;
   gender: "boy" | "girl" | null;
+  allergies?: string[];
 }): void {
   const data = readData();
   const u = data.appState.currentUser;
@@ -500,6 +501,7 @@ export function saveOnboardingBabyProfile(input: {
     name: input.name.trim(),
     birthDate: input.birthDate.trim(),
     gender: input.gender,
+    allergies: Array.isArray(input.allergies) ? input.allergies : u.baby.allergies,
   };
   const nextUser: UserAccount = { ...u, baby };
   data.appState.currentUser = nextUser;

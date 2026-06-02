@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
@@ -144,6 +144,9 @@ export default function DashboardPage() {
   const [babyBirthdate, setBabyBirthdate] = useState("");
   const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
+  // Tracks which email has already been checked for onboarding redirect,
+  // so that store updates (STORE_UPDATED_EVENT) don't re-trigger the redirect.
+  const onboardingCheckedEmailRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!userId) {
@@ -211,6 +214,12 @@ export default function DashboardPage() {
       email,
       name: typeof nameMeta === "string" ? nameMeta : null,
     });
+    // Guard: only run the onboarding redirect check once per authenticated email.
+    // Without this guard, every STORE_UPDATED_EVENT (e.g. triggered by saving the
+    // baby profile) bumps storeVersion → re-runs this effect → may redirect to
+    // /onboarding even though the profile was just saved, creating an infinite loop.
+    if (onboardingCheckedEmailRef.current === email) return;
+    onboardingCheckedEmailRef.current = email;
     const u = getCurrentUser();
     if (u?.email?.toLowerCase() === email.toLowerCase() && !u.baby?.name?.trim()) {
       router.replace("/onboarding");

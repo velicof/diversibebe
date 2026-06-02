@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
-import { getCurrentUser, registerUser, type UserAccount } from "../../lib/store";
+import { getCurrentUser, registerUser, saveOnboardingBabyProfile, type UserAccount } from "../../lib/store";
 import BabyAvatar from "../../components/BabyAvatar";
 
 type Gender = "boy" | "girl";
@@ -31,6 +31,18 @@ export default function ProfilBebelusPage() {
   const [gender, setGender] = useState<Gender>("boy");
   const [allergies, setAllergies] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [showAllergyPicker, setShowAllergyPicker] = useState(false);
+
+  const COMMON_ALLERGIES = [
+    "Lapte",
+    "Ou",
+    "Grâu",
+    "Soia",
+    "Nuci",
+    "Pește",
+    "Crustacee",
+    "Arahide",
+  ] as const;
 
   useEffect(() => {
     setAllergies(current?.baby.allergies ?? []);
@@ -57,6 +69,7 @@ export default function ProfilBebelusPage() {
           if (data.gender === "girl" || data.gender === "boy") {
             setGender(data.gender);
           }
+          setAllergies(Array.isArray(data.allergies) ? (data.allergies as string[]) : []);
         }
       });
   }, [userId]);
@@ -68,10 +81,7 @@ export default function ProfilBebelusPage() {
       bg: "#FAEEDA",
       color: "#854F0B",
     }));
-    return [
-      ...fromAllergies,
-      { key: "add", text: "+ Adaugă", bg: "#FFFFFF", color: "#B8A9BB", dashed: true },
-    ];
+    return fromAllergies;
   }, [allergies]);
 
   const handleSave = async () => {
@@ -86,26 +96,41 @@ export default function ProfilBebelusPage() {
           ? parseFloat(weight.replace(",", ".")) / 1000
           : null,
         gender,
+        allergies: allergies.length ? allergies : [],
       })
       .eq("user_id", userId);
     if (error) {
       alert("Eroare: " + error.message);
     } else {
       alert("Salvat!");
-      if (current) {
+      // Sync baby data into the local store so the dashboard redirect guard
+      // doesn't see an empty baby name and bounce the user to /onboarding.
+      const latestUser = getCurrentUser();
+      if (latestUser) {
         const updated: UserAccount = {
-          ...current,
+          ...latestUser,
           baby: {
-            ...current.baby,
+            ...latestUser.baby,
             name: babyName.trim(),
             birthDate: birthDate.trim(),
             weight: weight.trim(),
             gender,
+            allergies,
           },
         };
         registerUser(updated);
+      } else {
+        // Fallback for Google OAuth users whose session hasn't been synced to
+        // localStorage yet — saveOnboardingBabyProfile only needs currentUser
+        // to exist, but if it's truly null we at least try the lighter update.
+        saveOnboardingBabyProfile({
+          name: babyName.trim(),
+          birthDate: birthDate.trim(),
+          gender,
+          allergies,
+        });
       }
-      router.push("/profil");
+      router.back();
     }
   };
 
@@ -116,8 +141,8 @@ export default function ProfilBebelusPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => router.push("/profil")}
-              className="text-[22px] text-[#3D2C3E] leading-none cursor-pointer bg-transparent border-0 p-0"
+              onClick={() => router.back()}
+              className="relative z-10 text-[22px] text-[#3D2C3E] leading-none cursor-pointer bg-transparent border-0 p-0"
               aria-label="Înapoi"
             >
               ←
@@ -217,15 +242,69 @@ export default function ProfilBebelusPage() {
                   key={t.key}
                   className="px-[14px] py-[6px] rounded-full text-[12px] font-semibold"
                   style={{
-                    background: t.dashed === true ? "#FFFFFF" : t.bg,
+                    background: t.bg,
                     color: t.color,
-                    border: t.dashed === true ? "2px dashed #EDE7F6" : "none",
+                    border: "none",
                   }}
                 >
                   {t.text}
                 </span>
               ))}
+              <button
+                type="button"
+                onClick={() => setShowAllergyPicker(true)}
+                className="px-[14px] py-[6px] rounded-full text-[12px] font-semibold cursor-pointer"
+                style={{
+                  background: "#FFFFFF",
+                  color: "#B8A9BB",
+                  border: "2px dashed #EDE7F6",
+                }}
+              >
+                + Adaugă
+              </button>
             </div>
+
+            {showAllergyPicker ? (
+              <div
+                className="mt-3 w-full rounded-[16px] border border-[#EDE7F6] bg-white p-3"
+                role="dialog"
+                aria-label="Picker alergii"
+              >
+                <div className="text-[12px] font-semibold text-[#8B7A8E]">Alege un alergen</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {COMMON_ALLERGIES.filter((a) => !allergies.includes(a)).length === 0 ? (
+                    <div className="text-[12px] text-[#8B7A8E]">Toate sunt deja selectate.</div>
+                  ) : null}
+                  {COMMON_ALLERGIES.filter((a) => !allergies.includes(a)).map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => {
+                        setAllergies((prev) => [...prev, a]);
+                        setShowAllergyPicker(false);
+                      }}
+                      className="px-[12px] py-[6px] rounded-full text-[12px] font-semibold cursor-pointer"
+                      style={{
+                        background: "#FAEEDA",
+                        color: "#854F0B",
+                        border: "none",
+                      }}
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="mt-3 w-full rounded-[14px] py-2 text-[13px] font-bold cursor-pointer border-0"
+                  style={{ background: "#EDE7F6", color: "#8B7A8E" }}
+                  onClick={() => setShowAllergyPicker(false)}
+                >
+                  Închide
+                </button>
+              </div>
+            ) : null}
           </div>
 
           <button
