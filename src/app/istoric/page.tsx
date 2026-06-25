@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
 import Navbar from "../components/Navbar";
-import type { FoodEntry } from "../lib/store";
+import type { CustomRecipeIngredient, FoodEntry } from "../lib/store";
 import { RECIPES } from "../lib/recipesDatabase";
 
 const RO_MONTHS_LONG = [
@@ -74,6 +74,7 @@ type FoodJournalRow = {
   id: string;
   food_id: string;
   food_name: string;
+  custom_recipe_id?: string | null;
   reaction: string | null;
   notes: string | null;
   logged_at: string;
@@ -82,6 +83,12 @@ type FoodJournalRow = {
   portion: string | null;
   baby_mood: string | null;
   quantity_grams?: number | null;
+};
+
+type CustomRecipeRow = {
+  id: string;
+  name: string;
+  ingredients: CustomRecipeIngredient[];
 };
 
 type CookedRecipeRow = {
@@ -102,7 +109,10 @@ function dbReactionToFoodReaction(db: string | null): FoodEntry["reaction"] {
   return null;
 }
 
-function rowToFoodEntry(row: FoodJournalRow): FoodEntry {
+function rowToFoodEntry(
+  row: FoodJournalRow,
+  customRecipesById: Map<string, CustomRecipeRow>
+): FoodEntry {
   const d = new Date(row.logged_at);
   const date =
     row.logged_at.length >= 10
@@ -112,6 +122,30 @@ function rowToFoodEntry(row: FoodJournalRow): FoodEntry {
   const time = Number.isNaN(d.getTime())
     ? "12:00"
     : `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+  const customRecipe = row.custom_recipe_id
+    ? customRecipesById.get(row.custom_recipe_id)
+    : undefined;
+
+  if (customRecipe || row.custom_recipe_id) {
+    return {
+      id: row.id,
+      type: "custom_recipe",
+      foodId: row.food_id,
+      foodName: customRecipe?.name ?? row.food_name,
+      emoji: "🍳",
+      customRecipeId: row.custom_recipe_id ?? row.food_id,
+      ingredients: customRecipe?.ingredients ?? [],
+      date,
+      time,
+      reaction: dbReactionToFoodReaction(row.reaction),
+      portion: (row.portion as FoodEntry["portion"]) ?? null,
+      symptoms: Array.isArray(row.symptoms) ? row.symptoms : [],
+      notes: (row.notes ?? "").trim(),
+      babyMood: (row.baby_mood as FoodEntry["babyMood"]) ?? null,
+    };
+  }
+
   return {
     id: row.id,
     type: "food",
@@ -175,7 +209,9 @@ function isInLast30Days(dt: Date, now: Date) {
 }
 
 function entryDisplayName(e: FoodEntry) {
-  return e.type === "recipe" && e.recipeName ? e.recipeName : e.foodName;
+  if (e.type === "custom_recipe") return `Rețeta mea: ${e.foodName}`;
+  if (e.type === "recipe" && e.recipeName) return e.recipeName;
+  return e.foodName;
 }
 
 function inferMealChip(timeStr: string): { emoji: string; label: string } {
@@ -329,11 +365,20 @@ function EntryDetailSheet({
         <dl className="space-y-3 text-[14px]">
           <div>
             <dt className="text-[11px] font-bold uppercase text-[#B0A0B8]">
-              {entry.type === "recipe" ? "Rețetă" : "Aliment"}
+              {entry.type === "custom_recipe"
+                ? "Rețeta mea"
+                : entry.type === "recipe"
+                  ? "Rețetă"
+                  : "Aliment"}
             </dt>
             <dd className="mt-0.5 font-bold text-[#3D2C3E]">
               {entryDisplayName(entry)} {entry.emoji}
             </dd>
+            {entry.type === "custom_recipe" && entry.ingredients?.length ? (
+              <dd className="mt-1 text-[12px] text-[#8B7A8E]">
+                {entry.ingredients.map((i) => `${i.emoji} ${i.name}`).join(" · ")}
+              </dd>
+            ) : null}
           </div>
           <div>
             <dt className="text-[11px] font-bold uppercase text-[#B0A0B8]">
@@ -513,6 +558,7 @@ export default function IstoricPage() {
   const router = useRouter();
   const { userId } = useUser();
   const [journalRows, setJournalRows] = useState<FoodJournalRow[]>([]);
+  const [customRecipeRows, setCustomRecipeRows] = useState<CustomRecipeRow[]>([]);
   const [cookedRecipes, setCookedRecipes] = useState<CookedRecipeRow[]>([]);
   const [activeTab, setActiveTab] = useState<"jurnal" | "retete">("jurnal");
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -551,6 +597,7 @@ export default function IstoricPage() {
   useEffect(() => {
     if (!userId) {
       setJournalRows([]);
+      setCustomRecipeRows([]);
       setCookedRecipes([]);
       return;
     }
@@ -558,11 +605,31 @@ export default function IstoricPage() {
     supabase
       .from("food_journal")
       .select(
-        "id, food_id, food_name, reaction, notes, logged_at, meal_type, symptoms, portion, baby_mood, quantity_grams"
+        "id, food_id, food_name, custom_recipe_id, reaction, notes, logged_at, meal_type, symptoms, portion, baby_mood, quantity_grams"
       )
       .eq("user_id", userId)
       .order("logged_at", { ascending: false })
       .then(({ data }) => setJournalRows((data as FoodJournalRow[]) || []));
+
+    supabase
+      .from("custom_recipes")
+      .select("id, name, ingredients")
+      .eq("user_id", userId)
+      .then(({ data }) => {
+        if (!data) {
+          setCustomRecipeRows([]);
+          return;
+        }
+        setCustomRecipeRows(
+          data.map((row) => ({
+            id: row.id,
+            name: row.name,
+            ingredients: Array.isArray(row.ingredients)
+              ? (row.ingredients as CustomRecipeIngredient[])
+              : [],
+          }))
+        );
+      });
 
     supabase
       .from("cooked_recipes")
@@ -586,9 +653,14 @@ export default function IstoricPage() {
       });
   }, [userId]);
 
+  const customRecipesById = useMemo(
+    () => new Map(customRecipeRows.map((r) => [r.id, r])),
+    [customRecipeRows]
+  );
+
   const allEntries = useMemo(
-    () => journalRows.map(rowToFoodEntry),
-    [journalRows]
+    () => journalRows.map((row) => rowToFoodEntry(row, customRecipesById)),
+    [journalRows, customRecipesById]
   );
 
   const last30 = useMemo(() => {
@@ -603,9 +675,11 @@ export default function IstoricPage() {
     const total = last30.length;
     const uniqueKeys = new Set(
       last30.map((e) =>
-        e.type === "recipe" && e.recipeId
-          ? `r:${e.recipeId}`
-          : `f:${e.foodId}`
+        e.type === "custom_recipe" && e.customRecipeId
+          ? `cr:${e.customRecipeId}`
+          : e.type === "recipe" && e.recipeId
+            ? `r:${e.recipeId}`
+            : `f:${e.foodId}`
       )
     );
     const reactions = last30.filter((e) => hasAdverseJournalSignal(e)).length;

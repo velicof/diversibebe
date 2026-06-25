@@ -23,14 +23,22 @@ export interface UserAccount {
   createdAt: string;
 }
 
+export type CustomRecipeIngredient = {
+  id: string;
+  name: string;
+  emoji: string;
+};
+
 export interface FoodEntry {
   id: string;
-  type: "food" | "recipe";
+  type: "food" | "recipe" | "custom_recipe";
   foodId: string;
   foodName: string;
   emoji: string;
   recipeId?: string;
   recipeName?: string;
+  customRecipeId?: string;
+  ingredients?: CustomRecipeIngredient[];
   date: string; // ISO date YYYY-MM-DD
   time: string; // HH:MM
   reaction: "loved" | "ok" | "disliked" | "refused" | null;
@@ -201,7 +209,12 @@ function migrateFoodEntry(raw: Record<string, unknown>): FoodEntry | null {
     ? raw.symptoms.filter((s): s is string => typeof s === "string")
     : [];
 
-  const type: FoodEntry["type"] = raw.type === "recipe" ? "recipe" : "food";
+  const type: FoodEntry["type"] =
+    raw.type === "recipe"
+      ? "recipe"
+      : raw.type === "custom_recipe"
+        ? "custom_recipe"
+        : "food";
   const hadId =
     typeof raw.id === "string" && raw.id.length > 0 ? raw.id : "";
   const id = hadId || `${Date.now().toString()}-${Math.random().toString(36).slice(2, 9)}`;

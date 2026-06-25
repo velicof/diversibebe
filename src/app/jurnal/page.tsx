@@ -11,6 +11,7 @@ import {
   getRecipeById,
   getRecipes,
   TRIED_FOODS_UPDATED_EVENT,
+  type CustomRecipeIngredient,
   type FoodEntry,
   type TriedFoodsOptimisticDetail,
 } from "../lib/store";
@@ -49,6 +50,12 @@ const MOOD_OPTIONS: Array<{
   { key: "agitat", label: "Agitat", emoji: "😣" },
 ];
 
+type CustomRecipe = {
+  id: string;
+  name: string;
+  ingredients: CustomRecipeIngredient[];
+};
+
 type Selection =
   | {
       kind: "food";
@@ -57,6 +64,10 @@ type Selection =
   | {
       kind: "recipe";
       recipe: RecipeCatalogItem;
+    }
+  | {
+      kind: "custom_recipe";
+      recipe: CustomRecipe;
     };
 
 function todayISO() {
@@ -83,6 +94,79 @@ const mapReaction = (r: string | null): string | null => {
   return map[r] ?? r;
 };
 
+async function upsertTriedFoodForUser(
+  userId: string,
+  foodId: string,
+  foodName: string
+): Promise<TriedFoodsOptimisticDetail | null> {
+  const nowIso = new Date().toISOString();
+  const { data: existing } = await supabaseClient
+    .from("tried_foods")
+    .select("id, try_count, first_tried_at")
+    .eq("user_id", userId)
+    .eq("food_id", foodId)
+    .maybeSingle();
+
+  if (existing) {
+    const nextCount = Number(existing.try_count ?? 0) + 1;
+    const { error: triedError } = await supabaseClient
+      .from("tried_foods")
+      .update({ try_count: nextCount })
+      .eq("id", existing.id);
+    if (triedError) {
+      console.error("tried_foods error:", triedError);
+      return null;
+    }
+    return {
+      food_id: foodId,
+      food_name: foodName,
+      try_count: nextCount,
+      first_tried_at: existing.first_tried_at ?? nowIso,
+    };
+  }
+
+  const { error: triedError } = await supabaseClient.from("tried_foods").insert({
+    user_id: userId,
+    baby_id: null,
+    food_id: foodId,
+    food_name: foodName,
+    first_tried_at: nowIso,
+    try_count: 1,
+  });
+  if (triedError) {
+    console.error("tried_foods error:", triedError);
+    return null;
+  }
+  return {
+    food_id: foodId,
+    food_name: foodName,
+    try_count: 1,
+    first_tried_at: nowIso,
+  };
+}
+
+async function insertAllergyForIngredient(
+  userId: string,
+  foodId: string,
+  foodName: string,
+  symptoms: string[]
+): Promise<void> {
+  const severity =
+    symptoms.includes("Erupție") || symptoms.includes("Vărsături")
+      ? "severa"
+      : "usoara";
+  const { error: allergyErr } = await supabaseClient.from("allergy_records").insert({
+    user_id: userId,
+    baby_id: null,
+    food_id: foodId,
+    food_name: foodName,
+    severity,
+    notes: symptoms.join(", "),
+    recorded_at: new Date().toISOString(),
+  });
+  if (allergyErr) console.error("allergy_records insert error:", allergyErr);
+}
+
 function JurnalInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -101,8 +185,9 @@ function JurnalInner() {
     };
   }, [paramFoodId, paramFoodName, paramEmoji]);
 
-  const [pickerTab, setPickerTab] = useState<"food" | "recipe">("food");
+  const [pickerTab, setPickerTab] = useState<"food" | "recipe" | "my_recipe">("food");
   const [search, setSearch] = useState("");
+  const [ingredientSearch, setIngredientSearch] = useState("");
   const [selection, setSelection] = useState<Selection | null>(null);
 
   const [dateStr, setDateStr] = useState(todayISO);
@@ -118,6 +203,12 @@ function JurnalInner() {
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customFoodName, setCustomFoodName] = useState("");
   const [customFoodEmoji, setCustomFoodEmoji] = useState("🍽️");
+  const [customRecipes, setCustomRecipes] = useState<CustomRecipe[]>([]);
+  const [customRecipeName, setCustomRecipeName] = useState("");
+  const [customRecipeIngredients, setCustomRecipeIngredients] = useState<
+    CustomRecipeIngredient[]
+  >([]);
+  const [savingCustomRecipe, setSavingCustomRecipe] = useState(false);
 
   const babyName = getCurrentUser()?.baby.name?.trim() || "bebe";
   const foods = useMemo(() => getAllFoods(), []);
@@ -169,6 +260,24 @@ function JurnalInner() {
           );
         }
       });
+
+    supabaseClient
+      .from("custom_recipes")
+      .select("id, name, ingredients")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (!data) return;
+        setCustomRecipes(
+          data.map((row) => ({
+            id: row.id,
+            name: row.name,
+            ingredients: Array.isArray(row.ingredients)
+              ? (row.ingredients as CustomRecipeIngredient[])
+              : [],
+          }))
+        );
+      });
   }, [userId]);
 
   const allFoodsWithCustom = useMemo(
@@ -188,6 +297,18 @@ function JurnalInner() {
     return searchByNameNormalized(recipes, q).slice(0, 6);
   }, [recipes, search]);
 
+  const filteredIngredientOptions = useMemo(() => {
+    const q = ingredientSearch.trim();
+    if (!q) return allFoodsWithCustom.slice(0, 6);
+    return searchFoods(allFoodsWithCustom, q).slice(0, 6);
+  }, [allFoodsWithCustom, ingredientSearch]);
+
+  const filteredCustomRecipes = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return customRecipes;
+    return customRecipes.filter((r) => r.name.toLowerCase().includes(q));
+  }, [customRecipes, search]);
+
   const toggleSymptom = useCallback((value: string) => {
     setSymptoms((prev) => {
       if (value === "Nicio reacție") {
@@ -204,13 +325,21 @@ function JurnalInner() {
       ? selection.food.name
       : selection?.kind === "recipe"
         ? selection.recipe.name
-        : "";
+        : selection?.kind === "custom_recipe"
+          ? selection.recipe.name
+          : "";
   const displayEmoji =
     selection?.kind === "food"
       ? selection.food.emoji
       : selection?.kind === "recipe"
         ? selection.recipe.emoji
-        : "";
+        : selection?.kind === "custom_recipe"
+          ? "🍳"
+          : "";
+  const displaySubtitle =
+    selection?.kind === "custom_recipe" && selection.recipe.ingredients.length > 0
+      ? selection.recipe.ingredients.map((i) => i.name).join(", ")
+      : null;
 
   const handleSaveCustomFood = async () => {
     if (!customFoodName.trim() || !userId) return;
@@ -236,6 +365,50 @@ function JurnalInner() {
     setSearch("");
   };
 
+  const addIngredientToRecipe = (food: FoodCatalogItem) => {
+    setCustomRecipeIngredients((prev) => {
+      if (prev.some((i) => i.id === food.id)) return prev;
+      return [
+        ...prev,
+        { id: food.id, name: food.name, emoji: food.emoji || "🍽️" },
+      ];
+    });
+    setIngredientSearch("");
+  };
+
+  const handleSaveCustomRecipe = async () => {
+    if (!customRecipeName.trim() || customRecipeIngredients.length === 0 || !userId) {
+      return;
+    }
+    setSavingCustomRecipe(true);
+    try {
+      const id = `custom_recipe_${Date.now()}`;
+      const ingredients = customRecipeIngredients;
+      const { error } = await supabaseClient.from("custom_recipes").insert({
+        id,
+        user_id: userId,
+        name: customRecipeName.trim(),
+        ingredients,
+      });
+      if (error) {
+        alert("Eroare la salvare: " + error.message);
+        return;
+      }
+      const recipe: CustomRecipe = {
+        id,
+        name: customRecipeName.trim(),
+        ingredients,
+      };
+      setCustomRecipes((prev) => [recipe, ...prev]);
+      setSelection({ kind: "custom_recipe", recipe });
+      setCustomRecipeName("");
+      setCustomRecipeIngredients([]);
+      setIngredientSearch("");
+    } finally {
+      setSavingCustomRecipe(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!selection || reaction === null) return;
     const entry: FoodEntry =
@@ -254,22 +427,39 @@ function JurnalInner() {
             notes: notes.trim(),
             babyMood,
           }
-        : {
-            id: Date.now().toString(),
-            type: "recipe",
-            foodId: selection.recipe.id,
-            foodName: selection.recipe.name,
-            emoji: selection.recipe.emoji,
-            recipeId: selection.recipe.id,
-            recipeName: selection.recipe.name,
-            date: dateStr,
-            time: timeStr,
-            reaction,
-            portion,
-            symptoms,
-            notes: notes.trim(),
-            babyMood,
-          };
+        : selection.kind === "recipe"
+          ? {
+              id: Date.now().toString(),
+              type: "recipe",
+              foodId: selection.recipe.id,
+              foodName: selection.recipe.name,
+              emoji: selection.recipe.emoji,
+              recipeId: selection.recipe.id,
+              recipeName: selection.recipe.name,
+              date: dateStr,
+              time: timeStr,
+              reaction,
+              portion,
+              symptoms,
+              notes: notes.trim(),
+              babyMood,
+            }
+          : {
+              id: Date.now().toString(),
+              type: "custom_recipe",
+              foodId: selection.recipe.id,
+              foodName: selection.recipe.name,
+              emoji: "🍳",
+              customRecipeId: selection.recipe.id,
+              ingredients: selection.recipe.ingredients,
+              date: dateStr,
+              time: timeStr,
+              reaction,
+              portion,
+              symptoms,
+              notes: notes.trim(),
+              babyMood,
+            };
     if (!userId) {
       alert("Autentifică-te pentru a salva jurnalul");
       return;
@@ -304,6 +494,8 @@ function JurnalInner() {
         baby_id: null,
         food_id: entry.foodId,
         food_name: entry.foodName,
+        custom_recipe_id:
+          entry.type === "custom_recipe" ? entry.customRecipeId ?? entry.foodId : null,
         meal_type: null,
         reaction: mapReaction(entry.reaction),
         notes: entry.notes || null,
@@ -322,10 +514,33 @@ function JurnalInner() {
       return;
     }
 
-    if (
-      entry.symptoms.length > 0 &&
-      !entry.symptoms.includes("Nicio reacție")
-    ) {
+    const hasAdverseSymptoms =
+      entry.symptoms.length > 0 && !entry.symptoms.includes("Nicio reacție");
+
+    if (entry.type === "custom_recipe" && entry.ingredients?.length) {
+      for (const ingredient of entry.ingredients) {
+        const detail = await upsertTriedFoodForUser(
+          userId,
+          ingredient.id,
+          ingredient.name
+        );
+        if (detail && typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent<TriedFoodsOptimisticDetail>(TRIED_FOODS_UPDATED_EVENT, {
+              detail,
+            })
+          );
+        }
+        if (hasAdverseSymptoms) {
+          await insertAllergyForIngredient(
+            userId,
+            ingredient.id,
+            ingredient.name,
+            entry.symptoms
+          );
+        }
+      }
+    } else if (hasAdverseSymptoms) {
       const severity =
         entry.symptoms.includes("Erupție") || entry.symptoms.includes("Vărsături")
           ? "severa"
@@ -345,61 +560,12 @@ function JurnalInner() {
     }
 
     if (entry.type === "food") {
-      const nowIso = new Date().toISOString();
-      const { data: existing } = await supabaseClient
-        .from("tried_foods")
-        .select("id, try_count, first_tried_at")
-        .eq("user_id", userId)
-        .eq("food_id", entry.foodId)
-        .maybeSingle();
-
-      let detail: TriedFoodsOptimisticDetail | null = null;
-
-      if (existing) {
-        const nextCount = Number(existing.try_count ?? 0) + 1;
-        const { error: triedError } = await supabaseClient
-          .from("tried_foods")
-          .update({ try_count: nextCount })
-          .eq("id", existing.id);
-        if (triedError) {
-          console.error("tried_foods error:", triedError);
-        } else {
-          detail = {
-            food_id: entry.foodId,
-            food_name: entry.foodName,
-            try_count: nextCount,
-            first_tried_at: existing.first_tried_at ?? nowIso,
-          };
-        }
-      } else {
-        const { error: triedError } = await supabaseClient
-          .from("tried_foods")
-          .insert({
-            user_id: userId,
-            baby_id: null,
-            food_id: entry.foodId,
-            food_name: entry.foodName,
-            first_tried_at: nowIso,
-            try_count: 1,
-          });
-        if (triedError) {
-          console.error("tried_foods error:", triedError);
-        } else {
-          detail = {
-            food_id: entry.foodId,
-            food_name: entry.foodName,
-            try_count: 1,
-            first_tried_at: nowIso,
-          };
-        }
-      }
-
+      const detail = await upsertTriedFoodForUser(userId, entry.foodId, entry.foodName);
       if (detail && typeof window !== "undefined") {
         window.dispatchEvent(
-          new CustomEvent<TriedFoodsOptimisticDetail>(
-            TRIED_FOODS_UPDATED_EVENT,
-            { detail }
-          )
+          new CustomEvent<TriedFoodsOptimisticDetail>(TRIED_FOODS_UPDATED_EVENT, {
+            detail,
+          })
         );
       }
     }
@@ -442,7 +608,7 @@ function JurnalInner() {
         {showPicker ? (
           <section className="mt-5">
             <div
-              className="flex gap-2 rounded-[20px] p-1"
+              className="flex gap-1 rounded-[20px] p-1"
               style={{ backgroundColor: "#EDE7F6" }}
             >
               <button
@@ -451,7 +617,7 @@ function JurnalInner() {
                   setPickerTab("food");
                   setSearch("");
                 }}
-                className="flex-1 rounded-[20px] py-2 text-[13px] font-bold cursor-pointer"
+                className="flex-1 rounded-[20px] py-2 text-[11px] font-bold cursor-pointer"
                 style={{
                   backgroundColor: pickerTab === "food" ? "#D4849A" : "transparent",
                   color: pickerTab === "food" ? "#FFFFFF" : "#3D2C3E",
@@ -465,7 +631,7 @@ function JurnalInner() {
                   setPickerTab("recipe");
                   setSearch("");
                 }}
-                className="flex-1 rounded-[20px] py-2 text-[13px] font-bold cursor-pointer"
+                className="flex-1 rounded-[20px] py-2 text-[11px] font-bold cursor-pointer"
                 style={{
                   backgroundColor: pickerTab === "recipe" ? "#D4849A" : "transparent",
                   color: pickerTab === "recipe" ? "#FFFFFF" : "#3D2C3E",
@@ -473,57 +639,199 @@ function JurnalInner() {
               >
                 🍳 Rețetă
               </button>
-            </div>
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={
-                pickerTab === "recipe" ? "Caută rețetă..." : "Caută aliment..."
-              }
-              className="mt-3 w-full rounded-[12px] px-4 py-3 text-[14px] outline-none"
-              style={{ backgroundColor: "#F5F0F8", color: "#3D2C3E" }}
-            />
-            <div className="mt-3 flex flex-wrap gap-2">
-              {(pickerTab === "food" ? filteredFoods : filteredRecipes).map(
-                (item) => (
-                  <button
-                    key={pickerTab === "food" ? item.id : (item as RecipeCatalogItem).id}
-                    type="button"
-                    onClick={() =>
-                      pickerTab === "food"
-                        ? setSelection({ kind: "food", food: item as FoodCatalogItem })
-                        : setSelection({
-                            kind: "recipe",
-                            recipe: item as RecipeCatalogItem,
-                          })
-                    }
-                    className="rounded-full border border-[#EDE7F6] bg-white px-3 py-2 text-left text-[12px] font-semibold text-[#3D2C3E] cursor-pointer"
-                  >
-                    <span className="mr-1">
-                      {pickerTab === "food"
-                        ? (item as FoodCatalogItem).emoji
-                        : (item as RecipeCatalogItem).emoji}
-                    </span>
-                    {pickerTab === "food"
-                      ? (item as FoodCatalogItem).name
-                      : (item as RecipeCatalogItem).name}
-                  </button>
-                )
-              )}
-            </div>
-            {pickerTab === "food" && search.trim().length > 1 && filteredFoods.length === 0 && (
               <button
                 type="button"
                 onClick={() => {
-                  setCustomFoodName(search.trim());
-                  setCustomFoodEmoji("🍽️");
-                  setShowCustomModal(true);
+                  setPickerTab("my_recipe");
+                  setSearch("");
+                  setIngredientSearch("");
                 }}
-                className="mt-3 w-full rounded-[14px] border-2 border-dashed border-[#D4849A] bg-white px-4 py-3 text-[13px] font-semibold text-[#D4849A] cursor-pointer text-left"
+                className="flex-1 rounded-[20px] py-2 text-[11px] font-bold cursor-pointer"
+                style={{
+                  backgroundColor: pickerTab === "my_recipe" ? "#D4849A" : "transparent",
+                  color: pickerTab === "my_recipe" ? "#FFFFFF" : "#3D2C3E",
+                }}
               >
-                + Adaugă „{search.trim()}" ca aliment nou
+                ✏️ Rețeta mea
               </button>
+            </div>
+
+            {pickerTab === "my_recipe" ? (
+              <div className="mt-3 flex flex-col gap-3">
+                <div>
+                  <p className="mb-1 text-[12px] font-semibold text-[#8B7A8E]">
+                    Numele rețetei
+                  </p>
+                  <input
+                    type="text"
+                    value={customRecipeName}
+                    onChange={(e) => setCustomRecipeName(e.target.value)}
+                    placeholder='ex: Iaurt cu piersici'
+                    className="w-full rounded-[12px] px-4 py-3 text-[14px] outline-none"
+                    style={{ backgroundColor: "#F5F0F8", color: "#3D2C3E" }}
+                  />
+                </div>
+
+                <div>
+                  <p className="mb-1 text-[12px] font-semibold text-[#8B7A8E]">
+                    Ingrediente
+                  </p>
+                  <input
+                    type="search"
+                    value={ingredientSearch}
+                    onChange={(e) => setIngredientSearch(e.target.value)}
+                    placeholder="Caută aliment de adăugat..."
+                    className="w-full rounded-[12px] px-4 py-3 text-[14px] outline-none"
+                    style={{ backgroundColor: "#F5F0F8", color: "#3D2C3E" }}
+                  />
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {filteredIngredientOptions.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => addIngredientToRecipe(item)}
+                        disabled={customRecipeIngredients.some((i) => i.id === item.id)}
+                        className="rounded-full border border-[#EDE7F6] bg-white px-3 py-2 text-left text-[12px] font-semibold text-[#3D2C3E] cursor-pointer disabled:opacity-40"
+                      >
+                        <span className="mr-1">{item.emoji}</span>
+                        {item.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {customRecipeIngredients.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {customRecipeIngredients.map((ing) => (
+                      <span
+                        key={ing.id}
+                        className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold"
+                        style={{ background: "#FAEEDA", color: "#854F0B" }}
+                      >
+                        <span>{ing.emoji}</span>
+                        {ing.name}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCustomRecipeIngredients((prev) =>
+                              prev.filter((i) => i.id !== ing.id)
+                            )
+                          }
+                          className="ml-1 cursor-pointer border-0 bg-transparent text-[14px] leading-none"
+                          style={{ color: "#854F0B" }}
+                          aria-label={`Elimină ${ing.name}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-[#8B7A8E]">
+                    Adaugă cel puțin un ingredient din catalog sau din alimentele tale.
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => void handleSaveCustomRecipe()}
+                  disabled={
+                    savingCustomRecipe ||
+                    !customRecipeName.trim() ||
+                    customRecipeIngredients.length === 0
+                  }
+                  className="w-full rounded-full py-3 text-[14px] font-bold text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: "#D4849A" }}
+                >
+                  {savingCustomRecipe ? "Se salvează..." : "Salvează rețeta"}
+                </button>
+              </div>
+            ) : (
+              <>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={
+                    pickerTab === "recipe" ? "Caută rețetă..." : "Caută aliment..."
+                  }
+                  className="mt-3 w-full rounded-[12px] px-4 py-3 text-[14px] outline-none"
+                  style={{ backgroundColor: "#F5F0F8", color: "#3D2C3E" }}
+                />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(pickerTab === "food" ? filteredFoods : filteredRecipes).map(
+                    (item) => (
+                      <button
+                        key={pickerTab === "food" ? item.id : (item as RecipeCatalogItem).id}
+                        type="button"
+                        onClick={() =>
+                          pickerTab === "food"
+                            ? setSelection({ kind: "food", food: item as FoodCatalogItem })
+                            : setSelection({
+                                kind: "recipe",
+                                recipe: item as RecipeCatalogItem,
+                              })
+                        }
+                        className="rounded-full border border-[#EDE7F6] bg-white px-3 py-2 text-left text-[12px] font-semibold text-[#3D2C3E] cursor-pointer"
+                      >
+                        <span className="mr-1">
+                          {pickerTab === "food"
+                            ? (item as FoodCatalogItem).emoji
+                            : (item as RecipeCatalogItem).emoji}
+                        </span>
+                        {pickerTab === "food"
+                          ? (item as FoodCatalogItem).name
+                          : (item as RecipeCatalogItem).name}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                {pickerTab === "recipe" && filteredCustomRecipes.length > 0 ? (
+                  <div className="mt-4">
+                    <p className="mb-2 text-[12px] font-bold text-[#8B7A8E] uppercase tracking-wide">
+                      Rețetele mele
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {filteredCustomRecipes.map((recipe) => (
+                        <button
+                          key={recipe.id}
+                          type="button"
+                          onClick={() =>
+                            setSelection({ kind: "custom_recipe", recipe })
+                          }
+                          className="w-full rounded-[12px] border border-[#EDE7F6] bg-white px-3 py-2.5 text-left cursor-pointer"
+                        >
+                          <p className="text-[13px] font-bold text-[#3D2C3E]">
+                            🍳 {recipe.name}
+                          </p>
+                          {recipe.ingredients.length > 0 ? (
+                            <p className="mt-0.5 text-[11px] text-[#8B7A8E] truncate">
+                              {recipe.ingredients
+                                .map((i) => `${i.emoji} ${i.name}`)
+                                .join(" · ")}
+                            </p>
+                          ) : null}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {pickerTab === "food" && search.trim().length > 1 && filteredFoods.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomFoodName(search.trim());
+                      setCustomFoodEmoji("🍽️");
+                      setShowCustomModal(true);
+                    }}
+                    className="mt-3 w-full rounded-[14px] border-2 border-dashed border-[#D4849A] bg-white px-4 py-3 text-[13px] font-semibold text-[#D4849A] cursor-pointer text-left"
+                  >
+                    + Adaugă „{search.trim()}" ca aliment nou
+                  </button>
+                )}
+              </>
             )}
           </section>
         ) : null}
@@ -534,7 +842,15 @@ function JurnalInner() {
             style={{ backgroundColor: "#E8F8F5" }}
           >
             <span className="text-[40px] leading-none">{displayEmoji}</span>
-            <p className="text-[18px] font-bold text-[#3D2C3E]">{displayTitle}</p>
+            <div className="min-w-0">
+              <p className="text-[18px] font-bold text-[#3D2C3E]">{displayTitle}</p>
+              {displaySubtitle ? (
+                <p className="mt-0.5 text-[12px] text-[#8B7A8E] truncate">{displaySubtitle}</p>
+              ) : null}
+              {selection.kind === "custom_recipe" ? (
+                <p className="mt-0.5 text-[11px] font-semibold text-[#D4849A]">Rețeta mea</p>
+              ) : null}
+            </div>
           </section>
         ) : null}
 
