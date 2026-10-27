@@ -1,3 +1,5 @@
+import { unusedRecipes } from "./planSelection";
+
 export const ingredientNutrition: Record<string, { kcal: number; protein: number; fat: number; carbs: number; fiber: number }> = {
   // Fructe
   'afine': { kcal: 57, protein: 0.7, fat: 0.3, carbs: 14, fiber: 2.4 },
@@ -294,7 +296,7 @@ export function generateSmartWeekPlan(
       )
       if (fresh.length > 0) candidates = fresh
 
-      const notUsed = candidates.filter(r => !usedRecipeIds.includes(r.id))
+      const notUsed = unusedRecipes(candidates, usedRecipeIds)
       if (notUsed.length > 0) candidates = notUsed
 
       let selected: any

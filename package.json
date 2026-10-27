@@ -6,24 +6,36 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:v2": "node scripts/build-v2.cjs",
+    "preview:v2": "node scripts/preview-v2.cjs",
+    "dev:v2": "node scripts/preview-v2.cjs --dev",
+    "typecheck": "tsc --noEmit --pretty false",
+    "test": "node --test --test-concurrency=1 tests/*.test.cjs",
+    "lint:v2": "eslint src/features/v2 src/app/v2 src/app/lib/planSelection.ts src/lib/security src/app/api/chat src/app/api/send-verification src/app/register src/app/auth/callback src/app/layout.tsx src/app/components/ClientLayout.tsx src/proxy.ts next.config.ts",
+    "test:e2e": "playwright test --config playwright.config.cjs",
+    "test:api": "node scripts/test-api.cjs"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.9.0",
-    "@supabase/supabase-js": "^2.100.1",
+    "@supabase/ssr": "0.9.0",
+    "@supabase/supabase-js": "2.100.1",
     "jspdf": "^4.2.1",
-    "next": "16.2.0",
+    "lucide-react": "1.61.0",
+    "next": "16.4.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.9.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@electric-sql/pglite": "0.5.12",
+    "@playwright/test": "1.64.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.0",
+    "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

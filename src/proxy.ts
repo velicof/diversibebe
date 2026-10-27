@@ -1,7 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  // V2 uses its own isolated test authentication; never the legacy production session.
+  // Its layout is disabled in production unless explicitly enabled for a preview.
+  if (request.nextUrl.pathname === "/v2" || request.nextUrl.pathname.startsWith("/v2/")) {
+    if (process.env.NODE_ENV === "production" && process.env.DIVERSIBEBE_V2_PREVIEW !== "1") return new NextResponse(null, { status: 404 });
+    return NextResponse.next();
+  }
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(

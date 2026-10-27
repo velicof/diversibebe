@@ -1,12 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  images: {
-    unoptimized: true,
-  },
+  distDir: ".next-v2",
+  experimental: { cpus: 1, webpackBuildWorker: false, webpackMemoryOptimizations: true },
 };
 
 export default nextConfig;

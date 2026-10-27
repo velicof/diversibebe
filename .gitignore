@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/.next-v2/
 /.pnp
 .pnp.*
 .yarn/*
@@ -12,6 +13,11 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/supabase/.temp/
+/.local-supabase/
+/.local-test-db/
 
 # next.js
 /.next/

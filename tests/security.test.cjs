@@ -7,12 +7,12 @@ const ts = require('typescript');
 
 function load(relative, auth = { data: { user: null }, error: null }) {
   let calls = 0;
-  const module = { exports: {} };
+  const compiledModule = { exports: {} };
   const source = ts.transpileModule(fs.readFileSync(path.join(__dirname, '..', relative), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
   }).outputText;
   vm.runInNewContext(source, {
-    exports: module.exports, module,
+    exports: compiledModule.exports, module: compiledModule,
     require(name) {
       if (name === 'next/server') return { NextResponse: { json: (body, init) => Response.json(body, init) } };
       if (name === '@/lib/supabase/server') return { createClient: async () => {
@@ -25,7 +25,7 @@ function load(relative, auth = { data: { user: null }, error: null }) {
     fetch() { calls++; throw new Error('Network forbidden during tests'); },
     process: { env: {} },
   });
-  return { api: module.exports, networkCalls: () => calls };
+  return { api: compiledModule.exports, networkCalls: () => calls };
 }
 
 test('redirect attacks are rejected and internal return paths preserved', () => {
