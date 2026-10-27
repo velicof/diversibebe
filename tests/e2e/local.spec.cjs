@@ -139,6 +139,20 @@ test("empty results, favorite filter, cooking steps and keyboard navigation", as
   await expect(
     page.getByRole("link", { name: "Sari la conținut" }),
   ).toBeFocused();
+  await page.evaluate(() => {
+    const key='diversibebe:v2:isolated-preview:1';
+    const state=JSON.parse(localStorage.getItem(key)||'{"version":1}');
+    const date=new Date();date.setDate(date.getDate()-1);
+    state.uses=[{id:'synthetic-previous-day',recipeId:'piure-dovlecel',day:date.toISOString().slice(0,10),confirmedAt:date.toISOString()}];
+    localStorage.setItem(key,JSON.stringify(state));
+  });
+  await page.goto('/v2/retete/piure-dovlecel');
+  await expect(page).toHaveTitle('Piure de dovlecel · DiversiBebe');
+  await page.getByRole('button',{name:'Am folosit ideea',exact:true}).click();
+  await page.locator('.v2-bottom-nav').getByRole('link',{name:'Profil',exact:true}).click();
+  await page.locator('.v2-diagnostics summary').click();
+  await expect(page.locator('.v2-diagnostics')).toContainText('meal_used_confirmed');
+  await expect(page.locator('.v2-diagnostics')).toContainText('meal_reused');
 });
 for (const [name, url] of screens)
   test(`accessibility ${name}`, async ({ page }) => {

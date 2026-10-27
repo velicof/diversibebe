@@ -662,7 +662,8 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
         confirmedAt: new Date().toISOString(),
       },
     });
-    track(reused ? "meal_reused" : "meal_confirmed", { recipeId: recipe.id });
+    track("meal_confirmed", { recipeId: recipe.id });
+    if (reused) track("meal_reused", { recipeId: recipe.id });
     announce("Ai păstrat ce a funcționat. Mulțumim!");
   }
   return (
