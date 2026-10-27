@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import SocialLoginButtons from "../components/SocialLoginButtons";
+import { useRegistrationDraft } from "./RegistrationDraft";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -59,6 +60,7 @@ function EyeIcon({ open }: { open: boolean }) {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { setDraft } = useRegistrationDraft();
   const [showPassword1, setShowPassword1] = useState(false);
   const [showPassword2, setShowPassword2] = useState(false);
   const [parentName, setParentName] = useState("");
@@ -107,23 +109,7 @@ export default function RegisterPage() {
     setTouched({ name: true, email: true, password: true, confirmPassword: true });
     if (!isValid) return;
 
-    // Check if email already exists in Supabase
-    // We do this by attempting signInWithPassword with wrong password
-    // A cleaner way: just save and let step2 handle the error
-
-    localStorage.setItem(
-      "register_step1",
-      JSON.stringify({ name: parentName, email, password })
-    );
-    localStorage.setItem(
-      "diversibebe_register_step1",
-      JSON.stringify({
-        parentName: parentName.trim(),
-        email: email.trim(),
-        password,
-        confirmPassword,
-      })
-    );
+    setDraft({ parentName: parentName.trim(), email: email.trim(), password });
 
     router.push("/register/step2");
   };
