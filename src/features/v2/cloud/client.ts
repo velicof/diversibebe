@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { assertIsolatedSupabaseUrl } from "./guard";
 import { V2Repository } from "./repository";
 let repository: V2Repository | null = null;
+export const AUTH_STORAGE_KEY = "diversibebe:v2:test-auth";
 export function getV2Repository(): V2Repository | null {
   const url = process.env.NEXT_PUBLIC_V2_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_V2_SUPABASE_ANON_KEY;
@@ -12,7 +13,7 @@ export function getV2Repository(): V2Repository | null {
     repository = new V2Repository(
       createClient(url, key, {
         auth: {
-          storageKey: "diversibebe:v2:test-auth",
+          storageKey: AUTH_STORAGE_KEY,
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: false,

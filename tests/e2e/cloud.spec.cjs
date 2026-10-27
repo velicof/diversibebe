@@ -64,8 +64,13 @@ test('authenticated flows: persistence, second device, siblings, logout and acco
     await select(page,childA); await page.goto('/v2/jurnal');
     await expect(page.getByRole('heading',{name:'Piure de dovlecel',exact:true})).toBeVisible();
     await page.screenshot({path:path.join(captures,'jurnal-autentificat-390.png'),fullPage:true});
-    await page.goto('/v2/cont'); await page.getByRole('button',{name:'Deconectare',exact:true}).click();
+    await page.goto('/v2/cont');
+    await page.route('**/auth/v1/logout*',async r=>{await new Promise(resolve=>setTimeout(resolve,900));await r.continue();});
+    await page.getByRole('button',{name:'Deconectare',exact:true}).click();
+    await expect(page.getByRole('status',{name:'Se încarcă',exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Conectare în test',exact:true})).toHaveCount(0);
     await expect(page.getByRole('heading',{name:'Conectează contul de test'})).toBeVisible();
+    await page.unroute('**/auth/v1/logout*');
     await login(page,accounts[0]); await page.goto('/v2/retete/piure-dovlecel'); await synced(page);
     await expect(page.getByRole('button',{name:'Confirmată azi',exact:true})).toBeDisabled();
     await page.goto('/v2/cont'); await page.getByRole('button',{name:'Deconectare',exact:true}).click();
@@ -74,6 +79,16 @@ test('authenticated flows: persistence, second device, siblings, logout and acco
     await page.goto('/v2/retete/piure-dovlecel');
     await expect(page.getByRole('button',{name:'Salvează Piure de dovlecel',exact:true})).toHaveAttribute('aria-pressed','false');
   } finally { await device.close(); await sdk.auth.signOut({scope:'local'}); }
+});
+test('offline logout clears the local session and never restores the private view on reload',async({page})=>{
+  await login(page,accounts[0]);await page.goto('/v2/cont');
+  await page.route('**/auth/v1/logout*',r=>r.abort('failed'));
+  await page.getByRole('button',{name:'Deconectare',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Conectează contul de test'})).toBeVisible();
+  expect(await page.evaluate(()=>localStorage.getItem('diversibebe:v2:test-auth'))).toBeNull();
+  await page.reload();
+  await expect(page.getByRole('heading',{name:'Conectează contul de test'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Contul tău de test'})).toHaveCount(0);
 });
 test('network write failure is visible, retry persists and invalid login is rejected',async({page})=>{
   await page.goto('/v2/cont'); await page.getByLabel('Email de test',{exact:true}).fill(accounts[0].email);

@@ -5,7 +5,7 @@ import {
   type AppState,
   type LocalEvent,
 } from "../model";
-import { getV2Repository } from "./client";
+import { AUTH_STORAGE_KEY, getV2Repository } from "./client";
 import type { CloudState, V2Repository } from "./repository";
 
 type Snapshot = CloudState & {
@@ -35,6 +35,7 @@ let snapshot = initial,
   generation = 0;
 let repository: V2Repository | null = null;
 let currentWrite: Promise<void> = Promise.resolve();
+let signingOut = false, locallySignedOut = false;
 let failed: { owner: string; child: string | null; action: Action } | null =
   null;
 const listeners = new Set<() => void>();
@@ -43,7 +44,7 @@ function update(value: Partial<Snapshot>) {
   listeners.forEach((l) => l());
 }
 async function connect() {
-  if (!repository) return;
+  if (!repository || signingOut || locallySignedOut) return;
   const run = ++generation;
   update({ loading: true, error: null });
   try {
@@ -108,9 +109,10 @@ export const cloudStore = {
     update({ available: true });
     repository.client.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
+        locallySignedOut = true;
         generation++;
         failed = null;
-        update({ ...initial, available: true });
+        update({ ...initial, available: true, loading: signingOut });
       } else if (["SIGNED_IN", "TOKEN_REFRESHED"].includes(event))
         window.setTimeout(() => {
           void connect();
@@ -118,6 +120,14 @@ export const cloudStore = {
     });
     window.addEventListener("focus", () => {
       if (snapshot.connected && !snapshot.saving) void connect();
+    });
+    window.addEventListener("storage", (event) => {
+      if (event.key === AUTH_STORAGE_KEY && event.newValue === null) {
+        generation++;
+        locallySignedOut = true;
+        failed = null;
+        update({ ...initial, available: true });
+      }
     });
     void connect();
   },
@@ -132,14 +142,35 @@ export const cloudStore = {
       throw new Error(
         "Conectarea nu a reușit. Verifică datele contului de test și conexiunea.",
       );
+    locallySignedOut = false;
+    await repository.client.auth.startAutoRefresh();
     await connect();
   },
   async logout() {
+    if (signingOut) return false;
+    signingOut = true;
+    locallySignedOut = true;
     generation++;
     failed = null;
     // Clear private views immediately even if the network is unavailable.
-    update({ ...initial, available: Boolean(repository) });
-    await repository?.client.auth.signOut({ scope: "local" });
+    update({ ...initial, available: Boolean(repository), loading: true });
+    let serverConfirmed = false;
+    try {
+      const result = await repository?.client.auth.signOut({ scope: "local" });
+      serverConfirmed = Boolean(result && !result.error);
+    } catch { /* The local session must still be removed while offline. */ }
+    finally {
+      await repository?.client.auth.stopAutoRefresh();
+      try {
+        window.localStorage.removeItem(AUTH_STORAGE_KEY);
+        window.localStorage.removeItem(`${AUTH_STORAGE_KEY}-code-verifier`);
+        window.localStorage.removeItem(`${AUTH_STORAGE_KEY}-user`);
+      } catch { /* Unsupported browser storage uses a memory-only SDK session. */ }
+      generation++;
+      signingOut = false;
+      update({ ...initial, available: Boolean(repository) });
+    }
+    return serverConfirmed;
   },
   refresh: connect,
   dispatch(action: Action) {
@@ -206,13 +237,14 @@ export const cloudStore = {
     }
   },
   async createChild(label: string, stage: number) {
-    if (!repository) throw new Error("Test environment unavailable");
+    if (!repository || !snapshot.connected) throw new Error("Test environment unavailable");
+    const run = generation, owner = snapshot.userId;
     const value = await repository.call(null, "create-child", {
       id: crypto.randomUUID(),
       label,
       stage,
     });
-    update(value);
+    if (run === generation && owner === snapshot.userId && snapshot.connected) update(value);
   },
   async record(event: LocalEvent) {
     if (!repository || !snapshot.connected) return;
@@ -229,21 +261,27 @@ export const cloudStore = {
     if (!repository || !snapshot.connected || !snapshot.selectedBabyId) return;
     // Explicit, additive import only. Meals/clinical choices/history are never imported.
     const owner = snapshot.userId,
-      child = snapshot.selectedBabyId;
+      child = snapshot.selectedBabyId,
+      run = generation;
+    const stillCurrent = () => run === generation && snapshot.connected && owner === snapshot.userId && child === snapshot.selectedBabyId;
     for (const id of local.favorites) {
-      if (owner !== snapshot.userId || child !== snapshot.selectedBabyId)
+      if (!stillCurrent())
         throw new Error("Session changed");
       const value = await repository.call(child, "favorite", {
         recipeId: id,
         enabled: true,
       });
+      if (!stillCurrent()) throw new Error("Session changed");
       update(value);
     }
     for (const entry of local.plan) {
-      if (owner !== snapshot.userId || child !== snapshot.selectedBabyId)
+      if (!stillCurrent())
         throw new Error("Session changed");
-      if (!snapshot.state.plan.some((p) => p.slot === entry.slot))
-        update(await repository.call(child, "plan", entry));
+      if (!snapshot.state.plan.some((p) => p.slot === entry.slot)) {
+        const value = await repository.call(child, "plan", entry);
+        if (!stillCurrent()) throw new Error("Session changed");
+        update(value);
+      }
     }
   },
 };

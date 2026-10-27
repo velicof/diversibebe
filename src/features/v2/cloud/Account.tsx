@@ -6,7 +6,7 @@ import { ArrowRight, LogOut, ShieldCheck } from "lucide-react";
 import { cloudStore } from "./store";
 import { usePreview } from "../Provider";
 import { previewStore } from "../store";
-import { PageHeading } from "../components";
+import { LoadingState, PageHeading } from "../components";
 
 export function Account() {
   const { cloud, announce } = usePreview();
@@ -17,6 +17,7 @@ export function Account() {
   const [busy, setBusy] = useState(false);
   const [childLabel, setChildLabel] = useState("");
   const [imported, setImported] = useState(false);
+  if (cloud.loading && !cloud.connected) return <LoadingState />;
   if (cloud.connected)
     return (
       <>
@@ -32,7 +33,7 @@ export function Account() {
           <select
             id="v2-child"
             value={cloud.selectedBabyId ?? ""}
-            disabled={cloud.saving || cloud.loading}
+            disabled={busy || cloud.saving || cloud.loading}
             onChange={(e) => void cloudStore.selectChild(e.target.value)}
           >
             <option value="" disabled>
@@ -114,10 +115,13 @@ export function Account() {
             <button
               className="v2-button v2-button-secondary"
               onClick={async () => {
-                await cloudStore.logout();
+                const serverConfirmed = await cloudStore.logout();
                 setPassword("");
                 setImported(false);
-                announce("Ai ieșit din contul de test.");
+                setEmail("");
+                setChildLabel("");
+                setError("");
+                announce(serverConfirmed ? "Ai ieșit din contul de test." : "Ai ieșit pe acest dispozitiv. Revocarea sesiunii pe server nu a putut fi confirmată.");
               }}
             >
               <LogOut size={16} />
