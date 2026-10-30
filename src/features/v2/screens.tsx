@@ -45,6 +45,8 @@ import {
 } from "./planning";
 import type { Stage } from "./model";
 import { weeklyUsage } from "./analytics";
+import { DashboardFocus, useDashboardMatches } from "./growth/PersonalizedDashboard";
+import { emitGrowth, journeyScope, journeyStore } from "./growth/browser";
 
 function useEligible(filters?: Filters) {
   const { state, clinicalGuidance } = usePreview();
@@ -180,7 +182,7 @@ export function Landing() {
             Începe cu câteva alegeri. Profilul se completează treptat, iar
             jurnalul rămâne opțional.
           </p>
-          <Link className="v2-text-link" href="/v2/onboarding">
+          <Link className="v2-text-link" href="/v2/onboarding?parcurs=clasic">
             Personalizează explorarea <ArrowRight size={18} />
           </Link>
         </div>
@@ -218,6 +220,7 @@ function OnboardingReady() {
   const [step, setStep] = useState(1);
   useEffect(() => {
     track("onboarding_started");
+    emitGrowth("onboarding_started",{flow:"classic"},"classic-start");
   }, [track]);
   return (
     <div className="v2-onboarding">
@@ -276,11 +279,13 @@ function OnboardingReady() {
         className="v2-button v2-button-primary v2-full-width"
         onClick={() => {
           if (step === 1) {
+            emitGrowth("question_completed",{step:1,flow:"classic"},"classic-question:1");
             setStep(2);
             return;
           }
           dispatch({ type: "onboard", stage, introduced: selected });
           track("onboarding_completed");
+          emitGrowth("question_completed",{step:2,flow:"classic"},"classic-question:2");
           router.push("/v2/azi");
         }}
       >
@@ -302,11 +307,11 @@ function OnboardingReady() {
 
 export function Dashboard() {
   const { state, ready } = usePreview();
-  const matches = useEligible();
+  const matches = useDashboardMatches();
   const days = useDays();
   if (!ready) return <LoadingState />;
   const today = state.plan.find((p) => p.slot === days[0].key);
-  const planned = catalog.find((r) => r.id === today?.recipeId);
+  const planned = matches.find((r) => r.id === today?.recipeId);
   const featured = planned ?? matches[0];
   const saved = catalog.filter((r) => state.favorites.includes(r.id));
   return (
@@ -326,6 +331,7 @@ export function Dashboard() {
       >
         O idee simplă pentru masă. Un pic mai mult timp pentru voi.
       </PageHeading>
+      <DashboardFocus />
       <div className="v2-dashboard-primary">
         <div className="v2-featured-area">
           <div className="v2-section-top">
@@ -1155,6 +1161,7 @@ export function Profile() {
       </PageHeading>
       <div className="v2-profile-grid">
         <section className="v2-profile-section">
+          <Link className="v2-text-link" href="/v2/onboarding">Schimbă preferințele de explorare <ArrowRight size={16} /></Link>
           <h2>Etapa din catalog</h2>
           <StageSelect
             value={state.stage}
@@ -1242,6 +1249,7 @@ export function Profile() {
                   className="v2-button v2-button-secondary"
                   onClick={() => {
                     dispatch({ type: "reset" });
+                  journeyStore.restart(journeyScope(cloud.userId,cloud.selectedBabyId));
                     setResetConfirm(false);
                     announce("Datele demonstrative au fost șterse.");
                   }}
@@ -1331,6 +1339,7 @@ export function Premium() {
           <p>Mai puține căutări, mai multe dintre ideile voastre preferate.</p>
         </div>
       </div>
+      <table className="gw-comparison"><caption>Ce poți folosi astăzi. Ce pregătim pentru Plus.</caption><thead><tr><th scope="col">Gratuit în această versiune</th><th scope="col">Plus · propuneri în dezvoltare</th></tr></thead><tbody><tr><td>Idei din catalogul demonstrativ, salvare și planificare<small>Funcționale, fără limitare comercială în demo</small></td><td>Planuri reutilizabile pentru mai multe săptămâni<small>Încă neimplementate</small></td></tr><tr><td>Listă de cumpărături și preferințe de explorare<small>Disponibile acum</small></td><td>Exporturi și organizare extinsă<small>Încă neimplementate</small></td></tr><tr><td>Resurse esențiale despre pregătire și siguranță<small>Fără cont și fără paywall</small></td><td>Mai mult timp economisit prin planificare<small>Ipoteză de beneficiu, de validat</small></td></tr></tbody></table>
       <div className="v2-premium-offer">
         <span>IPOTEZĂ DE PREȚ · NEVALIDATĂ</span>
         <p>
@@ -1345,6 +1354,7 @@ export function Premium() {
           onClick={() => {
             setInterested(true);
             track("premium_interest", { price: 25 });
+            emitGrowth("premium_interest",{},"monthly");
             announce(
               cloud.connected ? "Interesul a fost înregistrat în contul de test. Nu ai activat un abonament." : "Interesul este notat doar în sesiunea locală. Nu ai activat un abonament.",
             );
@@ -1371,6 +1381,7 @@ export function Premium() {
         <button className="v2-button v2-button-secondary" disabled={packInterested} onClick={() => {
           setPackInterested(true);
           track("premium_interest", { price: 69 });
+          emitGrowth("premium_interest",{},"pack");
           announce("Interes notat pentru pachet. Nu ai făcut o achiziție.");
         }}>{packInterested ? "Interes notat pentru pachet" : "Mă interesează pachetul"}</button>
       </section>

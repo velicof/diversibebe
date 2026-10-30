@@ -1,2 +1,2 @@
-import { Landing } from "@/features/v2/screens";
-export default Landing;
+import { GrowthHome } from "@/features/v2/growth/Home";
+export default GrowthHome;

@@ -7,6 +7,7 @@ import { cloudStore } from "./store";
 import { usePreview } from "../Provider";
 import { previewStore } from "../store";
 import { LoadingState, PageHeading } from "../components";
+import { emitGrowth, journeyStore } from "../growth/browser";
 
 export function Account() {
   const { cloud, announce } = usePreview();
@@ -155,9 +156,11 @@ export function Account() {
           }
           setBusy(true);
           try {
+            emitGrowth("login_started");
             await cloudStore.login(email, password);
+            emitGrowth("login_completed");
             setPassword("");
-            router.push("/v2/azi");
+            router.push(journeyStore.hasHandoff() ? "/v2/onboarding?rezultat=1" : "/v2/azi");
           } catch (e) {
             setError(
               e instanceof Error ? e.message : "Conectarea nu a reușit.",

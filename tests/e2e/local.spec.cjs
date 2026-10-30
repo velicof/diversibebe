@@ -59,7 +59,7 @@ for (const width of widths)
 test("three core flows persist across reload with optional confirmation", async ({
   page,
 }) => {
-  await page.goto("/v2/onboarding");
+  await page.goto("/v2/onboarding?parcurs=clasic");
   await page.getByRole("button", { name: /Primele descoperiri/ }).click();
   await page.getByRole("button", { name: "Continuă", exact: true }).click();
   await page.getByRole("button", { name: "Morcov", exact: true }).click();

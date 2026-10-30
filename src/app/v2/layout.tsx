@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PreviewProvider } from "@/features/v2/Provider";
 import { Shell } from "@/features/v2/components";
 import "./v2.css";
+import "./growth.css";
 export const metadata: Metadata = {
   metadataBase: new URL("http://127.0.0.1:3100"),
   title: {

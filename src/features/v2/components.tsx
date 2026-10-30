@@ -20,6 +20,7 @@ import {
 import type { Recipe } from "./catalog";
 import { usePreview } from "./Provider";
 import { SyncStatus } from "./cloud/SyncStatus";
+import { GrowthTelemetry } from "./growth/Telemetry";
 
 export const navItems = [
   { href: "/v2/azi", label: "Azi", icon: Home },
@@ -48,8 +49,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { storageError, cloud } = usePreview();
   const landing = pathname === "/v2";
+  const marketing = landing || pathname === "/v2/onboarding" || pathname === "/v2/pregatire";
   return (
-    <div className={`v2-shell ${landing ? "v2-shell-landing" : ""}`}>
+    <div className={`v2-shell ${landing ? "v2-shell-landing" : ""} ${marketing ? "v2-shell-marketing" : ""}`}>
       <a className="v2-skip" href="#v2-content">
         Sari la conținut
       </a>
@@ -109,7 +111,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
             ? "Conținut în curs de revizie. Datele sunt salvate în mediul local de test."
             : "Conținut în curs de revizie. Datele demo rămân pe acest dispozitiv."}
         </div>
-        <SyncStatus />
+        {(!marketing || cloud.connected) && <SyncStatus />}
+        <GrowthTelemetry />
         {storageError && (
           <div className="v2-alert" role="alert">
             Salvarea pe dispozitiv nu este disponibilă. Poți continua în această
@@ -131,7 +134,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </a>
         </footer>
       </div>
-      {!landing && (
+      {!marketing && (
         <nav className="v2-bottom-nav" aria-label="Navigare mobilă">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Link
@@ -225,14 +228,14 @@ export function RecipePhoto({
     <div className={`v2-photo ${recipe.image.endsWith("icon.svg") ? "v2-ingredient-photo" : ""} ${className}`}>
       <Image
         src={recipe.image}
-        alt={recipe.image.endsWith("icon.svg") ? "" : "Fotografie de textură, ilustrativă; nu indică ingredientele exacte sau forma de servire pentru copil."}
+        alt={recipe.image.endsWith("icon.svg") ? "" : recipe.image.includes("/generated-") ? `Ilustrație generată pentru ${recipe.name}, fără rol de ghid de servire.` : "Fotografie de textură, ilustrativă; nu indică ingredientele exacte sau forma de servire pentru copil."}
         width={1000}
         height={800}
         priority={priority}
         sizes="(max-width: 600px) 90vw, 45vw"
       />
       {recipe.image.endsWith("icon.svg") && <span className="v2-ingredient-description">{recipe.relatedFoods.slice(0,3).map((id) => id.replaceAll("-", " ")).join(" · ") || "O idee din catalog"}</span>}
-      <span className="v2-photo-caption">{recipe.image.endsWith("icon.svg") ? "Prezentare de catalog" : "Textură ilustrativă"}</span>
+      <span className="v2-photo-caption">{recipe.image.includes("/generated-") ? "Ilustrație generată · demo" : recipe.image.endsWith("icon.svg") ? "Prezentare de catalog" : "Textură ilustrativă"}</span>
     </div>
   );
 }
