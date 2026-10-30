@@ -1,7 +1,7 @@
 const {test,expect}=require('@playwright/test');
 const AxeBuilder=require('@axe-core/playwright').default;
 const path=require('node:path');
-const captures=path.resolve(__dirname,'../../../../outputs/mvp-final/capturi');
+const captures=process.env.V2_QA_CAPTURE_DIR||path.resolve(__dirname,'../../../../outputs/mvp-final/capturi');
 test.beforeEach(async({context})=>{
  await context.route('**/*',r=>['127.0.0.1','localhost'].includes(new URL(r.request().url()).hostname)?r.continue():r.abort());
 });

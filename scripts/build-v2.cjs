@@ -21,7 +21,7 @@ const result = spawnSync(
       NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:9",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "synthetic-preview-only",
       NEXT_TELEMETRY_DISABLED: "1",
-      NODE_OPTIONS: "--max-old-space-size=1536",
+      NODE_OPTIONS: process.env.NODE_OPTIONS || "--max-old-space-size=4096",
       RAYON_NUM_THREADS: "1",
     },
   },

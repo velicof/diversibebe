@@ -6,7 +6,7 @@ require('../load-ts.cjs').load('src/features/v2/cloud/guard.ts').assertIsolatedS
 const publicKey=process.env.V2_TEST_ANON_KEY||'local-test-public-key';
 const accounts = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../finalization/local-test-access.json'), 'utf8')).accounts;
 const childA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', sibling = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab';
-const captures = path.resolve(__dirname, '../../../../outputs/mvp-final/capturi');
+const captures = process.env.V2_QA_CAPTURE_DIR || path.resolve(__dirname, '../../../../outputs/mvp-final/capturi');
 async function restrict(context) {
   await context.route('**/*', r => ['127.0.0.1','localhost'].includes(new URL(r.request().url()).hostname) ? r.continue() : r.abort());
 }

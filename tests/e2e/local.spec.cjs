@@ -2,7 +2,7 @@ const { test, expect } = require("@playwright/test");
 const AxeBuilder = require("@axe-core/playwright").default;
 const path = require("node:path"),
   fs = require("node:fs");
-const captures = path.resolve(
+const captures = process.env.V2_QA_CAPTURE_DIR || path.resolve(
   __dirname,
   "../../../../outputs/mvp-final/capturi",
 );
