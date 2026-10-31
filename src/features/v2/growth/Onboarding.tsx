@@ -7,6 +7,7 @@ import { usePreview } from "../Provider";
 import { LoadingState, RecipeCard } from "../components";
 import { ingredients } from "../catalog";
 import { emptyState } from "../model";
+import { nativeAuth } from "../cloud/client";
 import { cloudStore } from "../cloud/store";
 import { ageBands, challenges, contextQuestion, education, journeyStage, personalizedResult, resultReason, type Journey } from "./journey";
 import { emitGrowth, journeyScope, journeyStore, useExperiment, useJourney } from "./browser";
@@ -28,7 +29,7 @@ export function GrowthOnboarding(){
   const j=snapshot.data;
   const result=personalizedResult(j,state,clinicalGuidance,cloud.connected);
   useEffect(()=>{
-    if(snapshot.ready && !cloud.loading && cloud.connected)journeyStore.claimHandoff(scope);
+    if(!nativeAuth && snapshot.ready && !cloud.loading && cloud.connected)journeyStore.claimHandoff(scope);
   },[snapshot.ready,cloud.connected,cloud.loading,scope]);
   useEffect(()=>{
     if(!snapshot.ready || !ready || !exp.ready || exp.flow==="classic")return;
@@ -76,16 +77,18 @@ function SaveResult({scope,journey,ids,kind}:{scope:string;journey:Journey;ids:s
   const {state,cloud,dispatch,announce,storageError}=usePreview();
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
-  const saved=ids.length?ids.every(id=>state.favorites.includes(id)):journey.guideSaved;
+  const localSaved=ids.length?ids.every(id=>state.favorites.includes(id)):journey.guideSaved;
+  const saved=localSaved&&(!cloud.connected||!nativeAuth||JSON.stringify(cloud.journey)===JSON.stringify(journey));
   useEffect(()=>{if(saved&&!cloud.connected)emitGrowth("account_prompt_viewed",{},"prompt",journey.id);},[saved,cloud.connected,journey.id]);
-  return <section className="gw-save-result" aria-labelledby="gw-save-title"><span className="gw-note-icon"><Bookmark size={24}/></span><div><h2 id="gw-save-title">{saved?"Un lucru mai puțin de căutat mâine.":ids.length?"Vrei să păstrezi ideile pentru mai târziu?":"Vrei să păstrezi aceste resurse?"}</h2><p>{saved?cloud.connected&&ids.length?"Ideile sunt păstrate în contul tău de test.":storageError?"Rezultatul este păstrat în această sesiune.":"Rezultatul este păstrat pe acest dispozitiv. Poți reveni oricând.":cloud.connected&&ids.length?"Adăugăm doar ideile din acest rezultat. Planul și profilul rămân ale tale.":"Le salvăm întâi pe acest dispozitiv. Nu ai nevoie de email sau parolă."}</p><button type="button" className="v2-button v2-button-secondary" disabled={busy||saved||cloud.saving||cloud.loading||(cloud.connected&&!cloud.selectedBabyId)} onClick={async()=>{
+  return <section className="gw-save-result" aria-labelledby="gw-save-title"><span className="gw-note-icon"><Bookmark size={24}/></span><div><h2 id="gw-save-title">{saved?"Un lucru mai puțin de căutat mâine.":ids.length?"Vrei să păstrezi ideile pentru mai târziu?":"Vrei să păstrezi aceste resurse?"}</h2><p>{saved?cloud.connected?"Rezultatul și preferințele sunt păstrate în contul tău de test.":storageError?"Rezultatul este păstrat în această sesiune.":"Rezultatul este păstrat pe acest dispozitiv. Poți reveni oricând.":cloud.connected&&ids.length?"Adăugăm doar ideile din acest rezultat. Planul și profilul rămân ale tale.":"Le salvăm întâi pe acest dispozitiv. Nu ai nevoie de email sau parolă."}</p><button type="button" className="v2-button v2-button-secondary" disabled={busy||saved||cloud.saving||cloud.loading||(cloud.connected&&!cloud.selectedBabyId)} onClick={async()=>{
     setBusy(true);setError("");
     try{
       if(ids.length){if(cloud.connected)await cloudStore.importIdeas({...emptyState,favorites:ids});else for(const recipeId of ids)if(!state.favorites.includes(recipeId))dispatch({type:"favorite",recipeId});}
       else journeyStore.update(scope,{guideSaved:true});
+      if(nativeAuth&&cloud.connected)await cloudStore.saveJourney(ids.length?journey:{...journey,guideSaved:true});
       emitGrowth("result_saved",{count:ids.length,valueKind:kind},"saved",journey.id);
       announce("Rezultatul a fost păstrat.");
     }catch{setError("Salvarea nu s-a încheiat. Rezultatul rămâne aici și poți reîncerca.");}finally{setBusy(false);}
   }}><Check size={17}/>{busy?"Se salvează…":saved?"Rezultat păstrat":ids.length?"Salvează ideile mele":"Păstrează ghidul meu"}</button>{error&&<p role="alert">{error}</p>}
-  {saved&&!cloud.connected&&<div className="gw-account-invitation"><h3>Ai deja un cont de test?</h3><p>Poți conecta contul și păstra acest rezultat. Crearea conturilor reale va fi disponibilă după validarea autentificării; înregistrarea nu este simulată aici.</p><Link href="/v2/cont" className="v2-text-link" onClick={()=>{journeyStore.prepareHandoff(scope);emitGrowth("account_prompt_viewed",{},"prompt",journey.id);}}>Continuă cu contul de test <ArrowRight size={16}/></Link></div>}</div></section>;
+  {saved&&!cloud.connected&&<div className="gw-account-invitation"><h3>{nativeAuth?"Păstrează rezultatul și pentru următoarea vizită":"Ai deja un cont de test?"}</h3><p>{nativeAuth?"Creează un cont sintetic sau conectează-te. Preferințele și ideile se vor salva în cont, pentru revenirea din alt browser.":"Poți conecta contul și păstra acest rezultat. Crearea conturilor reale va fi disponibilă după validarea autentificării; înregistrarea nu este simulată aici."}</p><Link href="/v2/cont" className="v2-text-link" onClick={()=>{journeyStore.prepareHandoff(scope);emitGrowth("account_prompt_viewed",{},"prompt",journey.id);}}>{nativeAuth?"Salvează în cont sau creează un cont":"Continuă cu contul de test"} <ArrowRight size={16}/></Link></div>}</div></section>;
 }

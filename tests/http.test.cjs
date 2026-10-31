@@ -12,7 +12,7 @@ test('production and remote Supabase destinations are blocked',()=>{
  assert.equal(assertIsolatedSupabaseUrl('http://127.0.0.1:54321').hostname,'127.0.0.1');
 });
 test('real SDK HTTP integration: login, persist, second device, logout/login and account isolation',{skip:!process.env.V2_RUN_HTTP_TESTS},async()=>{
- const accounts=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../../finalization/local-test-access.json'),'utf8')).accounts;
+ const accounts=JSON.parse(fs.readFileSync(process.env.V2_TEST_ACCESS_FILE || path.resolve(__dirname,'../../finalization/local-test-access.json'),'utf8')).accounts;
  const create=()=>createClient(apiUrl,publicKey,{auth:{persistSession:false,autoRefreshToken:false}});
  const a=create(),b=create(),device=create();
  try{

@@ -8,7 +8,10 @@ import {
 } from "../model";
 import { normalize } from "../review";
 
+import { readJourney, newJourney, type Journey } from "../growth/journey";
+
 export type CloudState = {
+  journey: Journey | null;
   state: AppState;
   selectedBabyId: string | null;
   children: { id: string; label: string }[];
@@ -31,6 +34,7 @@ function parse(value: unknown): CloudState {
   );
   return {
     state,
+    journey: data.journey ? readJourney(JSON.stringify(data.journey), newJourney("00000000-0000-4000-8000-000000000000",1)) : null,
     selectedBabyId:
       typeof data.selectedBabyId === "string" ? data.selectedBabyId : null,
     children: Array.isArray(data.children)
@@ -124,6 +128,14 @@ export class V2Repository {
       .abortSignal(AbortSignal.timeout(12000));
     if (error) throw error;
     return parse(data);
+  }
+  async saveJourney(babyId: string, journey: Journey) {
+    const {data,error}=await this.client.rpc("v2_save_journey",{p_baby_id:babyId,p_preferences:journey}).abortSignal(AbortSignal.timeout(12000));
+    if(error)throw error;return parse(data);
+  }
+  async editChild(babyId: string,label: string,stage: number) {
+    const {data,error}=await this.client.rpc("v2_edit_child",{p_baby_id:babyId,p_label:label,p_stage:stage}).abortSignal(AbortSignal.timeout(12000));
+    if(error)throw error;return parse(data);
   }
   async record(event: LocalEvent) {
     const { error } = await this.client

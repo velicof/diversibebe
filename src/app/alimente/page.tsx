@@ -164,6 +164,7 @@ function AlimentePageInner() {
       const { data, error } = await supabaseClient
         .from("tried_foods")
         .select("food_id, food_name, try_count, first_tried_at")
+    .is("baby_id", null)
         .eq("user_id", userId)
         .order("first_tried_at", { ascending: false });
 
@@ -226,6 +227,7 @@ function AlimentePageInner() {
       void supabaseClient
         .from("tried_foods")
         .select("food_id, food_name, try_count, first_tried_at")
+    .is("baby_id", null)
         .eq("user_id", uid)
         .order("first_tried_at", { ascending: false })
         .then(({ data: refreshed }) => {

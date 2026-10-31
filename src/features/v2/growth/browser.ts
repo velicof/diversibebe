@@ -33,6 +33,10 @@ export const journeyStore={
     try{sessionStorage.setItem(pendingKey,JSON.stringify({at:Date.now(),data:this.get(scope).data}));return true;}catch{return false;}
   },
   hasHandoff(){try{const v=JSON.parse(sessionStorage.getItem(pendingKey)||"null");return Boolean(v && Date.now()-v.at<3600000 && v.data?.completed);}catch{return false;}},
+  peekHandoff():Journey|null{
+    if(!this.hasHandoff())return null;
+    try{const v=JSON.parse(sessionStorage.getItem(pendingKey)!);return readJourney(JSON.stringify(v.data),emptyJourney);}catch{return null;}
+  },
   claimHandoff(scope:string){
     if(scope==="guest"||!this.hasHandoff())return;
     try{const v=JSON.parse(sessionStorage.getItem(pendingKey)!);sessionStorage.removeItem(pendingKey);this.update(scope,v.data);}catch{/* Remain in the current, isolated journey. */}

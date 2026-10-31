@@ -4,7 +4,7 @@ const fs = require('node:fs'), path = require('node:path');
 const apiUrl=process.env.V2_TEST_API_URL||'http://127.0.0.1:54329';
 require('../load-ts.cjs').load('src/features/v2/cloud/guard.ts').assertIsolatedSupabaseUrl(apiUrl);
 const publicKey=process.env.V2_TEST_ANON_KEY||'local-test-public-key';
-const accounts = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../finalization/local-test-access.json'), 'utf8')).accounts;
+const accounts = JSON.parse(fs.readFileSync(process.env.V2_TEST_ACCESS_FILE || path.resolve(__dirname, '../../../finalization/local-test-access.json'), 'utf8')).accounts;
 const childA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', sibling = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab';
 const captures = process.env.V2_QA_CAPTURE_DIR || path.resolve(__dirname, '../../../../outputs/mvp-final/capturi');
 async function restrict(context) {
@@ -26,7 +26,7 @@ async function select(page,id) {
   await page.goto('/v2/cont'); await page.getByLabel('Profilul activ').selectOption(id); await synced(page);
 }
 test.beforeEach(async ({context})=>restrict(context));
-test('authenticated flows: persistence, second device, siblings, logout and account isolation', async ({page,browser})=>{
+test('authenticated persistence, second device and sibling isolation', async ({page,browser})=>{
   const sdk = createClient(apiUrl,publicKey,{auth:{persistSession:false,autoRefreshToken:false}});
   await sdk.auth.signInWithPassword(accounts[0]);
   const call = async (id,action,payload) => { const r=await sdk.rpc('v2_apply_action',{p_baby_id:id,p_action:action,p_payload:payload}); if(r.error) throw r.error; return r.data; };
@@ -64,7 +64,18 @@ test('authenticated flows: persistence, second device, siblings, logout and acco
     await select(page,childA); await page.goto('/v2/jurnal');
     await expect(page.getByRole('heading',{name:'Piure de dovlecel',exact:true})).toBeVisible();
     await page.screenshot({path:path.join(captures,'jurnal-autentificat-390.png'),fullPage:true});
-    await page.goto('/v2/cont');
+  } finally { await device.close(); await sdk.auth.signOut({scope:'local'}); }
+});
+
+// Independent session: persistence and logout remain covered without one long-lived
+// browser scenario depending on the first test's navigation/cache state.
+test('logout loading, login again, optional confirmation and account isolation',async({page})=>{
+  const sdk=createClient(apiUrl,publicKey,{auth:{persistSession:false,autoRefreshToken:false}});
+  const signed=await sdk.auth.signInWithPassword(accounts[0]);if(signed.error)throw signed.error;
+  const prepared=await sdk.rpc('v2_apply_action',{p_baby_id:childA,p_action:'confirm',p_payload:{id:crypto.randomUUID(),recipeId:'piure-dovlecel'}});if(prepared.error)throw prepared.error;
+  await sdk.auth.signOut({scope:'local'});
+  await login(page,accounts[0]);
+    await page.goto('/v2/cont'); await synced(page);
     await page.route('**/auth/v1/logout*',async r=>{await new Promise(resolve=>setTimeout(resolve,900));await r.continue();});
     await page.getByRole('button',{name:'Deconectare',exact:true}).click();
     await expect(page.getByRole('status',{name:'Se încarcă',exact:true})).toBeVisible();
@@ -73,12 +84,13 @@ test('authenticated flows: persistence, second device, siblings, logout and acco
     await page.unroute('**/auth/v1/logout*');
     await login(page,accounts[0]); await page.goto('/v2/retete/piure-dovlecel'); await synced(page);
     await expect(page.getByRole('button',{name:'Confirmată azi',exact:true})).toBeDisabled();
-    await page.goto('/v2/cont'); await page.getByRole('button',{name:'Deconectare',exact:true}).click();
+    await page.goto('/v2/cont'); await synced(page); await page.getByRole('button',{name:'Deconectare',exact:true}).click();
     await login(page,accounts[1]); await page.goto('/v2/jurnal'); await synced(page);
     await expect(page.getByRole('heading',{name:'Bunele idei se întorc la masă'})).toBeVisible();
     await page.goto('/v2/retete/piure-dovlecel');
     await expect(page.getByRole('button',{name:'Salvează Piure de dovlecel',exact:true})).toHaveAttribute('aria-pressed','false');
-  } finally { await device.close(); await sdk.auth.signOut({scope:'local'}); }
+
+
 });
 test('offline logout clears the local session and never restores the private view on reload',async({page})=>{
   await login(page,accounts[0]);await page.goto('/v2/cont');
@@ -123,4 +135,15 @@ test('explicit local import is additive and never imports local meal confirmatio
   await page.goto('/v2/cont'); await page.getByRole('button',{name:'Deconectare',exact:true}).click();
   const demo=await page.evaluate(()=>JSON.parse(localStorage.getItem('diversibebe:v2:isolated-preview:1')));
   expect(demo.uses[0].id).toBe('local-only');
+});
+
+test('logout intent survives immediate reload before the server responds',async({page})=>{
+  await login(page,accounts[0]);await page.goto('/v2/cont');await synced(page);
+  let observed;const started=new Promise(r=>observed=r);
+  await page.route('**/auth/v1/logout*',async r=>{observed();await new Promise(resolve=>setTimeout(resolve,1500));await r.abort().catch(()=>{});});
+  await page.getByRole('button',{name:'Deconectare',exact:true}).click();await started;
+  await page.reload();
+  await expect(page.getByRole('heading',{name:'Conectează contul de test',exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>localStorage.getItem('diversibebe:v2:test-auth'))).toBeNull();
+  await expect(page.getByRole('heading',{name:'Contul tău de test',exact:true})).toHaveCount(0);
 });

@@ -31,17 +31,18 @@ function toIsoDate(input: string): string {
 }
 
 export async function getCurrentUserId(): Promise<string | null> {
-  if (cachedUserId) return cachedUserId;
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.id) return null;
+  if (!user?.id) { clearSupabaseDataCache(); return null; }
+  if(cachedUserId!==user.id)cachedBaby=null;
   cachedUserId = user.id;
   return cachedUserId;
 }
 
 export async function getCurrentBaby(): Promise<DbBaby | null> {
-  if (cachedBaby) return cachedBaby;
+
   const userId = await getCurrentUserId();
   if (!userId) return null;
   const { data, error } = await supabase
@@ -206,10 +207,11 @@ export async function upsertTriedFood(input: {
     .select("id,try_count,first_tried_at")
     .eq("user_id", userId)
     .eq("food_id", input.foodId)
+    .eq("baby_id", baby.id)
     .maybeSingle();
 
   if (!existing?.id) {
-    await supabase.from("tried_foods").upsert(
+    await supabase.from("tried_foods").insert(
       {
         user_id: userId,
         baby_id: baby.id,
@@ -217,8 +219,7 @@ export async function upsertTriedFood(input: {
         food_name: input.foodName,
         first_tried_at: new Date().toISOString(),
         try_count: 1,
-      },
-      { onConflict: "user_id,food_id" }
+      }
     );
     return;
   }
@@ -316,25 +317,8 @@ export async function markRecipeCooked(
   const userId = await getCurrentUserId();
   if (!userId) return false;
 
-  const { data: existingRow } = await supabase
-    .from("cooked_recipes")
-    .select("notes")
-    .eq("user_id", userId)
-    .eq("recipe_id", recipeId)
-    .maybeSingle();
-
-  const { error } = await supabase.from("cooked_recipes").upsert(
-    {
-      user_id: userId,
-      recipe_id: recipeId,
-      cooked_at: new Date().toISOString(),
-      notes: existingRow?.notes ?? null,
-    },
-    { onConflict: "user_id,recipe_id", ignoreDuplicates: false }
-  );
-  if (error && !error.message.includes("duplicate") && !error.message.includes("unique")) {
-    return false;
-  }
+  const { error } = await supabase.rpc("v2_mark_legacy_recipe",{p_recipe_id:recipeId});
+  if(error)return false;
 
   if (relatedFoods && relatedFoods.length > 0) {
     for (const foodId of relatedFoods) {

@@ -1,7 +1,7 @@
 const {test,expect}=require('@playwright/test');
 const {createClient}=require('@supabase/supabase-js');
 const fs=require('node:fs'),path=require('node:path');
-const accounts=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../../../finalization/local-test-access.json'),'utf8')).accounts;
+const accounts=JSON.parse(fs.readFileSync(process.env.V2_TEST_ACCESS_FILE || path.resolve(__dirname,'../../../finalization/local-test-access.json'),'utf8')).accounts;
 const apiUrl=process.env.V2_TEST_API_URL||'http://127.0.0.1:54329',key=process.env.V2_TEST_ANON_KEY||'local-test-public-key';
 require('../load-ts.cjs').load('src/features/v2/cloud/guard.ts').assertIsolatedSupabaseUrl(apiUrl);
 async function enter(page,account){

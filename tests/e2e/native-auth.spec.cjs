@@ -1,0 +1,37 @@
+const {test,expect}=require('@playwright/test'),crypto=require('node:crypto'),path=require('node:path');
+const {createClient}=require('@supabase/supabase-js');
+const native=process.env.V2_TEST_API_URL==='http://127.0.0.1:54321';
+test.skip(!native,'Real GoTrue/PostgREST runtime only');
+const out=process.env.V2_QA_CAPTURE_DIR||path.resolve(__dirname,'../../../../outputs/real-app-2026-10-30/captures');
+async function restrict(context){await context.route('**/*',r=>['127.0.0.1','localhost'].includes(new URL(r.request().url()).hostname)?r.continue():r.abort());}
+async function login(page,email,password){await page.goto('/v2/cont');await page.getByLabel('Email de test',{exact:true}).fill(email);await page.getByLabel('Parola contului de test',{exact:true}).fill(password);await page.getByRole('button',{name:'Conectare în test',exact:true}).click();await expect(page).toHaveURL('/v2/azi');}
+async function journey(page){await page.goto('/v2');await page.getByRole('link',{name:'Hai să găsim o idee de masă',exact:true}).click();await page.getByRole('button',{name:/^Nu am suficient timp/}).click();await page.getByRole('button',{name:'Continuă',exact:true}).click();await page.getByRole('button',{name:/^9–12 luni/}).click();await page.getByRole('button',{name:'Continuă',exact:true}).click();await page.getByRole('button',{name:/^Sub 15 minute/}).click();await page.getByRole('button',{name:'Vezi rezultatul meu',exact:true}).click();}
+test('real signup: guest result → account → database → new browser, child editing, siblings and no plaintext password',async({page,context,browser})=>{
+ await restrict(context);const email='browser-'+crypto.randomUUID()+'@example.test',password=crypto.randomBytes(18).toString('base64url');
+ await journey(page);await page.reload();await expect(page.locator('[data-result-recipe]')).toHaveCount(3);const ids=await page.locator('[data-result-recipe]').evaluateAll(xs=>xs.map(x=>x.dataset.resultRecipe));
+ await page.getByRole('button',{name:'Salvează ideile mele',exact:true}).click();await page.getByRole('link',{name:'Salvează în cont sau creează un cont',exact:true}).click();
+ await page.getByRole('button',{name:'Creează un cont de test',exact:true}).click();await page.getByLabel('Email de test',{exact:true}).fill(email);await page.getByLabel('Parola contului de test',{exact:true}).fill(password);await page.getByRole('button',{name:'Creează și salvează în cont',exact:true}).click();
+ await expect(page).toHaveURL(/onboarding\?rezultat=1/);await expect(page.getByRole('button',{name:'Rezultat păstrat',exact:true})).toBeDisabled();
+ await page.screenshot({path:path.join(out,'native-result-mobile.png'),fullPage:true});
+ const stored=await page.evaluate(()=>[...Object.values(localStorage),...Object.values(sessionStorage)].join(' '));expect(stored).not.toContain(password);
+ const other=await browser.newContext({baseURL:'http://127.0.0.1:3100',viewport:{width:1440,height:1000}});await restrict(other);const second=await other.newPage();
+ try{await login(second,email,password);await second.goto('/v2/onboarding');await expect(second.locator('[data-result-recipe]')).toHaveCount(ids.length);expect(await second.locator('[data-result-recipe]').evaluateAll(xs=>xs.map(x=>x.dataset.resultRecipe))).toEqual(ids);await expect(second.getByRole('button',{name:'Rezultat păstrat',exact:true})).toBeDisabled();await second.screenshot({path:path.join(out,'native-result-desktop.png'),fullPage:true});}finally{await other.close();}
+ await page.goto('/v2/cont');const original=await page.getByLabel('Profilul activ').inputValue();await page.getByLabel('Eticheta profilului activ').fill('Profil editat');await page.getByLabel('Etapa profilului activ').selectOption('10');await page.getByRole('button',{name:'Salvează profilul',exact:true}).click();await expect(page.getByLabel('Profilul activ')).toContainText('Profil editat');
+ await page.getByLabel('Etichetă opțională pentru profil').fill('Frate sintetic');await page.getByLabel('Etapa noului profil').selectOption('6');await page.getByRole('button',{name:'Creează profilul',exact:true}).click();await expect(page.getByLabel('Profilul activ').locator('option')).toHaveCount(3);await page.goto('/v2/onboarding');await expect(page.getByRole('heading',{level:1})).toContainText('Care e cea mai mare provocare');
+ await page.goto('/v2/cont');await page.getByLabel('Profilul activ').selectOption(original);await page.reload();await expect(page.getByLabel('Eticheta profilului activ')).toHaveValue('Profil editat');await expect(page.getByLabel('Etapa profilului activ')).toHaveValue('10');await page.screenshot({path:path.join(out,'native-account-mobile.png'),fullPage:true});
+ await page.getByRole('button',{name:'Deconectare',exact:true}).click();await expect(page.getByLabel('Email de test',{exact:true})).toBeVisible();
+});
+test('real recovery email and PKCE callback change the password; expired session removes private views',async({page,context})=>{
+ await restrict(context);const email='recovery-'+crypto.randomUUID()+'@example.test',password=crypto.randomBytes(18).toString('base64url'),nextPassword=crypto.randomBytes(18).toString('base64url');
+ const sdk=createClient(process.env.V2_TEST_API_URL,process.env.V2_TEST_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+ const created=await sdk.auth.signUp({email,password});expect(created.error).toBeNull();await sdk.auth.signOut({scope:'local'});
+ await page.goto('/v2/cont');await page.getByRole('button',{name:'Am uitat parola',exact:true}).click();await page.getByLabel('Email de test',{exact:true}).fill(email);await page.getByRole('button',{name:'Trimite linkul de recuperare',exact:true}).click();await expect(page.getByRole('status').filter({hasText:'Dacă adresa există'})).toBeVisible();
+ let message;await expect.poll(async()=>{const r=await fetch('http://127.0.0.1:54324/api/v1/messages');const data=await r.json();message=data.messages.find(m=>m.To?.some(t=>t.Address===email));return Boolean(message);}).toBe(true);
+ const detail=await (await fetch('http://127.0.0.1:54324/api/v1/message/'+message.ID)).json();const html=detail.HTML||detail.Text;const link=html.match(/http:\/\/127\.0\.0\.1:54321[^"\s<>]+/)[0].replaceAll('&amp;','&');
+ await page.goto(link);await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:3100\/v2\/recuperare/);await expect(page.getByLabel('Parola nouă',{exact:true})).toBeVisible();await page.getByLabel('Parola nouă',{exact:true}).fill(nextPassword);await page.getByRole('button',{name:'Schimbă parola',exact:true}).click();await expect(page.getByRole('status').filter({hasText:'Parola a fost schimbată'})).toBeVisible();
+ expect((await sdk.auth.signInWithPassword({email,password})).error).not.toBeNull();expect((await sdk.auth.signInWithPassword({email,password:nextPassword})).error).toBeNull();await sdk.auth.signOut({scope:'local'});
+ await login(page,email,nextPassword);await page.goto('/v2/cont');
+ await page.evaluate(()=>{const key='diversibebe:v2:test-auth',v=JSON.parse(localStorage.getItem(key));v.expires_at=1;v.refresh_token='invalid-expired-test-session';localStorage.setItem(key,JSON.stringify(v));});
+ await page.reload();await expect(page.getByRole('heading',{name:'Conectează contul de test',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'Contul tău de test',exact:true})).toHaveCount(0);
+ const stored=await page.evaluate(()=>[...Object.values(localStorage),...Object.values(sessionStorage)].join(' '));expect(stored).not.toContain(password);expect(stored).not.toContain(nextPassword);
+});

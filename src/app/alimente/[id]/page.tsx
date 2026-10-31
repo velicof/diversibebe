@@ -79,6 +79,7 @@ export default function FoodDetailPage({
     supabase
       .from("tried_foods")
       .select("try_count, first_tried_at")
+    .is("baby_id", null)
       .eq("user_id", userId)
       .eq("food_id", id)
       .maybeSingle()

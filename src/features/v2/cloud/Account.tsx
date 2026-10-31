@@ -3,6 +3,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LogOut, ShieldCheck } from "lucide-react";
+import { nativeAuth } from "./client";
+import { emptyState } from "../model";
+import { journeyScope } from "../growth/browser";
 import { cloudStore } from "./store";
 import { usePreview } from "../Provider";
 import { previewStore } from "../store";
@@ -12,12 +15,24 @@ import { emitGrowth, journeyStore } from "../growth/browser";
 export function Account() {
   const { cloud, announce } = usePreview();
   const router = useRouter();
+  const [mode,setMode]=useState<"login"|"signup"|"recover">("login");
+  const [notice,setNotice]=useState("");
+  const [stage,setStage]=useState(0);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [childLabel, setChildLabel] = useState("");
   const [imported, setImported] = useState(false);
+  async function transferPending(){
+    const pending=journeyStore.peekHandoff();
+    if(!nativeAuth || !pending)return;
+    const current=cloudStore.getSnapshot();
+    if(!current.selectedBabyId)throw new Error("Creează un profil pentru a asocia rezultatul.");
+    await cloudStore.importIdeas({...emptyState,favorites:pending.resultIds});
+    await cloudStore.saveJourney(pending);
+    journeyStore.claimHandoff(journeyScope(current.userId,current.selectedBabyId));
+  }
   if (cloud.loading && !cloud.connected) return <LoadingState />;
   if (cloud.connected)
     return (
@@ -46,13 +61,14 @@ export function Account() {
               </option>
             ))}
           </select>
-          {cloud.children.length === 0 && (
+          {(nativeAuth || cloud.children.length === 0) && (
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
                 setBusy(true);
                 try {
-                  await cloudStore.createChild(childLabel, 0);
+                  await cloudStore.createChild(childLabel, nativeAuth?stage:0);
+                  setChildLabel("");
                 } catch {
                   setError("Profilul nu a putut fi creat.");
                 } finally {
@@ -70,11 +86,14 @@ export function Account() {
                 onChange={(e) => setChildLabel(e.target.value)}
                 placeholder="Copilul meu"
               />
+              {nativeAuth&&<><label htmlFor="v2-new-stage">Etapa noului profil</label><select id="v2-new-stage" value={stage} onChange={e=>setStage(Number(e.target.value))}>{[0,6,8,10,12].map(n=><option key={n} value={n}>{n===0?"Pregătire":n+" luni sau mai mult"}</option>)}</select></>}
               <button disabled={busy} className="v2-button v2-button-primary">
                 Creează profilul
               </button>
             </form>
           )}
+          {nativeAuth&&cloud.selectedBabyId&&<ChildEditor key={cloud.selectedBabyId+cloud.state.stage+cloud.children.find(c=>c.id===cloud.selectedBabyId)?.label} label={cloud.children.find(c=>c.id===cloud.selectedBabyId)?.label??"Copilul meu"} stage={cloud.state.stage}/>}
+          {nativeAuth&&journeyStore.hasHandoff()&&<button className="v2-button v2-button-primary" disabled={busy} onClick={async()=>{setBusy(true);try{await transferPending();router.push("/v2/onboarding?rezultat=1");}catch{setError("Rezultatul a rămas disponibil. Reîncearcă asocierea.");}finally{setBusy(false);}}}>Asociază rezultatul dinainte de cont</button>}
           <div className="v2-import-panel">
             <h3>Vrei să păstrezi ideile explorate fără cont?</h3>
             <p>
@@ -117,6 +136,8 @@ export function Account() {
               className="v2-button v2-button-secondary"
               onClick={async () => {
                 const serverConfirmed = await cloudStore.logout();
+                setMode("login");
+                setMode("login");
                 setPassword("");
                 setImported(false);
                 setEmail("");
@@ -142,6 +163,7 @@ export function Account() {
         unui cont real.
         {process.env.NEXT_PUBLIC_V2_BACKEND_KIND === "contract-fixture" && " Acest test folosește PostgreSQL și o API compatibilă Supabase, cu autentificare sintetică. Serviciile Supabase complete nu sunt încă validate."}
       </PageHeading>
+      {nativeAuth&&<div className="v2-action-row" aria-label="Operații cont"><button className="v2-button v2-button-secondary" aria-pressed={mode==="login"} onClick={()=>{setMode("login");setError("");setNotice("");}}>Am deja cont</button><button className="v2-button v2-button-secondary" aria-pressed={mode==="signup"} onClick={()=>{setMode("signup");setError("");setNotice("");}}>Creează un cont de test</button></div>}
       <form
         className="v2-profile-section v2-account-panel"
         onSubmit={async (e) => {
@@ -149,18 +171,24 @@ export function Account() {
           setError("");
           if (
             !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
-            password.length < 6
+            (mode!=="recover" && password.length < (mode==="signup"?8:6))
           ) {
             setError("Completează un email valid și parola contului de test.");
             return;
           }
+          if(nativeAuth&&!/^[^\s@]+@example\.test$/i.test(email)){setError("Folosește o adresă sintetică @example.test, de exemplu demo-nou@example.test.");return;}
           setBusy(true);
           try {
-            emitGrowth("login_started");
-            await cloudStore.login(email, password);
-            emitGrowth("login_completed");
+            if(mode==="recover"){
+              await cloudStore.recover(email);setNotice("Dacă adresa există, linkul apare în cutia poștală locală. Deschide linkul în acest browser.");setPassword("");return;
+            }
+            emitGrowth(mode==="signup"?"signup_started":"login_started");
+            const pending=journeyStore.peekHandoff();
+            if(mode==="signup")await cloudStore.signup(email,password,pending);else await cloudStore.login(email,password);
+            await transferPending();
+            emitGrowth(mode==="signup"?"signup_completed":"login_completed");
             setPassword("");
-            router.push(journeyStore.hasHandoff() ? "/v2/onboarding?rezultat=1" : "/v2/azi");
+            router.push(pending ? "/v2/onboarding?rezultat=1" : "/v2/azi");
           } catch (e) {
             setError(
               e instanceof Error ? e.message : "Conectarea nu a reușit.",
@@ -180,17 +208,19 @@ export function Account() {
           required
           maxLength={254}
         />
-        <label htmlFor="v2-password">Parola contului de test</label>
+        {mode!=="recover"&&<><label htmlFor="v2-password">Parola contului de test</label>
         <input
           id="v2-password"
           type="password"
-          autoComplete="current-password"
+          autoComplete={mode==="signup"?"new-password":"current-password"}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          minLength={6}
+          minLength={mode==="signup"?8:6}
           maxLength={200}
         />
+        </>}
+        {notice&&<p role="status">{notice} <a href="http://127.0.0.1:54324" target="_blank" rel="noreferrer">Deschide emailurile locale</a></p>}
         {error && (
           <p className="v2-alert" role="alert">
             {error}
@@ -206,9 +236,10 @@ export function Account() {
           className="v2-button v2-button-primary v2-full-width"
           disabled={busy || !cloud.available}
         >
-          {busy ? "Se conectează…" : "Conectare în test"}
+          {busy ? "Se procesează…" : mode==="signup"?"Creează și salvează în cont":mode==="recover"?"Trimite linkul de recuperare":"Conectare în test"}
           <ArrowRight size={17} />
         </button>
+        {nativeAuth&&<button type="button" className="v2-text-button" onClick={()=>{setMode("recover");setPassword("");setError("");}}>Am uitat parola</button>}
         <p className="v2-field-note">
           Parola nu este salvată de aplicație. Sesiunea de autentificare este
           păstrată separat de datele demonstrative.
@@ -220,4 +251,9 @@ export function Account() {
       </form>
     </>
   );
+}
+
+function ChildEditor({label,stage}:{label:string;stage:number}){
+ const [name,setName]=useState(label),[age,setAge]=useState(stage),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+ return <form className="v2-import-panel" onSubmit={async e=>{e.preventDefault();setBusy(true);setMessage("");try{await cloudStore.editChild(name,age);setMessage("Profil actualizat.");}catch{setMessage("Profilul nu a fost salvat. Reîncearcă.");}finally{setBusy(false);}}}><h3>Editează profilul activ</h3><label htmlFor="v2-edit-label">Eticheta profilului activ</label><input id="v2-edit-label" required maxLength={40} value={name} onChange={e=>setName(e.target.value)}/><label htmlFor="v2-edit-stage">Etapa profilului activ</label><select id="v2-edit-stage" value={age} onChange={e=>setAge(Number(e.target.value))}>{[0,6,8,10,12].map(n=><option key={n} value={n}>{n===0?"Pregătire":n+" luni sau mai mult"}</option>)}</select><button className="v2-button v2-button-secondary" disabled={busy}>Salvează profilul</button>{message&&<p role="status">{message}</p>}</form>;
 }

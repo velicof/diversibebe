@@ -11,6 +11,7 @@ import {
 import { makeEvent } from "./analytics";
 import type { Action, EventName } from "./model";
 import { previewStore } from "./store";
+import { journeyScope, journeyStore } from "./growth/browser";
 import { cloudStore } from "./cloud/store";
 
 type ContextValue = ReturnType<typeof previewStore.getSnapshot> & {
@@ -38,6 +39,7 @@ export function PreviewProvider({ children }: { children: React.ReactNode }) {
     : { ...local, ready: local.ready && !cloud.loading };
   const [message, setMessage] = useState("");
   const sessionStarted = useRef(false);
+  const journeyOwner = useRef<string | null>(null);
   const cloudSessionUser = useRef<string | null>(null);
   // This sensitive eligibility choice is memory-only and excluded from analytics.
   const [clinicalGuidance, setClinicalGuidance] = useState(false);
@@ -69,6 +71,15 @@ export function PreviewProvider({ children }: { children: React.ReactNode }) {
     }
     if (!cloud.connected) cloudSessionUser.current = null;
   }, [cloud.connected, cloud.userId, track]);
+  useEffect(() => {
+    if (!cloud.connected || cloud.loading) { if(!cloud.connected)journeyOwner.current=null; return; }
+    const scope=journeyScope(cloud.userId,cloud.selectedBabyId);
+    if(journeyOwner.current!==scope){
+      journeyOwner.current=scope;
+      journeyStore.hydrate(scope);
+      if(cloud.journey)journeyStore.update(scope,cloud.journey);
+    }
+  },[cloud.connected,cloud.loading,cloud.userId,cloud.selectedBabyId,cloud.journey]);
   useEffect(() => {
     if (!message) return;
     const id = window.setTimeout(() => setMessage(""), 4000);

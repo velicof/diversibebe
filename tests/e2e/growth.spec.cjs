@@ -1,11 +1,13 @@
 const {test,expect}=require('@playwright/test');
 const AxeBuilder=require('@axe-core/playwright').default;
 const fs=require('node:fs'),path=require('node:path');
-const accounts=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../../../finalization/local-test-access.json'),'utf8')).accounts;
+const accounts=JSON.parse(fs.readFileSync(process.env.V2_TEST_ACCESS_FILE || path.resolve(__dirname,'../../../finalization/local-test-access.json'),'utf8')).accounts;
 const out=process.env.V2_QA_CAPTURE_DIR||path.resolve(__dirname,'../../../../outputs/growth-2026-10-30/after');
 test.beforeEach(async({context})=>{await context.route('**/*',r=>['127.0.0.1','localhost'].includes(new URL(r.request().url()).hostname)?r.continue():r.abort());});
 async function choose(page,challenge='Nu am suficient timp',age='Aproximativ 6–8',context='Sub 15 minute'){
  await page.goto('/v2/onboarding');
+ await expect(page.locator('.gw-journey')).toBeVisible();
+ const change=page.getByRole('button',{name:/Schimbă răspunsurile/});if(await change.isVisible())await change.click();
  await page.getByRole('button',{name:new RegExp('^'+challenge)}).click();
  await page.getByRole('button',{name:'Continuă',exact:true}).click();
  await page.getByRole('button',{name:new RegExp('^'+age)}).click();
@@ -34,7 +36,7 @@ test('growth: full journey survives back, refresh, save and repeated result view
  await page.getByRole('button',{name:'Continuă',exact:true}).click();await page.getByRole('button',{name:/^Sub 15 minute/}).click();await page.getByRole('button',{name:'Vezi rezultatul meu',exact:true}).click();
  await expect(page.locator('[data-result-recipe]')).toHaveCount(3);const ids=await page.locator('[data-result-recipe]').evaluateAll(xs=>xs.map(x=>x.dataset.resultRecipe));
  for(const text of await page.locator('.gw-result-grid .v2-time-badge').allTextContents())expect(parseInt(text)).toBeLessThan(15);
- await expect(page.getByRole('link',{name:'Continuă cu contul de test',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('link',{name:process.env.V2_TEST_API_URL==='http://127.0.0.1:54321'?'Salvează în cont sau creează un cont':'Continuă cu contul de test',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Salvează ideile mele',exact:true}).click();await expect(page.getByRole('button',{name:'Rezultat păstrat',exact:true})).toBeDisabled();
  await page.reload();await expect(page.locator('[data-result-recipe]')).toHaveCount(ids.length);expect(await page.locator('[data-result-recipe]').evaluateAll(xs=>xs.map(x=>x.dataset.resultRecipe))).toEqual(ids);
  await expect(page.getByRole('button',{name:'Rezultat păstrat',exact:true})).toBeDisabled();
@@ -64,7 +66,7 @@ for(const [challenge,context] of [['Refuză multe alimente','Mese fără presiun
 });
 test('growth: result handoff survives test login and explicit save to account',async({page})=>{
  await choose(page,'Nu mai știu','Aproximativ 6–8','O idee pentru masa');const ids=await page.locator('[data-result-recipe]').evaluateAll(xs=>xs.map(x=>x.dataset.resultRecipe));
- await page.getByRole('button',{name:'Salvează ideile mele',exact:true}).click();await page.getByRole('link',{name:'Continuă cu contul de test',exact:true}).click();
+ await page.getByRole('button',{name:'Salvează ideile mele',exact:true}).click();await page.getByRole('link',{name:process.env.V2_TEST_API_URL==='http://127.0.0.1:54321'?'Salvează în cont sau creează un cont':'Continuă cu contul de test',exact:true}).click();
  await page.getByLabel('Email de test').fill(accounts[0].email);await page.getByLabel('Parola contului de test').fill(accounts[0].password);await page.getByRole('button',{name:'Conectare în test',exact:true}).click();
  await expect(page).toHaveURL(/onboarding\?rezultat=1/);await expect(page.getByRole('heading',{level:1})).toContainText('Un punct de pornire');expect(await page.locator('[data-result-recipe]').evaluateAll(xs=>xs.map(x=>x.dataset.resultRecipe))).toEqual(ids);
  const save=page.getByRole('button',{name:'Salvează ideile mele',exact:true});if(await save.count())await save.click();await expect(page.getByRole('button',{name:'Rezultat păstrat',exact:true})).toBeDisabled();await page.reload();await expect(page.getByRole('button',{name:'Rezultat păstrat',exact:true})).toBeDisabled();
@@ -99,5 +101,5 @@ test('growth: blocked browser storage is explained while the current journey rem
  await page.addInitScript(()=>Object.defineProperty(window,'localStorage',{get(){throw new Error('storage blocked by test');}}));await choose(page);await expect(page.locator('[data-result-recipe]')).toHaveCount(3);await expect(page.locator('.gw-journey')).toContainText('Browserul nu permite salvarea');await page.getByRole('button',{name:'Salvează ideile mele',exact:true}).click();await expect(page.locator('.gw-save-result')).toContainText('această sesiune');
 });
 for(const [variant,title] of [['A','Ce îi gătim azi?'],['C','Fiecare copil are ritmul lui.']])test(`growth: headline ${variant} is inspectable without changing the guided flow`,async({page})=>{
- await page.goto(`/v2?mesaj=${variant}&parcurs=nou`);await expect(page.getByRole('heading',{level:1})).toContainText(title);await expect(page.locator('.gw-hero')).toBeVisible();expect((await diagnostics(page)).filter(e=>e.name==='homepage_view').at(-1).properties.message).toBe(variant);
+ await page.goto(`/v2?mesaj=${variant}&parcurs=nou`);await expect(page.getByRole('heading',{level:1})).toContainText(title);await expect(page.locator('.gw-hero:visible')).toBeVisible();await expect.poll(async()=>(await diagnostics(page)).filter(e=>e.name==='homepage_view').at(-1)?.properties.message).toBe(variant);
 });

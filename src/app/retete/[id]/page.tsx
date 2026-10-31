@@ -151,6 +151,7 @@ export default function RecipeDetailPage({
         supabaseClient
           .from("cooked_recipes")
           .select("id, notes")
+          .eq("source", "legacy")
           .eq("user_id", userId)
           .eq("recipe_id", recipe.id)
           .maybeSingle(),
@@ -712,6 +713,7 @@ export default function RecipeDetailPage({
                           const { data: row } = await supabaseClient
                             .from("cooked_recipes")
                             .select("id")
+          .eq("source", "legacy")
                             .eq("user_id", userId)
                             .eq("recipe_id", recipe.id)
                             .maybeSingle();

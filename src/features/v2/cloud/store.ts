@@ -5,7 +5,8 @@ import {
   type AppState,
   type LocalEvent,
 } from "../model";
-import { AUTH_STORAGE_KEY, getV2Repository } from "./client";
+import { journeyStage, type Journey } from "../growth/journey";
+import { AUTH_SIGNED_OUT_KEY, AUTH_STORAGE_KEY, getV2Repository } from "./client";
 import type { CloudState, V2Repository } from "./repository";
 
 type Snapshot = CloudState & {
@@ -18,6 +19,7 @@ type Snapshot = CloudState & {
   email: string | null;
 };
 const initial: Snapshot = {
+  journey: null,
   state: emptyState,
   selectedBabyId: null,
   children: [],
@@ -35,7 +37,7 @@ let snapshot = initial,
   generation = 0;
 let repository: V2Repository | null = null;
 let currentWrite: Promise<void> = Promise.resolve();
-let signingOut = false, locallySignedOut = false;
+let signingOut = false, locallySignedOut = false, authenticating = false;
 let failed: { owner: string; child: string | null; action: Action } | null =
   null;
 const listeners = new Set<() => void>();
@@ -60,6 +62,7 @@ async function connect() {
     }
     if (snapshot.userId !== user.id)
       update({
+        journey: null,
         state: { ...emptyState },
         children: [],
         selectedBabyId: null,
@@ -113,7 +116,7 @@ export const cloudStore = {
         generation++;
         failed = null;
         update({ ...initial, available: true, loading: signingOut });
-      } else if (["SIGNED_IN", "TOKEN_REFRESHED"].includes(event))
+      } else if (!authenticating && ["SIGNED_IN", "TOKEN_REFRESHED"].includes(event))
         window.setTimeout(() => {
           void connect();
         }, 0);
@@ -122,7 +125,7 @@ export const cloudStore = {
       if (snapshot.connected && !snapshot.saving) void connect();
     });
     window.addEventListener("storage", (event) => {
-      if (event.key === AUTH_STORAGE_KEY && event.newValue === null) {
+      if ((event.key === AUTH_STORAGE_KEY && event.newValue === null) || (event.key === AUTH_SIGNED_OUT_KEY && event.newValue === "1")) {
         generation++;
         locallySignedOut = true;
         failed = null;
@@ -134,6 +137,8 @@ export const cloudStore = {
   async login(email: string, password: string) {
     if (!repository)
       throw new Error("Mediul Supabase local nu este configurat.");
+    authenticating=true;
+    try {
     const { error } = await repository.client.auth.signInWithPassword({
       email,
       password,
@@ -142,13 +147,47 @@ export const cloudStore = {
       throw new Error(
         "Conectarea nu a reușit. Verifică datele contului de test și conexiunea.",
       );
+    try { window.localStorage.removeItem(AUTH_SIGNED_OUT_KEY); } catch { /* Storage unavailable. */ }
     locallySignedOut = false;
     await repository.client.auth.startAutoRefresh();
     await connect();
+    } finally { authenticating=false; }
+  },
+  async signup(email: string, password: string, pending: Journey | null) {
+    if (!repository) throw new Error("Mediul local nu este configurat.");
+    authenticating=true;
+    try {
+    const {data,error}=await repository.client.auth.signUp({email,password});
+    if(error || !data.session)throw new Error("Contul nu a putut fi creat. Verifică adresa sintetică și parola (minimum 8 caractere).");
+    try { window.localStorage.removeItem(AUTH_SIGNED_OUT_KEY); } catch { /* Storage unavailable. */ }
+    locallySignedOut=false;
+    await connect();
+    if(!snapshot.connected)throw new Error("Contul a fost creat, dar datele nu s-au încărcat. Reîncearcă autentificarea.");
+    if(!snapshot.children.length)await this.createChild("Profilul meu",pending ? journeyStage(pending) : 0);
+    } finally { authenticating=false; }
+  },
+  async recover(email: string) {
+    if(!repository)throw new Error("Mediul local nu este configurat.");
+    const {error}=await repository.client.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+"/v2/recuperare"});
+    if(error)throw new Error("Cererea nu a fost trimisă. Verifică legătura și reîncearcă.");
+  },
+  async saveJourney(journey: Journey) {
+    if(!repository || !snapshot.connected || !snapshot.selectedBabyId)throw new Error("Alege un profil conectat.");
+    const run=generation, child=snapshot.selectedBabyId;
+    const value=await repository.saveJourney(child,journey);
+    if(run!==generation || child!==snapshot.selectedBabyId)throw new Error("Sesiunea s-a schimbat.");
+    update(value);
+  },
+  async editChild(label: string,stage: number) {
+    if(!repository || !snapshot.connected || !snapshot.selectedBabyId)throw new Error("Alege un profil conectat.");
+    const run=generation, child=snapshot.selectedBabyId;
+    const value=await repository.editChild(child,label,stage);
+    if(run===generation && child===snapshot.selectedBabyId)update(value);
   },
   async logout() {
     if (signingOut) return false;
     signingOut = true;
+    try { window.localStorage.setItem(AUTH_SIGNED_OUT_KEY,"1"); } catch { /* Memory-only SDK session. */ }
     locallySignedOut = true;
     generation++;
     failed = null;

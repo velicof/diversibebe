@@ -634,6 +634,7 @@ export default function IstoricPage() {
     supabase
       .from("cooked_recipes")
       .select("id, recipe_id, cooked_at")
+          .eq("source", "legacy")
       .eq("user_id", userId)
       .order("cooked_at", { ascending: false })
       .then(({ data }) => {
