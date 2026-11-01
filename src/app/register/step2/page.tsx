@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -10,11 +10,17 @@ import {
 } from "@/app/lib/registerFoodsList";
 import { searchFoods } from "@/lib/searchUtils";
 import SocialLoginButtons from "../../components/SocialLoginButtons";
+import { useRegistrationDraft } from "../RegistrationDraft";
 
 type Gender = "boy" | "girl" | null;
 
 export default function RegisterStep2Page() {
   const router = useRouter();
+  const { draft, setDraft } = useRegistrationDraft();
+  const completed = useRef(false);
+  useEffect(() => {
+    if (!draft && !completed.current) router.replace("/register");
+  }, [draft, router]);
   const [gender, setGender] = useState<Gender>(null);
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -354,20 +360,9 @@ export default function RegisterStep2Page() {
               setLoading(true);
 
               try {
-                const step1Raw = localStorage.getItem(
-                  "diversibebe_register_step1"
-                );
-                const step1 = step1Raw
-                  ? (JSON.parse(step1Raw) as {
-                      parentName?: string;
-                      email?: string;
-                      password?: string;
-                    })
-                  : {};
-
-                const email = step1.email?.trim() || "";
-                const password = step1.password || "";
-                const parentName = step1.parentName?.trim() || "";
+                const email = draft?.email.trim() || "";
+                const password = draft?.password || "";
+                const parentName = draft?.parentName.trim() || "";
 
                 if (!email || !password) {
                   router.push("/register");
@@ -437,8 +432,8 @@ export default function RegisterStep2Page() {
                   }
                 }
 
-                localStorage.removeItem("register_step1");
-                localStorage.removeItem("diversibebe_register_step1");
+                completed.current = true;
+                setDraft(null);
 
                 // Verifică dacă userul are sesiune activă (email confirmation dezactivat)
                 const { data: sessionData } = await supabase.auth.getSession();
