@@ -1,6 +1,6 @@
 # DiversiBebe — starea exactă a implementării (2 noiembrie 2026)
 
-Acest document descrie ce există **efectiv** în cod și ce a fost verificat. Codul nu este publicat în producție. Singura modificare de producție: închiderea P0 `user_login_summary` (2 nov. 2026, aprobată de fondator).
+Acest document descrie ce există **efectiv** în cod și ce a fost verificat. Modificări de producție, toate aprobate de fondator pe 2 nov. 2026: (1) închiderea P0 `user_login_summary`; (2) **hotfixurile legacy SEO + securitate publicate** prin PR #1 → `main` = `db14a4c`, deployment `dpl_z6E6xAaCN17TEq2goKUmkjJgV9EQ`, verificat live. Codul V2 nu este publicat.
 
 ## 1. Versiunea reală și branch-uri
 
@@ -10,7 +10,7 @@ Acest document descrie ce există **efectiv** în cod și ce a fost verificat. C
 | Branch de lucru V2 | `codex/diversibebe-real-auth-persistence` (ales de fondator pentru această sesiune) |
 | Punct de plecare al sesiunii | `3b73197` (neschimbat față de ultimul raport Codex); working tree curat |
 | Checkpoint restaurabil | tag `checkpoint/pre-master-20261101` → `3b73197`; bundle cu toate branch-urile: `outputs/master-2026-11-01/checkpoint/all-branches-20261101.bundle` (verificat cu `git bundle verify`, SHA-256 `daafb8dd…25c9`); backup PostgreSQL local `real-supabase-runtime/private/backups/diversibebe-pre-master-20261101.dump` (`pg_restore -l` OK) |
-| Producție (`main`, GitHub) | `1bda4b2` — versiunea legacy; neschimbată |
+| Producție (`main`, GitHub) | `db14a4c` = legacy `1bda4b2` + hotfix SEO + hotfix securitate (PR #1, publicat 2 nov. 2026) |
 | Hotfix SEO legacy | branch `hotfix/seo-metadata-legacy` = `main` + `ff60cf8` (worktree `work/seo-hotfix-legacy`) |
 | Hotfix securitate legacy | branch `hotfix/security-legacy` = `main` + `3fe63c7` |
 | Cele două hotfixuri | se combină fără conflicte (`git merge-tree` curat) |
@@ -60,9 +60,9 @@ Legendă: ✅ complet implementat și testat · 🟡 implementat, testat parția
 
 | Funcționalitate | Stare | Observații |
 |---|---|---|
-| SEO | ❌ în producție | „Create Next App”, `lang="en"`, robots/sitemap 404 → **corectat local** pe `hotfix/seo-metadata-legacy` |
-| `/api/chat` | ❌ securitate | apelează modelul plătit și fără autentificare → **corectat local** pe `hotfix/security-legacy` |
-| Parole în localStorage la înregistrare | ❌ securitate | → **corectat local** pe `hotfix/security-legacy` |
+| SEO | ✅ publicat 2 nov. 2026 | verify-seo 18/18 pe www; reindexarea Google urmează (Search Console) |
+| `/api/chat` | ✅ publicat 2 nov. 2026 | anonim → 401 în producție; limitare per utilizator |
+| Parole în localStorage la înregistrare | ✅ publicat 2 nov. 2026 | verificat în producție: parola nu este stocată |
 | `/api/data/sync` | 🎭 | stub care răspunde `{ok:true}`; nu scrie nimic |
 | Afirmații homepage („Rețete testate și aprobate de nutriționiști”, testimonial) | ⚠️ de verificat | neconcordant cu revizia clinică în așteptare; decizie a fondatorului |
 

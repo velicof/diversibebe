@@ -7,12 +7,12 @@ Ordinea respectă regula: securitate → SEO → consolidare → conținut → e
 | # | Acțiune | Efect în producție | Pregătit |
 |---|---|---|---|
 | A1 | ~~Închiderea `user_login_summary`~~ (P0) — **făcut 2 nov. 2026** | acces revocat, verificat | `security/INTERVENTIE-P0-2026-11-02.md` |
-| A2 | Deploy hotfix securitate legacy (chat cu autentificare, fără parole în localStorage) | schimbă comportamentul BebeAsist pentru vizitatori | branch `hotfix/security-legacy` (`3fe63c7`) |
-| A3 | Deploy hotfix SEO legacy | titlu, descriere, favicon, sitemap, robots în Google | branch `hotfix/seo-metadata-legacy` (`ff60cf8`) |
+| A2 | ~~Deploy hotfix securitate legacy~~ — **publicat 2 nov. 2026** (PR #1, `db14a4c`) | verificat live | `release/DEPLOY-RUNBOOK.md` |
+| A3 | ~~Deploy hotfix SEO legacy~~ — **publicat 2 nov. 2026**; rămâne Search Console (fondatorul) | verify-seo 18/18 live | `release/DEPLOY-RUNBOOK.md` |
 | A4 | Domeniu canonic: păstrăm `www.diversibebe.com` și schimbăm redirect-ul apex 307 → 308 în Vercel | setare de domeniu Vercel | recomandare |
 | A5 | Activarea protecției parolelor compromise (Supabase Auth) | setare Auth | recomandare |
 | A6 | Afirmațiile de pe homepage-ul legacy („aprobate de nutriționiști”, testimonialul) — se confirmă cu dovezi sau se elimină | conținut public | de decis |
-| A7 | Push pe GitHub al branch-urilor locale | publicare cod | nu s-a făcut |
+| A7 | Push pe GitHub al branch-urilor V2 | publicare cod | doar release-ul legacy a fost publicat; V2 rămâne local |
 | A8 | Contractarea unui specialist pentru revizia clinică a shortlist-ului | cost | shortlist 90 rețete |
 | A9 | Buget pentru fotografii (lot-pilot 12) | cost | `docs/PHOTO-STRATEGY.md` |
 | A10 | Contactarea părinților pentru pilot | comunicare externă | `real-app-2026-10-30/PLAN-PILOT.md` |
