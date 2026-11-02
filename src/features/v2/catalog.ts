@@ -1,6 +1,7 @@
 import { RECIPES, type RecipeCatalogItem } from "@/app/lib/recipesDatabase";
 import { FOODS_DATABASE } from "@/app/lib/foodsDatabase";
 import { inspectContent, normalize, type ClinicalReview } from "./review";
+import { shortlistIds } from "./content/shortlist";
 
 export type Recipe = RecipeCatalogItem & {
   minutes: number | null;
@@ -21,10 +22,18 @@ export const ingredients = [
   { id: "mar", name: "Măr" },
 ] as const;
 export function parseDuration(value: string): number | null {
-  const numbers = value.match(/\d+/g)?.map(Number) ?? [];
+  const text = normalize(value).toLowerCase();
+  // Advance preparation (overnight soaking) cannot satisfy a same-day time filter.
+  if (/peste noapte|de cu seara/.test(text)) return null;
+  const numbers = text.match(/\d+/g)?.map(Number) ?? [];
+  // Hours may be written "1 oră", "1½ ore", "1h", "2h" or "1h 30min".
+  const hours = text.match(/(\d+)?\s*(½)?\s*(?:h|ore|ora|hour)(?![a-z])/);
+  if (hours && (hours[1] || hours[2])) {
+    const total = Number(hours[1] ?? 0) + (hours[2] ? 0.5 : 0);
+    const minutes = text.slice((hours.index ?? 0) + hours[0].length).match(/(\d+)\s*min/);
+    return Math.round(total * 60) + (minutes ? Number(minutes[1]) : 0);
+  }
   if (!numbers.length) return null;
-  if (/ora|ore|hour/i.test(normalize(value)))
-    return numbers[0] * 60 + (numbers[1] ?? 0);
   return Math.max(...numbers);
 }
 export const catalog: Recipe[] = RECIPES.map((recipe) => {
@@ -56,7 +65,7 @@ const previewIds = [
   "piure-cartof-dulce",
   "terci-ovaz-banana",
 ];
-export const previewCatalog = [...catalog]
+const firstPreview = [...catalog]
   .filter(
     (r) =>
       r.automaticReview.status === "no-automatic-issues" && r.minutes !== null,
@@ -66,6 +75,18 @@ export const previewCatalog = [...catalog]
       Number(previewIds.includes(b.id)) - Number(previewIds.includes(a.id)),
   )
   .slice(0, 48);
+// The editorial shortlist (status review_required, still unreviewed) widens the demo so a
+// 5-day plan is possible for every stage and meal type.
+export const previewCatalog = [
+  ...firstPreview,
+  ...catalog.filter(
+    (r) =>
+      shortlistIds.has(r.id) &&
+      !firstPreview.includes(r) &&
+      r.automaticReview.status === "no-automatic-issues" &&
+      r.minutes !== null,
+  ),
+];
 export const contentInventory = {
   recipes: catalog.map((r) => ({
     id: r.id,

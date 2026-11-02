@@ -54,6 +54,32 @@ export function inspectContent(text: string): {
     reasons,
   };
 }
+/** Editorial workflow. Only a documented review by a qualified specialist unlocks the last two states. */
+export type EditorialStatus =
+  | "draft"
+  | "review_required"
+  | "clinically_approved"
+  | "published";
+export const editorialTransitions: Record<EditorialStatus, EditorialStatus[]> = {
+  draft: ["review_required"],
+  review_required: ["draft", "clinically_approved"],
+  clinically_approved: ["published", "review_required"],
+  published: ["review_required"],
+};
+export function canTransition(
+  from: EditorialStatus,
+  to: EditorialStatus,
+  review: ClinicalReview,
+): boolean {
+  if (!editorialTransitions[from].includes(to)) return false;
+  if (to === "clinically_approved" || to === "published")
+    return hasClinicalReview(review);
+  return true;
+}
+/** A recipe is shown to real families only when published AND clinically reviewed. */
+export function isPublishable(status: EditorialStatus, review: ClinicalReview) {
+  return status === "published" && hasClinicalReview(review);
+}
 export function hasClinicalReview(review: ClinicalReview): boolean {
   return (
     review.status === "reviewed" &&

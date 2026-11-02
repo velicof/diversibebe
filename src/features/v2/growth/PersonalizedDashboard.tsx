@@ -6,11 +6,12 @@ import { previewCatalog } from "../catalog";
 import { initialFilters, recommend } from "../recommendations";
 import { journeyScope, useJourney } from "./browser";
 import { challenges, personalizedResult } from "./journey";
+import { monthIn } from "../season";
 
 export function useDashboardMatches(){
   const {state,cloud,clinicalGuidance}=usePreview();
   const j=useJourney(journeyScope(cloud.userId,cloud.selectedBabyId));
-  return j.ready&&j.data.completed?personalizedResult(j.data,state,clinicalGuidance,cloud.connected).recipes:recommend(previewCatalog,{...initialFilters,months:state.stage},{mode:"preview",favorites:state.favorites,introduced:state.introduced,used:state.uses.map(u=>u.recipeId),excludedIngredients:[],requiresClinicalGuidance:clinicalGuidance});
+  return j.ready&&j.data.completed?personalizedResult(j.data,state,clinicalGuidance,cloud.connected).recipes:recommend(previewCatalog,{...initialFilters,months:state.stage},{mode:"preview",favorites:state.favorites,introduced:state.introduced,used:state.uses.map(u=>u.recipeId),excludedIngredients:[],requiresClinicalGuidance:clinicalGuidance,month:monthIn()});
 }
 export function DashboardFocus(){
   const {cloud,state,clinicalGuidance}=usePreview();

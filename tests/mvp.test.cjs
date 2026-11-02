@@ -39,6 +39,10 @@ test('automatic triage flags explicit risks but never awards medical approval', 
 });
 test('unknown preparation time is excluded; ranges use conservative upper bound', () => {
   assert.equal(parseDuration('15-20 min'), 20); assert.equal(parseDuration('1 oră 10 min'), 70); assert.equal(parseDuration('după preferință'), null);
+  // Regression 2026-11-02: "1h" was read as 1 minute and let long stews into the 30-minute filter.
+  assert.equal(parseDuration('1h'), 60); assert.equal(parseDuration('2h'), 120); assert.equal(parseDuration('1h 30min'), 90);
+  assert.equal(parseDuration('1½ ore'), 90); assert.equal(parseDuration('1 oră'), 60); assert.equal(parseDuration('5 min + peste noapte'), null);
+  assert.ok(catalog.every((r) => r.minutes === null || r.minutes >= 3), 'no recipe parses to an implausible duration');
   assert.equal(recommend([{ ...catalog[0], minutes: null }], initialFilters, context).length, 0);
 });
 test('three core flows: discover, save, plan, replace, confirm, reload and reuse', () => {

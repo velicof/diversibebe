@@ -23,8 +23,13 @@ test('growth: under 15 really excludes 15-minute recipes; unknown times remain i
 });
 test('growth: no eligible ingredient never silently relaxes the selected filter',()=>{
  const j={...base(),challenge:'ideas',ageBand:'6-8',context:'fridge',pantry:['broccoli']};
- assert.equal(personalizedResult(j,emptyState,false).kind,'empty');
- assert.equal(personalizedResult(j,emptyState,false).recipes.length,0);
+ // Since 2026-11-02 the demo catalog includes the editorial shortlist (with a 6+ broccoli purée),
+ // so the invariant is checked directly instead of relying on the catalog having no broccoli.
+ const found=personalizedResult(j,emptyState,false);
+ assert.ok(found.recipes.every(r=>r.ingredientIds.includes('broccoli')));
+ const withoutBroccoli=previewCatalog.filter(r=>!r.ingredientIds.includes('broccoli'));
+ assert.equal(personalizedResult(j,emptyState,false,false,withoutBroccoli).kind,'empty');
+ assert.equal(personalizedResult(j,emptyState,false,false,withoutBroccoli).recipes.length,0);
 });
 test('growth: clinical stop and live review gate cannot be overridden by preferences or pinned results',()=>{
  const j={...base(),challenge:'ideas',ageBand:'over24',resultIds:['piure-dovlecel']};

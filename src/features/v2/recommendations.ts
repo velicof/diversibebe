@@ -1,5 +1,6 @@
 import { hasClinicalReview, normalize } from "./review";
 import type { Recipe } from "./catalog";
+import { seasonalScore } from "./season";
 
 export type Filters = {
   months: number;
@@ -16,6 +17,8 @@ export type RecommendationContext = {
   used: string[];
   excludedIngredients: string[];
   requiresClinicalGuidance: boolean;
+  /** Month 1-12 (Europe/Bucharest). When set, in-season produce breaks ties only. */
+  month?: number;
 };
 export const initialFilters: Filters = {
   months: 8,
@@ -62,10 +65,15 @@ export function recommend(
       20 +
     r.ingredientIds.filter((id) => context.introduced.includes(id)).length * 2 +
     Number(context.favorites.includes(r.id)) * 4 +
-    Number(context.used.includes(r.id)) * 3;
+    Number(context.used.includes(r.id)) * 3 +
+    // Priority 6 of 7: capped so it never outweighs safety, stage, ingredients, time or preferences.
+    (context.month
+      ? Math.max(-1, Math.min(1.5, seasonalScore(r.ingredients, context.month)))
+      : 0);
+  const scores = new Map(eligible.map((r) => [r.id, score(r)]));
   return eligible.sort(
     (a, b) =>
-      score(b) - score(a) ||
+      scores.get(b.id)! - scores.get(a.id)! ||
       (a.minutes ?? 0) - (b.minutes ?? 0) ||
       a.id.localeCompare(b.id),
   );
