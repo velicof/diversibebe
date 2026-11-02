@@ -101,12 +101,53 @@ async function loadBebeAsistContext(userId: string | undefined): Promise<{
   };
 }
 
+// Best-effort per-instance throttle; a shared quota store is still required before scaling.
+const MAX_MESSAGES = 20;
+const MAX_CHARS_PER_MESSAGE = 2000;
+const WINDOW_MS = 10 * 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 15;
+const recentRequests = new Map<string, number[]>();
+
+function isThrottled(userId: string, now = Date.now()) {
+  const recent = (recentRequests.get(userId) ?? []).filter((t) => now - t < WINDOW_MS);
+  if (recent.length >= MAX_REQUESTS_PER_WINDOW) {
+    recentRequests.set(userId, recent);
+    return true;
+  }
+  recent.push(now);
+  recentRequests.set(userId, recent);
+  return false;
+}
+
 export async function POST(req: NextRequest) {
+  // Authenticate before reading the body or touching the paid model.
+  let userId: string;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    if (error || !user) {
+      return NextResponse.json({ error: "Autentificarea este necesară." }, { status: 401 });
+    }
+    userId = user.id;
+  } catch {
+    return NextResponse.json({ error: "Autentificarea nu poate fi verificată." }, { status: 503 });
+  }
+
+  if (isThrottled(userId)) {
+    return NextResponse.json(
+      { error: "Ai trimis multe întrebări într-un timp scurt. Încearcă din nou în câteva minute." },
+      { status: 429, headers: { "Retry-After": "600" } }
+    );
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey?.trim()) {
     return NextResponse.json(
-      { error: "Missing ANTHROPIC_API_KEY" },
-      { status: 500 }
+      { error: "BebeAsist este temporar indisponibil." },
+      { status: 503 }
     );
   }
 
@@ -117,12 +158,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const ctx = await loadBebeAsistContext(user?.id);
+  const ctx = await loadBebeAsistContext(userId);
 
   const ageDisplay =
     ctx.ageMonthsLabel === "necunoscută"
@@ -162,9 +198,11 @@ Poți ajuta cu:
         !!m &&
         typeof m === "object" &&
         (m.role === "user" || m.role === "assistant") &&
-        typeof m.content === "string"
+        typeof m.content === "string" &&
+        m.content.trim().length > 0
     )
-    .map((m) => ({ role: m.role, content: m.content }));
+    .slice(-MAX_MESSAGES)
+    .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_CHARS_PER_MESSAGE) }));
 
   while (messages.length > 0 && messages[0].role === "assistant") {
     messages.shift();
