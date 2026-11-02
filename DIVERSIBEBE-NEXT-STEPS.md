@@ -6,7 +6,7 @@ Ordinea respectă regula: securitate → SEO → consolidare → conținut → e
 
 | # | Acțiune | Efect în producție | Pregătit |
 |---|---|---|---|
-| A1 | **Închiderea `user_login_summary`** (P0) | revocă accesul `anon`/`authenticated`, `security_invoker=true` | `outputs/master-2026-11-01/security/00…02-*.sql` |
+| A1 | ~~Închiderea `user_login_summary`~~ (P0) — **făcut 2 nov. 2026** | acces revocat, verificat | `security/INTERVENTIE-P0-2026-11-02.md` |
 | A2 | Deploy hotfix securitate legacy (chat cu autentificare, fără parole în localStorage) | schimbă comportamentul BebeAsist pentru vizitatori | branch `hotfix/security-legacy` (`3fe63c7`) |
 | A3 | Deploy hotfix SEO legacy | titlu, descriere, favicon, sitemap, robots în Google | branch `hotfix/seo-metadata-legacy` (`ff60cf8`) |
 | A4 | Domeniu canonic: păstrăm `www.diversibebe.com` și schimbăm redirect-ul apex 307 → 308 în Vercel | setare de domeniu Vercel | recomandare |
@@ -19,9 +19,8 @@ Ordinea respectă regula: securitate → SEO → consolidare → conținut → e
 
 ## P0 — Securitate (blochează pilotul)
 
-1. **Aplicarea A1 după aprobare.**
-   - Acceptare: preflight arată proprietarul și granturile; după patch `has_table_privilege('anon'|'authenticated', …, 'SELECT') = false`, `reloptions = {security_invoker=true}`; linterul Supabase nu mai raportează `security_definer_view`; nicio eroare nouă în logurile aplicației timp de 24 h.
-2. Backup înainte de aplicare și jurnal al intervenției (cine, când, rezultat).
+1. ~~Aplicarea A1~~ — **făcut și verificat** (anon/authenticated fără acces, `security_invoker=true`, REST anonim 401, linter fără ERROR). Rămâne: monitorizarea logurilor 24 h.
+2. P0 nu mai blochează pilotul; blocante rămase: revizia clinică a rețetelor folosite și publicarea hotfixurilor legacy.
 
 ## P1 — SEO și hotfixuri legacy
 

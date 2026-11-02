@@ -1,6 +1,6 @@
 # DiversiBebe — starea exactă a implementării (2 noiembrie 2026)
 
-Acest document descrie ce există **efectiv** în cod și ce a fost verificat. Nimic din ce urmează nu este publicat în producție.
+Acest document descrie ce există **efectiv** în cod și ce a fost verificat. Codul nu este publicat în producție. Singura modificare de producție: închiderea P0 `user_login_summary` (2 nov. 2026, aprobată de fondator).
 
 ## 1. Versiunea reală și branch-uri
 
@@ -70,7 +70,7 @@ Legendă: ✅ complet implementat și testat · 🟡 implementat, testat parția
 
 | Problemă | Severitate | Stare la 1–2 nov. 2026 |
 |---|---|---|
-| `public.user_login_summary` accesibil `anon`/`authenticated` | **P0** | **Încă deschisă în producție** (verificat prin metadate: owner `postgres`, fără `security_invoker`, `anon`/`authenticated` au **toate** privilegiile, inclusiv SELECT). Linter Supabase: ERROR `security_definer_view`. Nicio linie de cod nu folosește view-ul. Patch + rollback testate local (PGlite și PostgreSQL 17). **Neaplicat — necesită aprobarea fondatorului.** |
+| `public.user_login_summary` accesibil `anon`/`authenticated` | **P0** | **ÎNCHISĂ în producție pe 2 nov. 2026, ~20:23 UTC**, cu aprobarea fondatorului (migrarea `close_user_login_summary`). Înainte: `anon`/`authenticated` aveau toate privilegiile. După: acces revocat, `security_invoker=true`, REST anonim → 401 `permission denied`, linterul nu mai raportează ERROR. Jurnal: `outputs/master-2026-11-01/security/INTERVENTIE-P0-2026-11-02.md`. |
 | `/api/chat` legacy fără autentificare | P1 | patch pregătit (`3fe63c7`), testat local (401 anonim/cookie fals) |
 | Parole în localStorage (legacy) | P1 | patch pregătit (`3fe63c7`), testat local (cheia veche ștearsă, parola absentă din stocare) |
 | `handle_new_user` — search_path mutabil, executabil de `anon`/`authenticated` | P2 | acoperit de migrarea locală `protect_family_data`; neaplicat în producție |
