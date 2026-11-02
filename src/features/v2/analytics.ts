@@ -15,6 +15,8 @@ const allowed: Record<EventName, string[]> = {
   meal_added_to_plan: [],
   meal_used_confirmed: [],
   return_session: [],
+  recipe_viewed: [],
+  shopping_list_generated: ["count"],
 };
 /** A strict allowlist: health fields, child names and arbitrary text never enter analytics. */
 export function makeEvent(

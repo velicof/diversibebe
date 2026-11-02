@@ -42,3 +42,20 @@ GROUP BY 1 ORDER BY 1;
 ```
 
 Nu publica acest query ca view anon. În raportul final nu sunt inventate valori DAU, retenție sau conversie: mediul conține numai conturi sintetice.
+
+## Completare 2 noiembrie 2026 — planificator și metrici de produs
+
+Evenimente noi (migrarea locală `20261102100000_v2_planner_events.sql`, neaplicată în producție):
+
+| Eveniment | Declanșare | Proprietăți acceptate |
+|---|---|---|
+| recipe_viewed | Deschiderea paginii unei rețete | niciuna (fără identificator de rețetă) |
+| shopping_list_generated | Deschiderea listei de cumpărături cu cel puțin un ingredient | count (număr de articole) |
+
+Corespondența cu lista cerută de fondator: `onboarding_started`/`onboarding_completed` (identice), `personalized_result_viewed` (funnel local `growth/funnel.ts`), `recipe_viewed` (nou), `recipe_saved`, `meal_added_to_plan` (alias pentru `plan_slot_saved`, câte unul pentru fiecare zi salvată din planificatorul pe 5 zile), `shopping_list_generated` (nou), `meal_used_confirmed`, `return_session`, `premium_interest` (inclusiv din cardul de după salvarea planului, fără preț). Funnel-ul vizitatorului rămâne local în browser; numai conturile autentificate trimit în `product_events`.
+
+- **Time to First Value (TTFV):** timpul de la `onboarding_started` (sau prima deschidere a planificatorului) până la primul `meal_added_to_plan` ori `recipe_saved` din aceeași vizită. Planificatorul trimite și `meal_selected.elapsedMs` = durata dintre prima propunere și salvarea planului. Raportează mediana, nu media.
+- **Conversie către cont:** vizitatori cu rezultat personalizat văzut (`personalized_result_viewed`) care ajung la `signup_completed` în aceeași vizită sau în 7 zile. Funnel local pentru pilot; nu există încă un colector server pentru vizitatori.
+- **Interes Premium:** conturi distincte cu `premium_interest` / conturi active în aceeași săptămână. Separă sursa (pagina Plus vs. cardul planificatorului) prin funnel-ul local; payload-ul server nu conține sursa.
+- **Folosire săptămânală:** conturi cu cel puțin un `meal_added_to_plan` sau `meal_used_confirmed` în săptămâna luni–duminică.
+- **North Star:** familii care confirmă folosirea sugestiilor pentru minimum trei mese în minimum două zile distincte ale săptămânii (`weeklyUsage().northStar`, sursa `cooked_recipes.source='v2_confirmed'`).

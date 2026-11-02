@@ -7,7 +7,7 @@ import {
   type AppState,
 } from "./model";
 import { catalog, ingredients } from "./catalog";
-import { normalize } from "./review";
+import { shoppingKeyUniverse } from "./planning";
 
 const KEY = "diversibebe:v2:isolated-preview:1";
 type Snapshot = { state: AppState; ready: boolean; storageError: boolean };
@@ -33,13 +33,13 @@ export const previewStore = {
   hydrate() {
     if (snapshot.ready) return;
     try {
+      const shoppingKeys = shoppingKeyUniverse(catalog);
       const state = readState(
         window.localStorage.getItem(KEY),
         new Set(catalog.map((r) => r.id)),
         new Set(ingredients.map((i) => i.id)),
-        new Set(
-          catalog.flatMap((r) => r.ingredients.map((i) => normalize(i).trim())),
-        ),
+        shoppingKeys,
+        new Set([...ingredients.map((i) => i.id), ...shoppingKeys]),
       );
       snapshot = { state, ready: true, storageError: false };
     } catch {

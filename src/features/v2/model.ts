@@ -28,7 +28,9 @@ export type EventName =
   | "meal_selected"
   | "meal_added_to_plan"
   | "meal_used_confirmed"
-  | "return_session";
+  | "return_session"
+  | "recipe_viewed"
+  | "shopping_list_generated";
 export type AppState = {
   version: 1;
   onboarded: boolean;
@@ -57,6 +59,7 @@ export type Action =
   | { type: "onboard"; stage: Stage; introduced: string[] }
   | { type: "favorite"; recipeId: string }
   | { type: "plan"; slot: string; recipeId: string }
+  | { type: "plan-many"; entries: PlanEntry[] }
   | { type: "remove-plan"; slot: string }
   | { type: "confirm"; use: MealUse }
   | { type: "remove-use"; id: string }
@@ -88,6 +91,16 @@ export function appReducer(state: AppState, action: Action): AppState {
           { slot: action.slot, recipeId: action.recipeId },
         ],
       };
+    case "plan-many": {
+      const slots = new Set(action.entries.map((e) => e.slot));
+      return {
+        ...state,
+        plan: [
+          ...state.plan.filter((p) => !slots.has(p.slot)),
+          ...action.entries.map(({ slot, recipeId }) => ({ slot, recipeId })),
+        ],
+      };
+    }
     case "remove-plan":
       return {
         ...state,
@@ -124,6 +137,7 @@ export function readState(
   allowedRecipes: Set<string>,
   allowedIngredients: Set<string>,
   allowedShopping = new Set<string>(),
+  allowedPantry: Set<string> = allowedIngredients,
 ): AppState {
   if (!raw) return { ...emptyState };
   try {
@@ -185,7 +199,7 @@ export function readState(
         : 8,
       favorites: strings(value.favorites, allowedRecipes),
       introduced: strings(value.introduced, allowedIngredients),
-      pantry: strings(value.pantry, allowedIngredients),
+      pantry: strings(value.pantry, allowedPantry),
       shoppingChecked: strings(value.shoppingChecked, allowedShopping),
       plan,
       uses,

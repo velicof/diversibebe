@@ -14,7 +14,7 @@ async function createDatabase(dataDir){
       GRANT EXECUTE ON FUNCTION auth.uid(),auth.jwt() TO anon,authenticated;`);
     await db.exec(fs.readFileSync(path.join(__dirname,'current-schema.sql'),'utf8'));
     for(const name of ['20261027055351_protect_family_data.sql','20261027055353_bebeasist_quota.sql','20261027133719_v2_persistence_and_events.sql']) await db.exec(fs.readFileSync(path.join(__dirname,'../../supabase/migrations',name),'utf8'));
-    for(const name of fs.readdirSync(path.join(__dirname,'../../supabase/migrations')).filter(n=>n.includes('real_auth_journey')))await db.exec(fs.readFileSync(path.join(__dirname,'../../supabase/migrations',name),'utf8'));
+    for(const name of fs.readdirSync(path.join(__dirname,'../../supabase/migrations')).filter(n=>n.includes('real_auth_journey')||n.includes('v2_planner_events')))await db.exec(fs.readFileSync(path.join(__dirname,'../../supabase/migrations',name),'utf8'));
     for(const [key,id] of Object.entries(USERS)) await db.query("INSERT INTO auth.users(id,email,raw_app_meta_data) VALUES($1,$2,'{\"is_test\":true}')",[id,`parent-${key.toLowerCase()}@example.test`]);
     for(const [key,id] of Object.entries(CHILDREN)) await db.query('INSERT INTO public.babies(id,user_id,name,feeding_stage) VALUES($1,$2,$3,8)',[id,USERS[key[0]],`Copil test ${key}`]);
   }

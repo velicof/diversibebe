@@ -37,18 +37,24 @@ import {
   SaveButton,
 } from "./components";
 import {
+  buildShoppingList,
+  formatAmounts,
   nextAvailableSlot,
   nextDays,
+  proposePlan,
+  reusedIngredients,
   weekRange,
-  shoppingList,
   swapRecipe,
+  type ProposedDay,
 } from "./planning";
+import { calendar, monthIn, seasonalHighlights } from "./season";
+import { cloudStore } from "./cloud/store";
 import type { Stage } from "./model";
 import { weeklyUsage } from "./analytics";
 import { DashboardFocus, useDashboardMatches } from "./growth/PersonalizedDashboard";
 import { emitGrowth, journeyScope, journeyStore } from "./growth/browser";
 
-function useEligible(filters?: Filters) {
+function useEligible(filters?: Filters, month?: number) {
   const { state, clinicalGuidance } = usePreview();
   return recommend(
     previewCatalog,
@@ -60,6 +66,7 @@ function useEligible(filters?: Filters) {
       used: state.uses.map((u) => u.recipeId),
       excludedIngredients: [],
       requiresClinicalGuidance: clinicalGuidance,
+      month,
     },
   );
 }
@@ -305,10 +312,28 @@ function OnboardingReady() {
   );
 }
 
+function SeasonStrip({ month }: { month: number }) {
+  const local = calendar()
+    .filter((p) => p.months[month - 1] === "local")
+    .map((p) => p.name);
+  if (!local.length) return null;
+  const name = new Intl.DateTimeFormat("ro-RO", { month: "long" }).format(new Date(2026, month - 1, 15));
+  return (
+    <p className="v2-season-strip">
+      <Leaf size={16} />
+      <span>
+        <strong>Proaspăt local în {name}:</strong> {local.slice(0, 6).join(", ").toLowerCase()}
+        <small> · calendar orientativ pentru România</small>
+      </span>
+    </p>
+  );
+}
+
 export function Dashboard() {
   const { state, ready } = usePreview();
   const matches = useDashboardMatches();
   const days = useDays();
+  const [month] = useState(() => monthIn());
   if (!ready) return <LoadingState />;
   const today = state.plan.find((p) => p.slot === days[0].key);
   const planned = matches.find((r) => r.id === today?.recipeId);
@@ -332,6 +357,7 @@ export function Dashboard() {
         O idee simplă pentru masă. Un pic mai mult timp pentru voi.
       </PageHeading>
       <DashboardFocus />
+      <SeasonStrip month={month} />
       <div className="v2-dashboard-primary">
         <div className="v2-featured-area">
           <div className="v2-section-top">
@@ -349,7 +375,9 @@ export function Dashboard() {
               reason={
                 planned
                   ? "Păstrată pentru astăzi"
-                  : "O alegere simplă de explorat"
+                  : seasonalHighlights(featured.ingredients, month).length
+                    ? `Cu ${seasonalHighlights(featured.ingredients, month).join(", ").toLowerCase()} de sezon`
+                    : "O alegere simplă de explorat"
               }
             />
           ) : (
@@ -640,6 +668,9 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
   const [checked, setChecked] = useState<number[]>([]);
   const [step, setStep] = useState(0);
   const [cookMode, setCookMode] = useState(false);
+  useEffect(() => {
+    if (ready) track("recipe_viewed");
+  }, [ready, recipe.id, track]);
   if (!ready) return <LoadingState />;
   const alreadyConfirmed = state.uses.some(
     (u) => u.recipeId === recipe.id && u.day === days[0].key,
@@ -854,16 +885,42 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
   );
 }
 
+const planMeals = [
+  { id: "all", label: "Oricare" },
+  { id: "mic-dejun", label: "Mic dejun" },
+  { id: "pranz", label: "Prânz" },
+  { id: "cina", label: "Cină" },
+];
+const planTimes = [15, 20, 30];
+type PlanPrefs = { meal: string; maxMinutes: number; ingredientIds: string[]; reuse: boolean };
+
 export function Planner() {
-  const { state, ready, dispatch, announce, track, cloud } = usePreview();
+  const { state, ready, dispatch, announce, track, cloud, clinicalGuidance } = usePreview();
   const eligible = useEligible();
   const days = useDays();
+  const [month] = useState(() => monthIn());
   const [tab, setTab] = useState<"plan" | "shopping">("plan");
+  const [prefs, setPrefs] = useState<PlanPrefs>({ meal: "all", maxMinutes: 30, ingredientIds: [], reuse: true });
+  const [proposal, setProposal] = useState<ProposedDay[] | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [saved, setSaved] = useState<{ count: number; seconds: number } | null>(null);
+  const [interested, setInterested] = useState(false);
+  const planEligible = useEligible(
+    { ...initialFilters, months: state.stage, maxMinutes: prefs.maxMinutes, meal: prefs.meal, ingredientIds: prefs.ingredientIds },
+    month,
+  );
+  const fiveDays = days.slice(0, 5);
   const activePlan = state.plan
     .filter((p) => days.some((d) => d.key === p.slot))
     .sort((a, b) => a.slot.localeCompare(b.slot));
-  const list = shoppingList(activePlan, catalog, state.pantry);
+  const { toBuy, atHome } = buildShoppingList(activePlan, catalog, state.pantry);
+  const checkedCount = toBuy.filter((r) => state.shoppingChecked.includes(r.key)).length;
   if (!ready) return <LoadingState />;
+  const recipeById = (id: string) => catalog.find((r) => r.id === id);
+  const dayLabel = (slot: string) => {
+    const i = days.findIndex((d) => d.key === slot);
+    return i === 0 ? "Azi" : `${days[i]?.label} ${days[i]?.number}`;
+  };
   const add = (slot: string) => {
     const candidate = swapRecipe(eligible, state.plan, slot);
     if (!candidate) {
@@ -874,14 +931,80 @@ export function Planner() {
     track("plan_slot_saved", { recipeId: candidate.id });
     announce("Planul a fost actualizat.");
   };
+  const openShopping = () => {
+    setTab("shopping");
+    if (toBuy.length + atHome.length > 0)
+      track("shopping_list_generated", { count: toBuy.length });
+  };
+  const generate = () => {
+    const kept = new Map<string, Recipe>();
+    for (const day of fiveDays) {
+      const entry = state.plan.find((p) => p.slot === day.key);
+      const recipe = entry && planEligible.find((r) => r.id === entry.recipeId);
+      if (recipe) kept.set(day.key, recipe);
+    }
+    const next = proposePlan(planEligible, fiveDays.map((d) => d.key), { reuseIngredients: prefs.reuse, kept });
+    setSaved(null);
+    if (!next.length) {
+      announce("Nu am găsit idei potrivite. Încearcă mai mult timp sau alt tip de masă.");
+      return;
+    }
+    if (next.length < 5) announce(`Am găsit idei pentru ${next.length} din 5 zile.`);
+    setProposal(next);
+    setStartedAt((value) => value ?? Date.now());
+    track("recommendation_results_shown", { count: next.length });
+  };
+  const choose = (slot: string, recipeId: string) =>
+    setProposal((current) =>
+      current?.map((day) =>
+        day.slot === slot
+          ? { ...day, recipeId, kept: false, alternatives: day.alternatives.map((id) => (id === recipeId ? day.recipeId : id)) }
+          : day,
+      ) ?? null,
+    );
+  const another = (slot: string) => {
+    if (!proposal) return;
+    const used = new Set(proposal.flatMap((d) => [d.recipeId, ...d.alternatives]));
+    const candidate = planEligible.find((r) => !used.has(r.id));
+    if (!candidate) {
+      announce("Nu mai sunt alte idei cu aceste preferințe.");
+      return;
+    }
+    setProposal((current) =>
+      current?.map((day) => (day.slot === slot ? { ...day, recipeId: candidate.id, kept: false } : day)) ?? null,
+    );
+  };
+  const save = () => {
+    if (!proposal?.length) return;
+    dispatch({ type: "plan-many", entries: proposal.map(({ slot, recipeId }) => ({ slot, recipeId })) });
+    for (const day of proposal) track("plan_slot_saved", { recipeId: day.recipeId });
+    const seconds = startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 1000)) : 0;
+    track("first_relevant_choice", { elapsedMs: seconds * 1000 });
+    setSaved({ count: proposal.length, seconds });
+    setProposal(null);
+    setStartedAt(null);
+    announce("Planul pentru 5 zile a fost salvat.");
+  };
+  const copyList = async () => {
+    const text = toBuy
+      .map((i) => `- ${i.name}${i.amounts.length ? `: ${formatAmounts(i.amounts)}` : ""}${i.notes.length ? ` (${i.notes.join("; ")})` : ""}`)
+      .join("\n");
+    try {
+      await navigator.clipboard.writeText(`De cumpărat (DiversiBebe)\n${text}`);
+      announce("Lista a fost copiată.");
+    } catch {
+      announce("Nu am putut copia lista în acest browser.");
+    }
+  };
+  const setPantry = (key: string, home: boolean) =>
+    dispatch({ type: "pantry", ids: home ? [...new Set([...state.pantry, key])] : state.pantry.filter((k) => k !== key && `p:${k}` !== key) });
+  const proposalRecipes = (proposal ?? []).map((d) => recipeById(d.recipeId)).filter((r): r is Recipe => Boolean(r));
+  const reuse = reusedIngredients(proposalRecipes);
+  const blocked = state.stage === 0 || clinicalGuidance;
   return (
     <>
-      <PageHeading
-        eyebrow="UN PIC DE ORGANIZARE. MAI MULTĂ LINIȘTE."
-        title="Micul vostru plan"
-      >
-        Nu trebuie să umpli săptămâna. Începe cu trei mese și schimbă-le
-        oricând.
+      <PageHeading eyebrow="UN PIC DE ORGANIZARE. MAI MULTĂ LINIȘTE." title="Micul vostru plan">
+        Alege preferințele, primești 5 zile de mese și o listă de cumpărături. Schimbi orice, oricând.
       </PageHeading>
       <div className="v2-planner-toolbar">
         <div className="v2-tabs" role="group" aria-label="Vizualizare plan">
@@ -889,12 +1012,9 @@ export function Planner() {
             <CalendarDays size={17} />
             Mesele mele
           </button>
-          <button
-            aria-pressed={tab === "shopping"}
-            onClick={() => setTab("shopping")}
-          >
+          <button aria-pressed={tab === "shopping"} onClick={openShopping}>
             <ShoppingBasket size={17} />
-            De cumpărat{list.length > 0 && <span>{list.length}</span>}
+            De cumpărat{toBuy.length > 0 && <span>{toBuy.length}</span>}
           </button>
         </div>
         <Link href="/v2/idei" className="v2-text-link">
@@ -903,151 +1023,297 @@ export function Planner() {
         </Link>
       </div>
       {tab === "plan" ? (
-        <div className="v2-plan-layout">
-          <section className="v2-plan-days">
-            {days.map((day, i) => {
-              const entry = activePlan.find((p) => p.slot === day.key);
-              const recipe = catalog.find((r) => r.id === entry?.recipeId);
-              return (
-                <article
-                  className={`v2-plan-day ${i === 0 ? "is-today" : ""}`}
-                  key={day.key}
+        <>
+          {saved && (
+            <section className="v2-plan-saved" aria-live="polite">
+              <CheckCircle2 size={26} />
+              <div>
+                <h2>{saved.count} zile de mese, gata{saved.seconds ? ` în ${saved.seconds} secunde` : ""}.</h2>
+                <p>Lista de cumpărături este pregătită din aceste mese.</p>
+                <button className="v2-button v2-button-primary" onClick={openShopping}>
+                  Vezi lista de cumpărături <ArrowRight size={17} />
+                </button>
+              </div>
+              <aside className="v2-plan-plus">
+                <p className="v2-eyebrow">DIVERSIBEBE PLUS · ÎN PREGĂTIRE</p>
+                <p>
+                  Planificarea pe mai multe zile și lista combinată sunt propuse pentru Plus. În această versiune de test
+                  sunt gratuite și nu există abonament.
+                </p>
+                <button
+                  className="v2-button v2-button-secondary"
+                  disabled={interested}
+                  onClick={() => {
+                    setInterested(true);
+                    track("premium_interest");
+                    emitGrowth("premium_interest", {}, "planner");
+                    announce("Interes notat. Nu ai activat un abonament.");
+                  }}
                 >
-                  <div className="v2-day-label">
-                    <span>{i === 0 ? "Azi" : day.label}</span>
-                    <strong>{day.number}</strong>
-                  </div>
-                  {recipe ? (
-                    <>
-                      <Link
-                        className="v2-plan-recipe"
-                        href={`/v2/retete/${recipe.id}`}
-                      >
-                        <Image
-                          src={recipe.image}
-                          alt=""
-                          width={100}
-                          height={100}
-                        />
+                  {interested ? <><Check size={17} /> Interes notat</> : "Mi-ar fi util"}
+                </button>
+              </aside>
+            </section>
+          )}
+          {proposal ? (
+            <section className="v2-proposal" aria-labelledby="v2-proposal-title">
+              <div className="v2-section-top">
+                <h2 id="v2-proposal-title">Propunerea pentru 5 zile</h2>
+                <span className="v2-small-label">EXPLORARE DEMO</span>
+              </div>
+              {reuse.length > 0 && (
+                <p className="v2-reuse-note">
+                  <Leaf size={16} /> Refolosești: {reuse.map((r) => `${r.name.toLowerCase()} (${r.recipes} mese)`).join(", ")}
+                </p>
+              )}
+              <ol className="v2-proposal-days">
+                {proposal.map((day) => {
+                  const recipe = recipeById(day.recipeId);
+                  if (!recipe) return null;
+                  const local = seasonalHighlights(recipe.ingredients, month);
+                  return (
+                    <li key={day.slot} className="v2-proposal-day">
+                      <span className="v2-proposal-label">{dayLabel(day.slot)}</span>
+                      <div className="v2-plan-recipe">
+                        <Image src={recipe.image} alt="" width={72} height={72} />
                         <div>
-                          <h2>{recipe.name}</h2>
+                          <h3>{recipe.name}</h3>
                           <span>
-                            <Clock3 size={13} />
-                            {recipe.minutes} min · în curs de revizie
+                            <Clock3 size={13} /> {recipe.minutes} min
+                            {day.kept ? " · deja în plan" : ""}
+                            {local.length ? ` · în sezon: ${local.join(", ").toLowerCase()}` : ""}
                           </span>
                         </div>
-                      </Link>
-                      <div className="v2-plan-actions">
-                        <button
-                          className="v2-icon-button"
-                          aria-label={`Înlocuiește masa pentru ${day.label} ${day.number}`}
-                          disabled={cloud.saving}
-                          onClick={() => add(day.key)}
-                        >
-                          <RefreshCw size={17} />
-                        </button>
-                        <button
-                          className="v2-icon-button"
-                          aria-label={`Elimină masa pentru ${day.label} ${day.number}`}
-                          disabled={cloud.saving}
-                          onClick={() => {
-                            dispatch({ type: "remove-plan", slot: day.key });
-                            announce("Masa a fost eliminată din plan.");
-                          }}
-                        >
-                          <X size={18} />
+                      </div>
+                      <div className="v2-proposal-actions">
+                        {day.alternatives.map((id) => {
+                          const alt = recipeById(id);
+                          return alt ? (
+                            <button key={id} type="button" className="v2-alt-chip" aria-label={`Alege ${alt.name} pentru ${dayLabel(day.slot)}`} onClick={() => choose(day.slot, id)}>
+                              sau {alt.name}
+                            </button>
+                          ) : null;
+                        })}
+                        <button type="button" className="v2-text-button" aria-label={`Altă idee pentru ${dayLabel(day.slot)}`} onClick={() => another(day.slot)}>
+                          <RefreshCw size={14} /> Altă idee
                         </button>
                       </div>
-                    </>
-                  ) : (
-                    <button
-                      className="v2-plan-add"
-                      disabled={cloud.saving}
-                      onClick={() => add(day.key)}
-                    >
-                      <Plus size={19} />
-                      <span>
-                        {i < 3
-                          ? "Alege o idee pentru această zi"
-                          : "Lasă loc pentru spontaneitate"}
-                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+              <div className="v2-proposal-footer">
+                <button className="v2-button v2-button-primary" disabled={cloud.saving} onClick={save}>
+                  <Check size={17} /> Salvează planul
+                </button>
+                <button className="v2-button v2-button-secondary" onClick={() => setProposal(null)}>
+                  Schimbă preferințele
+                </button>
+              </div>
+            </section>
+          ) : (
+            <section className="v2-planner-builder" aria-labelledby="v2-builder-title">
+              <h2 id="v2-builder-title">Planifică următoarele 5 zile</h2>
+              {cloud.connected && cloud.children.length > 1 && (
+                <label className="v2-builder-field">
+                  Pentru
+                  <select aria-label="Planifici pentru" value={cloud.selectedBabyId ?? ""} disabled={cloud.saving} onChange={(e) => void cloudStore.selectChild(e.target.value)}>
+                    {cloud.children.map((c) => (
+                      <option key={c.id} value={c.id}>{c.label}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <p className="v2-field-note">
+                {state.stage ? `Etapa ${state.stage}+ luni` : "Etapa: ne pregătim"} ·{" "}
+                <Link href="/v2/profil" className="v2-text-link">schimbă</Link>
+              </p>
+              <fieldset className="v2-builder-field">
+                <legend>Ce masă planificăm?</legend>
+                <div className="v2-segmented">
+                  {planMeals.map((m) => (
+                    <button key={m.id} type="button" aria-pressed={prefs.meal === m.id} onClick={() => setPrefs({ ...prefs, meal: m.id })}>
+                      {m.label}
                     </button>
-                  )}
-                </article>
-              );
-            })}
-          </section>
-          <aside className="v2-plan-note">
-            <Leaf size={27} strokeWidth={1.5} />
-            <h2>Un plan care se schimbă odată cu ziua.</h2>
-            <p>
-              Păstrează ce vă place, înlocuiește ce nu se potrivește. Nu e
-              nevoie să completezi fiecare zi.
-            </p>
-            <div className="v2-plan-total">
-              <strong>{activePlan.length}</strong>
-              <span>
-                idei păstrate
-                <br />
-                pentru următoarele 7 zile
-              </span>
-            </div>
-            <button
-              className="v2-button v2-button-secondary"
-              onClick={() => setTab("shopping")}
-            >
-              Vezi ce lipsește
-              <ArrowRight size={17} />
-            </button>
-          </aside>
-        </div>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset className="v2-builder-field">
+                <legend>Cât timp ai pentru gătit?</legend>
+                <div className="v2-segmented">
+                  {planTimes.map((t) => (
+                    <button key={t} type="button" aria-pressed={prefs.maxMinutes === t} onClick={() => setPrefs({ ...prefs, maxMinutes: t })}>
+                      max. {t} min
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset className="v2-builder-field">
+                <legend>Ingrediente pe care vrei să le folosești <small>(opțional)</small></legend>
+                <div className="v2-ingredient-cloud">
+                  {ingredients.map((i) => {
+                    const on = prefs.ingredientIds.includes(i.id);
+                    return (
+                      <button key={i.id} type="button" aria-pressed={on} onClick={() => setPrefs({ ...prefs, ingredientIds: on ? prefs.ingredientIds.filter((x) => x !== i.id) : [...prefs.ingredientIds, i.id] })}>
+                        {on && <Check size={14} />} {i.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+              <label className="v2-checkbox-row">
+                <input type="checkbox" checked={prefs.reuse} onChange={(e) => setPrefs({ ...prefs, reuse: e.target.checked })} />
+                Refolosește ingredientele între zile (mai puține cumpărături)
+              </label>
+              <button className="v2-button v2-button-primary" disabled={blocked || planEligible.length === 0} onClick={generate}>
+                <Sparkles size={17} /> Arată 5 zile de mese
+              </button>
+              <p className="v2-field-note">
+                {blocked
+                  ? "Planificarea meselor începe după alegerea etapei de diversificare. Pentru nevoi individuale este necesară îndrumarea unui specialist."
+                  : `${planEligible.length} idei potrivite în catalogul demonstrativ. Siguranța și etapa sunt verificate înaintea preferințelor; sezonul doar ordonează ideile.`}
+              </p>
+            </section>
+          )}
+          <div className="v2-plan-layout">
+            <section className="v2-plan-days" aria-label="Planul pentru 7 zile">
+              {days.map((day, i) => {
+                const entry = activePlan.find((p) => p.slot === day.key);
+                const recipe = catalog.find((r) => r.id === entry?.recipeId);
+                return (
+                  <article className={`v2-plan-day ${i === 0 ? "is-today" : ""}`} key={day.key}>
+                    <div className="v2-day-label">
+                      <span>{i === 0 ? "Azi" : day.label}</span>
+                      <strong>{day.number}</strong>
+                    </div>
+                    {recipe ? (
+                      <>
+                        <Link className="v2-plan-recipe" href={`/v2/retete/${recipe.id}`}>
+                          <Image src={recipe.image} alt="" width={100} height={100} />
+                          <div>
+                            <h2>{recipe.name}</h2>
+                            <span>
+                              <Clock3 size={13} />
+                              {recipe.minutes} min · în curs de revizie
+                            </span>
+                          </div>
+                        </Link>
+                        <div className="v2-plan-actions">
+                          <button className="v2-icon-button" aria-label={`Înlocuiește masa pentru ${day.label} ${day.number}`} disabled={cloud.saving} onClick={() => add(day.key)}>
+                            <RefreshCw size={17} />
+                          </button>
+                          <button
+                            className="v2-icon-button"
+                            aria-label={`Elimină masa pentru ${day.label} ${day.number}`}
+                            disabled={cloud.saving}
+                            onClick={() => {
+                              dispatch({ type: "remove-plan", slot: day.key });
+                              announce("Masa a fost eliminată din plan.");
+                            }}
+                          >
+                            <X size={18} />
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <button className="v2-plan-add" disabled={cloud.saving || blocked} onClick={() => add(day.key)}>
+                        <Plus size={19} />
+                        <span>{i < 3 ? "Alege o idee pentru această zi" : "Lasă loc pentru spontaneitate"}</span>
+                      </button>
+                    )}
+                  </article>
+                );
+              })}
+            </section>
+            <aside className="v2-plan-note">
+              <Leaf size={27} strokeWidth={1.5} />
+              <h2>Un plan care se schimbă odată cu ziua.</h2>
+              <p>Păstrează ce vă place, înlocuiește ce nu se potrivește. Nu e nevoie să completezi fiecare zi.</p>
+              <div className="v2-plan-total">
+                <strong>{activePlan.length}</strong>
+                <span>
+                  idei păstrate
+                  <br />
+                  pentru următoarele 7 zile
+                </span>
+              </div>
+              <button className="v2-button v2-button-secondary" onClick={openShopping}>
+                Vezi ce lipsește
+                <ArrowRight size={17} />
+              </button>
+            </aside>
+          </div>
+        </>
       ) : (
         <section className="v2-shopping-panel">
           <div className="v2-section-top">
             <h2>Doar ce îți lipsește</h2>
             <span>
-              {list.filter((r) => state.shoppingChecked.includes(r.key)).length}
-              /{list.length} bifate
+              {checkedCount}/{toBuy.length} bifate
             </span>
           </div>
           <p className="v2-field-note">
-            Lista păstrează cantitățile originale. Pentru ingrediente repetate,
-            verifică necesarul fiecărei rețete; nu facem conversii sau însumări
-            aproximative.
+            Adunăm cantitățile doar când unitatea este aceeași (g, ml, bucăți, linguri). Ce nu are o cantitate exactă
+            rămâne ca notă, ca să verifici în rețetă.
           </p>
-          {list.length ? (
-            <ul className="v2-shopping-list">
-              {list.map((row) => (
-                <li key={row.key}>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={state.shoppingChecked.includes(row.key)}
-                      disabled={cloud.saving}
-                      onChange={() =>
-                        dispatch({ type: "shopping", key: row.key })
-                      }
-                    />
-                    <span>
-                      <strong>{row.label}</strong>
-                      <small>
-                        {row.recipes.length > 1
-                          ? `Apare în ${row.recipes.length} mese · verifică totalul`
-                          : row.recipes[0]}
-                      </small>
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
+          {toBuy.length ? (
+            <>
+              <ul className="v2-shopping-list">
+                {toBuy.map((item) => (
+                  <li key={item.key}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={state.shoppingChecked.includes(item.key)}
+                        disabled={cloud.saving}
+                        onChange={() => dispatch({ type: "shopping", key: item.key })}
+                      />
+                      <span>
+                        <strong>
+                          {item.name}
+                          {item.amounts.length > 0 && <em> · {formatAmounts(item.amounts)}</em>}
+                        </strong>
+                        <small>
+                          {item.recipes.length > 1 ? `Pentru ${item.recipes.length} mese` : item.recipes[0]}
+                          {item.notes.length > 0 && ` · ${item.notes.join("; ")}`}
+                        </small>
+                      </span>
+                    </label>
+                    <button type="button" className="v2-text-button" disabled={cloud.saving} aria-label={`Am acasă: ${item.name}`} onClick={() => setPantry(item.key, true)}>
+                      Am acasă
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" className="v2-button v2-button-secondary v2-copy-list" onClick={copyList}>
+                Copiază lista
+              </button>
+            </>
           ) : (
-            <EmptyState title="Lista începe cu o idee">
-              Adaugă o masă în plan pentru a vedea ingredientele.
-              <Link className="v2-button v2-button-primary" href="/v2/idei">
-                Descoperă idei
-                <ArrowRight size={17} />
-              </Link>
+            <EmptyState title={atHome.length ? "Ai tot ce îți trebuie" : "Lista începe cu o idee"}>
+              {atHome.length ? "Toate ingredientele sunt marcate ca fiind deja acasă." : "Adaugă o masă în plan pentru a vedea ingredientele."}
+              {!atHome.length && (
+                <button className="v2-button v2-button-primary" onClick={() => setTab("plan")}>
+                  Planifică 5 zile
+                  <ArrowRight size={17} />
+                </button>
+              )}
             </EmptyState>
+          )}
+          {atHome.length > 0 && (
+            <details className="v2-at-home">
+              <summary>Ai deja acasă ({atHome.length})</summary>
+              <ul>
+                {atHome.map((item) => (
+                  <li key={item.key}>
+                    <span>{item.name}</span>
+                    <button type="button" className="v2-text-button" disabled={cloud.saving} onClick={() => setPantry(item.key, false)}>
+                      Mută în listă
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
         </section>
       )}

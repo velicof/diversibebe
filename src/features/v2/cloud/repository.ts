@@ -6,8 +6,7 @@ import {
   type AppState,
   type LocalEvent,
 } from "../model";
-import { normalize } from "../review";
-
+import { shoppingKeyUniverse } from "../planning";
 import { readJourney, newJourney, type Journey } from "../growth/journey";
 
 export type CloudState = {
@@ -19,9 +18,9 @@ export type CloudState = {
 };
 const recipeIds = new Set(catalog.map((r) => r.id));
 const ingredientIds = new Set<string>(ingredients.map((i) => i.id));
-const shoppingKeys = new Set(
-  catalog.flatMap((r) => r.ingredients.map((i) => normalize(i).trim())),
-);
+const shoppingKeys = shoppingKeyUniverse(catalog);
+// Pantry stores legacy ingredient ids and shopping keys marked "am acasă".
+const pantryKeys = new Set<string>([...ingredientIds, ...shoppingKeys]);
 function parse(value: unknown): CloudState {
   if (!value || typeof value !== "object")
     throw new Error("Invalid state response");
@@ -31,6 +30,7 @@ function parse(value: unknown): CloudState {
     recipeIds,
     ingredientIds,
     shoppingKeys,
+    pantryKeys,
   );
   return {
     state,
@@ -63,6 +63,13 @@ export class V2Repository {
     action: Action,
     before: AppState,
   ): Promise<CloudState> {
+    if (action.type === "plan-many") {
+      // The server keeps one plan row per child and day; writes are idempotent, so a retry is safe.
+      let state: CloudState | null = null;
+      for (const entry of action.entries)
+        state = await this.call(babyId, "plan", { slot: entry.slot, recipeId: entry.recipeId });
+      return state ?? this.load(babyId);
+    }
     let name: string;
     let payload: Record<string, unknown>;
     switch (action.type) {

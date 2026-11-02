@@ -49,7 +49,7 @@ function migrate(){
  }
  sql(fs.readFileSync(path.join(repo,'supabase/operations/security-hotfix/01-close-login-summary.sql'),'utf8'));
  sql(`CREATE OR REPLACE FUNCTION auth.mark_native_test_user() RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$BEGIN NEW.raw_app_meta_data=coalesce(NEW.raw_app_meta_data,'{}'::jsonb)||'{"is_test":true}'::jsonb;RETURN NEW;END$$;DROP TRIGGER IF EXISTS native_synthetic_user ON auth.users;CREATE TRIGGER native_synthetic_user BEFORE INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION auth.mark_native_test_user();GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated,service_role;`);
- for(const name of fs.readdirSync(path.join(repo,'supabase/migrations')).filter(n=>n.includes('real_auth_journey'))){
+ for(const name of fs.readdirSync(path.join(repo,'supabase/migrations')).filter(n=>n.includes('real_auth_journey')||n.includes('v2_planner_events'))){
   sql('CREATE TABLE IF NOT EXISTS app_private.native_applied_migrations(name text PRIMARY KEY,applied_at timestamptz NOT NULL DEFAULT now())');
   if(sql(`SELECT count(*) FROM app_private.native_applied_migrations WHERE name=${quote(name)}`)==='0'){sql(fs.readFileSync(path.join(repo,'supabase/migrations',name),'utf8'));sql(`INSERT INTO app_private.native_applied_migrations(name) VALUES(${quote(name)})`);}
  }
