@@ -26,7 +26,6 @@ const optionalLine = /dupa gust|optional|pentru servire|pentru decor/;
 
 const rows = catalog.map((r) => {
   const lines = r.ingredients;
-  const text = normalize([...lines, ...r.steps].join('\n'));
   const ingText = normalize(lines.join('\n'));
   const withQty = lines.filter((l) => quantity.test(normalize(l))).length;
   const risks = [...new Set(riskRules.filter(([re]) => re.test(ingText)).map(([, label]) => label))];

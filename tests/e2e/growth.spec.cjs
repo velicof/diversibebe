@@ -52,9 +52,11 @@ test('growth: pre-diversification gets educational value, no meal recommendation
  await page.getByRole('link',{name:'Continuă în spațiul meu',exact:true}).click();await expect(page.locator('.gw-dashboard-focus')).toContainText('Mai întâi, un început liniștit');await expect(page.locator('.v2-featured-area .v2-recipe-card')).toHaveCount(0);
  await page.goto('/v2/retete/piure-dovlecel');await expect(page.getByRole('button',{name:'Adaugă în plan',exact:true})).toBeDisabled();
 });
-test('growth: no eligible combination is explicit and keeps the selected constraints',async({page})=>{
+// Since 2026-11-02 every single fridge ingredient has at least one 6–8 month idea in the demo catalog
+// (editorial shortlist), so no onboarding path reaches the empty state; it stays covered in tests/growth.test.cjs.
+test('growth: a selected fridge ingredient is respected and the selected constraints are kept',async({page})=>{
  await page.goto('/v2/onboarding');await page.getByRole('button',{name:/^Nu mai știu/}).click();await page.getByRole('button',{name:'Continuă',exact:true}).click();await page.getByRole('button',{name:/^Aproximativ 6–8/}).click();await page.getByRole('button',{name:'Continuă',exact:true}).click();await page.getByRole('button',{name:/^Rețete din ce am/}).click();await page.getByRole('button',{name:'Broccoli',exact:true}).click();await page.getByRole('button',{name:'Vezi rezultatul meu',exact:true}).click();
- await expect(page.getByRole('heading',{level:1})).toContainText('Nu am găsit idei');await expect(page.locator('[data-result-recipe]')).toHaveCount(0);expect((await diagnostics(page)).find(e=>e.name==='personalized_result_viewed').properties.valueKind).toBe('empty');
+ await expect(page.locator('[data-result-recipe]').first()).toBeVisible();await expect(page.getByText('Include un ingredient ales din frigiderul tău').first()).toBeVisible();expect((await diagnostics(page)).find(e=>e.name==='personalized_result_viewed').properties.valueKind).not.toBe('empty');
  await page.getByRole('button',{name:/Schimbă răspunsurile/}).click();await expect(page.getByRole('button',{name:/^Nu mai știu/})).toHaveAttribute('aria-pressed','true');
 });
 test('growth: optional context may be skipped and planning remains available',async({page})=>{
