@@ -22,7 +22,7 @@ Efort = ore de lucru efectiv (agent sau om). Cost = cheltuieli externe. „Aprob
 
 | # | Acțiune | Efort | Cost | Gate |
 |---|---|---|---|---|
-| 12 | Afirmațiile V1 („aprobate de nutriționiști”, testimonial) — dovezi sau eliminare | 1 h | 0 | G7 |
+| 12 | Afirmațiile V1: „aprobate de nutriționiști” **corectat** (`6896710`, PR #2); rămâne testimonialul — dovezi sau eliminare | 0,5 h | 0 | G7 |
 | 13 | 12 fotografii: Gemini Images → verificare → `photo-import publish` | 4–6 h fondator + 2 h agent | 0–50 lei | G6 |
 | 14 | Lotul editorial 2 (încă 20–30 rețete, inclusiv cină 6+ dacă specialistul o cere) | 2 h agent + specialist | ~1.500–3.000 lei | G6 |
 | 15 | Vercel Pro înainte de orice monetizare | — | 20 USD/lună | G11 |
@@ -33,7 +33,7 @@ Efort = ore de lucru efectiv (agent sau om). Cost = cheltuieli externe. „Aprob
 | 20 | ~~Pass de copy pentru conturi reale~~ — **făcut** (`accountCopy`) | — | 0 | G7 |
 | 21 | Jurnalul V1 (1.176 intrări, 95 familii) vizibil și în V2 (citire) | 3–4 h | 0 | — |
 | 23 | **TBT < 200 ms** (azi 357–510 ms): părțile statice ca Server Components, supabase-js doar la autentificare (`NIGHT-SHIFT-REPORT.md` §5). LCP rezolvat 4 nov. (0,9–1,4 s) | 1,5–2,5 zile | 0 | G15 |
-| 24 | V1 `HomeClient.tsx:217` „Rețete testate și aprobate de nutriționiști” → „Rețete verificate editorial, după ghiduri publice” (conținut public: aprobarea fondatorului) | 0,2 h | 0 | G7 |
+| 24 | ~~V1 `HomeClient.tsx:217` „aprobate de nutriționiști”~~ → „Rețete verificate editorial, după ghiduri publice”: **făcut** 4 nov. (`6896710`, aprobat de fondator), live după merge-ul PR #2 | — | 0 | G7 |
 | 22 | V1: păstrarea copilului la înregistrare chiar dacă „Confirm email” ar fi activat (precondiție pentru activarea confirmării) | 2 h | 0 | — |
 
 ## P2 — după lansare

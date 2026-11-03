@@ -6,7 +6,7 @@ PR: https://github.com/velicof/diversibebe/pull/2 · branch `hotfix/v1-v2-schema
 
 Migrația `protect_family_data` înlocuiește constrângerile unice `(user_id, food_id)` și `(user_id, recipe_id)` cu indexuri parțiale per copil. Codul V1 din producție scrie cu `upsert(..., { onConflict })` pe exact acele constrângeri: după migrații, „Am încercat” și „Am gătit” eșuează cu `42P10` pentru toate familiile. V2 permite și adăugarea de copii, iar V1 citește copilul cu `maybeSingle()`: cu doi copii primește `null`. Patch-ul funcționează pe schema actuală, pe cea migrată și după rollback-ul L1, deci poate fi publicat oricând înainte.
 
-## Ce schimbă (4 commituri peste `db14a4c`, producția actuală)
+## Ce schimbă (5 commituri peste `db14a4c`, producția actuală)
 
 1. `b12b652` — V1 rămâne funcțional după migrațiile V2:
    - „Am încercat”: căutare per familie cu `limit(1)` + insert simplu, fără `onConflict`, pe care PostgREST nu îl poate ținti după migrații (eroarea `42P10`).
@@ -18,6 +18,7 @@ Migrația `protect_family_data` înlocuiește constrângerile unice `(user_id, f
    - 15 citiri ale copilului (`middleware`, dashboard, rețete, plan, profil, onboarding etc.) folosesc `maybeSingle()` filtrat doar după `user_id`. Cu doi copii, supabase-js întoarce `null` (PGRST116), middleware-ul trimite familia la `/onboarding`, iar formularul de acolo **suprascrie primul copil**. Acum toate iau primul copil (`created_at`, `limit(1)`), ca `getCurrentBaby()`.
    - `profil/bebelus`: salvarea făcea `update(...).eq("user_id")` și **copia numele, data nașterii și sexul peste toți copiii familiei**. Acum actualizează doar copilul afișat.
    - Pagina rețetei: starea „gătit” se citea cu `select("id, notes")`, coloană inexistentă, deci nu apărea niciodată; acum `select("id")` + `limit(1)` (V2 adaugă un rând de confirmare pe zi).
+5. `6896710` — pagina principală nu mai afirmă „Rețete testate și aprobate de nutriționiști”: nicio rețetă nu are o revizie de specialitate. Textul nou: „Rețete verificate editorial, după ghiduri publice”. Aprobat de fondator, 4 nov.
 
 ## Securitate — rutele API din V1
 
@@ -43,6 +44,7 @@ Migrația `protect_family_data` înlocuiește constrângerile unice `(user_id, f
 2. Cu contul tău: un aliment în jurnal → apare în „Alimente încercate”; „Am gătit” pe o rețetă → confirmat și rămâne afișat după reîncărcare; favorit → apare.
 3. Dacă ai un cont cu doi copii: login → dashboard (nu onboarding); salvarea profilului nu schimbă al doilea copil.
 4. `POST /api/send-verification` → 410.
+5. Pagina principală (deconectat): apare „Rețete verificate editorial, după ghiduri publice”.
 5. Rollback: Vercel Instant Rollback la `db14a4c`.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

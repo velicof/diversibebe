@@ -60,13 +60,14 @@ Cauza măsurată: biblioteca, planul și rețeta afișau doar un schelet până 
 
 ## 3. PR-ul V1
 
-[velicof/diversibebe#2](https://github.com/velicof/diversibebe/pull/2) · `hotfix/v1-v2-schema-compat` → `main` · **OPEN, MERGEABLE**, head `8f7780d`, 4 commituri, verificările Vercel SUCCESS. **Nu am făcut merge.**
+[velicof/diversibebe#2](https://github.com/velicof/diversibebe/pull/2) · `hotfix/v1-v2-schema-compat` → `main` · **OPEN**, head `6896710`, 5 commituri (al 5-lea: afirmația „aprobate de nutriționiști”, după aprobarea ta), verificările Vercel SUCCESS. **Nu am făcut merge.**
 
 **Ce schimbă:**
 1. „Am încercat” și „Am gătit” scriu fără `onConflict`.
 2. Cache-ul contului este corect după deconectare.
 3. Releul de email deschis este retras.
 4. Familiile cu mai mulți copii funcționează.
+5. Pagina principală nu mai afirmă o aprobare a nutriționiștilor.
 
 **De ce înaintea migrațiilor V2:** migrația `protect_family_data` înlocuiește constrângerile pe care V1 le folosește în `upsert(onConflict)`. Fără patch, „Am încercat” și „Am gătit” eșuează cu `42P10` pentru toate familiile din momentul migrării. Patch-ul funcționează pe schema actuală, pe cea migrată și după rollback-ul L1.
 
@@ -151,7 +152,7 @@ Autentificarea pe telefon cu stack-ul local ar cere slăbirea gărzilor de URL (
 - decizia despre fotografii (16 fișiere Antigravity, neintegrate);
 - mențiunea din politica de confidențialitate;
 - decizia BebeAsist;
-- **V1 afișează „Rețete testate și aprobate de nutriționiști”** (`src/app/HomeClient.tsx:217`), deși nu există nicio aprobare de specialitate. Text propus: „Rețete verificate editorial, după ghiduri publice”. Nu l-am schimbat: e conținut public, deci cere aprobarea ta.
+- ~~V1 afișează „Rețete testate și aprobate de nutriționiști”~~ → **rezolvat după aprobarea ta (4 nov.)**: „Rețete verificate editorial, după ghiduri publice”, commit `6896710` în PR #2 (live după merge) și în `release/v2-rc`. Un test nou (`library.test.cjs`) pică dacă o pagină afirmă o aprobare de specialitate pe care nicio rețetă nu o are. Testimonialul de sub text rămâne o decizie separată.
 
 **P2 — înainte de lansarea publică:**
 - TBT 357–510 ms (planul din §5);
@@ -169,7 +170,7 @@ Autentificarea pe telefon cu stack-ul local ar cere slăbirea gărzilor de URL (
 5. **Preview pe telefon:**
    - fie instalezi Tailscale (contul tău);
    - fie aprobi push-ul `release/v2-rc` + variabilele Vercel Preview.
-6. **Textul V1** „aprobate de nutriționiști” → varianta propusă.
+6. ~~Textul V1 „aprobate de nutriționiști”~~: aprobat și făcut (`6896710`), ajunge live odată cu merge-ul PR #2.
 7. Deciziile despre fotografii, BebeAsist și politica de confidențialitate.
 8. Merge `release/v2-rc` → `main`, după ce `release-check.cjs main` trece.
 
@@ -203,6 +204,6 @@ Autentificarea pe telefon cu stack-ul local ar cere slăbirea gărzilor de URL (
 - SMTP lipsește;
 - TBT 357–510 ms (ținta: 200 ms);
 - 0 revizii de specialitate;
-- afirmația falsă din V1;
+- afirmația falsă din V1 (corectată în PR #2, încă nepublicată);
 - fotografiile neaprobate;
 - beta nerulată.

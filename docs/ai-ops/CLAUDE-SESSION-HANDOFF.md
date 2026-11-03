@@ -4,7 +4,8 @@
 
 - **Patch V1 publicat:**
   - `hotfix/v1-v2-schema-compat` = `8f7780d` (4 commituri);
-  - PR [#2](https://github.com/velicof/diversibebe/pull/2) OPEN, MERGEABLE, Vercel SUCCESS; **fără merge**;
+  - PR [#2](https://github.com/velicof/diversibebe/pull/2) OPEN, head `6896710` (5 commituri), **fără merge**;
+  - `6896710` (aprobat de fondator): pagina principală V1 nu mai afirmă „aprobate de nutriționiști”, ci „Rețete verificate editorial, după ghiduri publice”;
   - commit nou `8f7780d`, pentru familiile cu mai mulți copii: V1 trimitea familia la `/onboarding` și suprascria primul copil, iar salvarea profilului copia datele peste toți copiii.
 - **`release/v2-rc`** (tot local):
   - `c24585d`: același fix + teste;
@@ -39,7 +40,7 @@ Pentru următoarea conversație. Nu relua auditul: faptele de mai jos sunt verif
 | Checkpoint restaurabil | tag **`checkpoint/v2-handoff-20261103`**. Restaurare: `git checkout checkpoint/v2-handoff-20261103` sau `git reset --hard checkpoint/v2-handoff-20261103` (pe release/v2-rc) |
 | Commituri | cod: **`45163e1`** (precedat de `396023e`); acest document este în commitul următor, marcat cu tag-ul de mai sus |
 | Producție | `origin/main` = `db14a4c`, neschimbată în această sesiune; `release/v2-rc` o conține deja |
-| Patch V1 | branch **`hotfix/v1-v2-schema-compat`**, worktree `..\seo-hotfix-legacy`, 4 commituri peste `db14a4c`: `b12b652`, `ef8b028`, `360d05d`, `8f7780d`. **Publicat, PR #2 deschis, fără merge** (4 nov.) |
+| Patch V1 | branch **`hotfix/v1-v2-schema-compat`**, worktree `..\seo-hotfix-legacy`, 5 commituri peste `db14a4c`: `b12b652`, `ef8b028`, `360d05d`, `8f7780d`, `6896710`. **Publicat, PR #2 deschis, fără merge** (4 nov.) |
 | Git status la final | curat pentru fișierele mele. Rămân **intenționat necomise**, fiind gestionate de Antigravity: `content/gemini-import/REPORT.md` (rescris de rularea lor a `check`), `BATCH-1-PREPARATION.md`, `PILOT-3-QUALITY-REPORT.md`, `PILOT-BATCH-0-PROGRESS.md`. Folderul `incoming/` este ignorat de git |
 
 Alte tag-uri utile:
@@ -98,7 +99,7 @@ Alte tag-uri utile:
 
 10. **Performanța pe mobil**: LCP 3,1–3,4 s, TBT 0,5–0,6 s. Corecție: randare pe server pentru bibliotecă și rețete și numai datele cardurilor în browser (1–2 zile).
 11. „Parolă uitată” în V1 nu funcționează (paginile nu apelează Supabase). Recomandare: link către `/v2/cont`.
-12. Afirmațiile din V1 („aprobate de nutriționiști”, testimonial).
+12. Afirmațiile din V1: „aprobate de nutriționiști” corectat (4 nov., PR #2); rămâne testimonialul.
 13. Secretele Vercel marcate „Sensitive” și scoase de pe Preview.
 14. Revizia de specialitate pentru cele 2 rețete cu ficat (sau rămân nepublicate).
 15. Lint-ul moștenit din V1: 46 de erori și 29 de avertismente, nemodificate.
