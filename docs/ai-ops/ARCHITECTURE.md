@@ -1,6 +1,6 @@
 # Arhitectura de producție V2
 
-Stare la 3 nov. 2026, branch `release/v2-rc`. Faptele despre producție provin din metadate citite read-only (Supabase MCP `execute_sql` pe catalog/agregate, fără rânduri personale). Producția nu a fost modificată în această etapă.
+Stare la 3 nov. 2026, branch `release/v2-rc`. Faptele despre producție provin din metadate citite read-only (Supabase MCP `execute_sql` pe catalog/agregate, fără rânduri personale). Producția nu a fost modificată în această etapă. **Planul de migrare pe proiectul comun: `MIGRATION-V1-V2.md`** (actualizat 3 nov.: V2 se conectează acum la proiectul V1, poartă fail-closed, robots corectat, rollback complet).
 
 ## 1. Ce există azi
 
@@ -44,6 +44,8 @@ Sursa unică: `supabase/v2-release.cjs` (folosită de teste, de runtime-ul nativ
 Caracter: aditive (tabele, coloane cu valori implicite, funcții, politici), cu două excepții care schimbă constrângeri V1 (C1). Rollback operațional testat (`tests/rollback.test.cjs`): `supabase/operations/v2-disable.sql` revocă accesul la RPC-urile V2 fără să șteargă date și fără să redeschidă P0. Constrângerile V1 nu se restaurează automat (după ce frații au rânduri proprii, unicitatea veche nu mai e validă); patch-ul V1 funcționează cu ambele forme.
 
 ## 4. Mediile — opțiuni de staging
+
+> **Înlocuit 3 nov. 2026** de decizia fondatorului: un singur proiect Supabase pentru V1 și V2, fără staging online. Validarea și lansarea graduală: **`MIGRATION-V1-V2.md`**. Tabelul de mai jos rămâne doar ca istoric al opțiunilor.
 
 Condiție: date de test și date reale niciodată în aceeași bază; fără proiect plătit fără aprobare.
 

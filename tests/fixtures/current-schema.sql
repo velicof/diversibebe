@@ -167,3 +167,9 @@ CREATE VIEW public.user_login_summary AS  SELECT p.name,
   GROUP BY p.id, p.name, p.email
   ORDER BY (count(l.id)) DESC;
 GRANT ALL ON public.user_login_summary TO anon,authenticated;
+CREATE INDEX custom_recipes_user_id_idx ON public.custom_recipes USING btree (user_id);
+CREATE INDEX custom_recipes_created_at_idx ON public.custom_recipes USING btree (created_at DESC);
+CREATE INDEX food_journal_custom_recipe_id_idx ON public.food_journal USING btree (custom_recipe_id) WHERE (custom_recipe_id IS NOT NULL);
+-- P0 closed in production on 2026-11-02 (migration close_user_login_summary).
+REVOKE ALL PRIVILEGES ON TABLE public.user_login_summary FROM PUBLIC,anon,authenticated;
+ALTER VIEW public.user_login_summary SET (security_invoker=true);

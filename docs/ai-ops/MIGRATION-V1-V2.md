@@ -1,0 +1,110 @@
+# Migrarea V1 → V2 pe un singur proiect Supabase
+
+Decizia fondatorului (3 nov. 2026): **un singur proiect Supabase** (`diversibebe`, `smyimgvxlggggjeoajdo`, Free) pentru V1 și V2. Fără proiect nou, fără pauzarea lui `Nuo`, fără costuri. Acest document înlocuiește opțiunile de staging din `ARCHITECTURE.md` §4.
+
+Consecință: nu există un mediu online intermediar. Validarea se face pe **o copie locală izolată** (schema producției, dovedită identică, plus date sintetice cu forma producției). Apoi urmează un **canary în producție** limitat la contul fondatorului, ascuns după codul de invitație.
+
+## 1. Ce știm despre producție (3 nov., metadate și agregate read-only, fără rânduri)
+
+| | Valoare |
+|---|---|
+| Conturi | **435** (370 email + parolă, **65 Google**); toate au profil |
+| Confirmarea emailului | **dezactivată** (toate conturile confirmate în < 5 s de la creare) |
+| Familii | 409 cu un copil, 14 cu doi, 1 cu trei, 11 fără copil |
+| Istoric V1 | `tried_foods` 4.695 (2.967 fără copil) · `food_journal` 1.176 (**toate** fără copil, 95 familii) · alergii 27 (toate fără copil, 17 familii) · favorite 38 · gătite 28 · rețete proprii 150 · alimente proprii 81 |
+| Mărime | 17 MB |
+| Activitate | 3 conturi autentificate în ultimele 30 de zile; ultima înregistrare: 25 sept. |
+| Preflight | **0 anomalii** (proprietar copil, duplicate, rețete proprii) |
+| Schemă | identică cu baza locală de test pe 8 categorii: coloane, constrângeri, indexuri, politici RLS, triggere, funcții, RLS, drepturi (`tests/schema-drift.test.cjs`) |
+| Migrații aplicate | numai `close_user_login_summary` (P0); niciun obiect V2 |
+
+## 2. Ce am rezolvat acum (cost 0, fără producție)
+
+| # | Problemă găsită | Rezolvare | Dovadă |
+|---|---|---|---|
+| M1 | Baza de test nu avea 3 indexuri din producție; driftul verifica doar coloanele | indexurile adăugate; drift pe 8 categorii | `schema-drift` 2/2 |
+| M2 | **Rollback incomplet**: `v2-disable.sql` lăsa apelabile 3 funcții V2 (`v2_save_journey`, `v2_edit_child`, `v2_mark_legacy_recipe`) | revocă toate funcțiile `v2_*` | `migration-rehearsal`, `rollback` |
+| M3 | **V2 nu se putea conecta la producție**: clientul accepta numai `127.0.0.1`, formularul accepta numai adrese `@example.test` | V2 acceptă stack-ul local **sau exact proiectul V1** (`NEXT_PUBLIC_SUPABASE_URL`); restricția `@example.test` rămâne doar local | `release-gates` |
+| M4 | **Texte de test pentru conturi reale**: „cont de test”, „DOAR CONTURI SINTETICE”, „mediul local de test” (≈ 30 de texte) | `accountCopy`: formulări pentru conturi reale când backend-ul e producția, etichetele de test rămân local | `release-gates` (niciun „test/sintetic/local” în modul real) |
+| M5 | **Activarea V2 în producție scotea tot site-ul V1 din Google**: `robots.txt` bloca `/` când `DIVERSIBEBE_V2_PREVIEW=1` | blocare totală doar în afara Vercel Production | `release-gates` |
+| M6 | Poarta beta era **fail-open**: fără `V2_INVITE_CODE_HASHES`, `/v2` devenea public | fail-closed în producție; deschiderea publică numai explicit (`V2_ACCESS=public`) | `release-gates` |
+| M7 | 65 de conturi Google nu puteau intra în V2 (doar email + parolă) | „Continuă cu Google” (PKCE) afișat numai pe conturi reale | se verifică în canary (Google nu există local) |
+| M8 | Fără backup verificat | `scripts/prod-backup.cjs`: `pg_dump` 17 (public + auth), AES-256-GCM, manifest cu numărul de rânduri, verificare prin restaurare locală | rulat pe baza locală sintetică: 12/12 tabele restaurate identic; parolă greșită respinsă |
+| M9 | Fără verificare după migrare | `v2-postflight.sql` (9 verificări structurale + numărul de rânduri), `v2-preflight.sql` include numărul de rânduri | ambele rulate în repetiții |
+
+## 3. Repetiția migrării (copia locală izolată)
+
+Două niveluri, ambele pe schema producției, cu date **sintetice** de aceeași formă (435 conturi, 0/1/2/3 copii, istoric fără copil, jurnal cu o familie de 410 intrări, alergii). Generator determinist: `tests/fixtures/synthetic-production.cjs`.
+
+| Verificare | PGlite (`tests/migration-rehearsal.test.cjs`, rulează la fiecare `npm test`) | Stack real: PostgreSQL 17 + GoTrue + PostgREST (`scripts/migration-rehearsal.cjs`) |
+|---|---|---|
+| Preflight 0 anomalii | ✅ | ✅ |
+| Rândurile V1 identice octet cu octet după migrații (md5 pe toate cele 11 tabele) | ✅ | ✅ |
+| `auth.users` neschimbat; conturile existente se autentifică | ✅ | ✅ (GoTrue real, JWT real) |
+| Postflight 9/9 | ✅ | ✅ |
+| Fiecare copil vede exact istoricul V1 promis (437 copii) | ✅ | ✅ (eșantion prin PostgREST) |
+| RLS: familia vede doar rândurile ei; anonimul nu vede nimic | ✅ | ✅ (HTTP 401 pentru anonim) |
+| Upsert-ul V1 nepatch-uit: merge înainte, eșuează după (`42P10`) | ✅ (`v1-compat`) | ✅ |
+| V1 patch-uit după migrații: jurnal, „am încercat”, „am gătit”, favorite | ✅ | ✅ |
+| Fluxul de înregistrare V1 (signUp → sesiune imediată → copil + alimente) | — | ✅ |
+| Cont nou deschis în V2 cu copilul lui | ✅ | ✅ |
+| Planificator + confirmare V2 pe cont migrat | ✅ | ✅ |
+| Email de recuperare a parolei (GoTrue → SMTP) | — | ✅ (Mailpit local) |
+| Rollback `v2-disable.sql`: 0 rânduri V1 modificate, toate RPC-urile V2 închise, V1 funcționează, login funcționează | ✅ | ✅ |
+
+Raport: `outputs/release-2026-11-03/rehearsal/REPORT.md`. Baza `diversibebe_rehearsal` este ștearsă la final.
+
+## 4. Planul de lansare graduală (fiecare pas cu aprobarea ta separată)
+
+| Etapa | Ce se întâmplă | Cine | Durată | Cum verificăm | Rollback |
+|---|---|---|---|---|---|
+| **1. Patch V1** | push + PR + merge `hotfix/v1-v2-schema-compat` (`b12b652`) → deploy automat V1 | agent (cu aprobare) | 1 h | live: jurnal, „am încercat”, „am gătit”, înregistrare; `get_runtime_errors` | Vercel Instant Rollback |
+| **2. Backup** | `node scripts/prod-backup.cjs` în terminalul tău (parola bazei nu ajunge la agent), apoi `--verify … --restore-local` | tu | 20 min | „restore check: 12 tables identical” | — |
+| **3. Preflight** | `supabase/operations/v2-preflight.sql` (read-only); notezi numărul de rânduri | agent | 5 min | 5 × 0 anomalii | — |
+| **4. Migrațiile** | cele 7 fișiere din `supabase/v2-release.cjs`, în ordine, oră cu trafic minim; fiecare fișier e o tranzacție (eșec = nicio schimbare) | agent (cu aprobare) | < 1 min de execuție; 30 min cu verificări | `v2-postflight.sql` 9/9 + același număr de rânduri; advisors fără ERROR; V1 smoke | **L1** `v2-disable.sql` (testat) |
+| **5. Auth** | Supabase → Auth → URL Configuration: `https://www.diversibebe.com/v2/**`; SMTP propriu (Resend) pentru emailurile de recuperare. **Nu activa „Confirm email”** (vezi §6) | tu (cu ghidaj) | 30 min | email de recuperare primit | revii la setarea anterioară |
+| **6. Vercel Preview** | push `release/v2-rc` → Preview (protejat de Vercel Authentication); în Preview **fără** `NEXT_PUBLIC_V2_SUPABASE_*` (V2 în modul vizitator, nicio scriere în producție) | agent (cu aprobare) | 1 h | build reușit pe Vercel (`distDir` custom), fluxul vizitator, telefonul tău | ștergi deployment-ul |
+| **7. Canary** | variabile Production + merge în `main`: `/v2` ascuns după invitație, **numai contul tău** (email și unul Google) timp de 48 h | agent + tu | 48 h | checklist §5; erori runtime 0; V1 neafectat | env → redeploy sau Instant Rollback; L1 |
+| **8. Beta privată** | 10–20 familii invitate (coduri `scripts/invite-codes.cjs`) — **numai după revizia clinică** (fără ea V2 afișează 0 rețete) | tu | 1–2 săpt. | metrici `product_events`, zero incidente | coduri revocate (scoți hash-ul) |
+| **9. Beta deschisă** | `V2_ACCESS=public` + link opțional din V1 („Încearcă noua versiune”) | agent (cu aprobare) | 2–4 săpt. | rata de erori, feedback | `V2_ACCESS` scos → redeploy |
+| **10. V2 implicit** | decizie separată: `/` → V2 pentru conturile conectate; V1 rămâne accesibil | — | — | — | redeploy |
+
+Vercel Hobby: Instant Rollback revine la deployment-ul de producție anterior; o variabilă de mediu schimbată intră în vigoare la următorul deploy.
+
+## 5. Checklist canary (etapa 7, contul tău)
+
+1. `/v2` fără cod → `/acces-beta`; cu cod → V2.
+2. Login cu email + parolă: apar copiii tăi și alimentele din V1.
+3. Login cu Google (un cont Google de test al tău): revine în `/v2/cont`, apoi `/v2/azi`.
+4. Salvezi o idee, planifici 2 zile, bifezi lista de cumpărături, închizi, revii de pe telefon: totul e acolo.
+5. În V1: jurnalul, „am încercat”, „am gătit” funcționează, iar favoritul din V2 apare în V1.
+6. Recuperare parolă: emailul ajunge (după SMTP).
+7. `robots.txt` pe producție: `Allow: /`, `Disallow: /v2/`, sitemap prezent.
+8. `get_runtime_errors` (Vercel) și Supabase Logs: fără erori noi.
+
+## 6. Constrângeri care decurg din proiectul comun
+
+- **Setările Auth sunt comune.** V1 creează profilul copilului imediat după `signUp`, ceea ce funcționează doar pentru că producția dă sesiunea imediat (confirmarea emailului e dezactivată). Dacă activezi „Confirm email”, înregistrările noi din V1 rămân fără copil. Schimbarea cere întâi o modificare în V1.
+- **Datele de test nu intră în producție.** Nu se creează conturi sintetice în producție. Canary-ul folosește doar contul tău. Preview-ul Vercel nu primește cheile Supabase V2.
+- **Evenimentele V2** (`product_events`) se marchează `is_test` numai pentru conturile cu `app_metadata.is_test`. Conturile reale apar ca reale.
+- **Jurnalul V1** (1.176 intrări) rămâne intact și vizibil în V1. V2 nu îl afișează încă (backlog P1).
+- **Alergiile V1 fără copil** (17 familii) blochează planificarea automată în V2 pentru acele familii (decizie de siguranță, PRD).
+
+## 7. Niveluri de rollback
+
+| Nivel | Când | Cum | Efect asupra datelor | Testat |
+|---|---|---|---|---|
+| L0 aplicație | V2 are o eroare vizibilă | Vercel Instant Rollback sau scoți `DIVERSIBEBE_V2_PREVIEW` → redeploy | niciunul | `scripts/check-v2-boundary.cjs` (404 fără flag) |
+| L1 bază, funcțional | V2 scrie greșit / RPC cu problemă | `supabase/operations/v2-disable.sql` | niciunul; V1 continuă | ✅ PGlite + stack real |
+| L2 schemă | — | **intenționat inexistent**: constrângerile vechi nu mai pot fi restaurate după ce frații au rânduri proprii, iar V1 patch-uit funcționează cu ambele forme | — | — |
+| L3 date | corupere de date (improbabil: migrațiile nu modifică rânduri) | restaurare țintită din backup (`pg_restore --table`) | revine la momentul backup-ului | restaurare completă verificată local |
+
+## 8. Riscuri reziduale
+
+| Risc | Probabilitate | Atenuare |
+|---|---|---|
+| Prima rulare reală a migrațiilor e în producție (fără staging online) | mică | schemă dovedită identică pe 8 categorii; repetiție pe PostgreSQL 17 + GoTrue + PostgREST reale; tranzacții; 17 MB → secunde; preflight 0; backup verificat; L1 testat |
+| Diferențe Supabase neacoperite local (pooler, versiunea schemei `auth`, extensii) | mică | postflight + advisors imediat după; V1 smoke |
+| Google OAuth neverificabil local | medie | canary cu contul tău; fallback de verificat tot în canary: recuperarea parolei pe adresa contului Google, apoi o parolă nouă |
+| Proiect Free pauzat după 7 zile fără activitate | mică (V1 activ) | monitorizare; Supabase Pro înainte de monetizare |
+| Fără backup automat zilnic (Free) | — | backup manual înaintea fiecărei migrații; Pro (25 USD/lună) recomandat la lansarea publică |

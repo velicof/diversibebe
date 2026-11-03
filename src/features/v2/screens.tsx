@@ -25,7 +25,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { activeCatalog, catalog, contentMode, ingredients, type Recipe } from "./catalog";
-import { reviewCopy } from "./content/copy";
+import { reviewCopy, accountCopy } from "./content/copy";
 import { initialFilters, recommend, type Filters } from "./recommendations";
 import { usePreview } from "./Provider";
 import {
@@ -1491,26 +1491,26 @@ export function Profile() {
         <aside>
           <section className="v2-profile-section" id="date">
             <ShieldCheck size={26} />
-            <h2>Un spațiu de test, cu date minime.</h2>
+            <h2>{accountCopy.dataTitle}</h2>
             <p>
               {cloud.connected
-                ? "Etapa, alimentele, planul și confirmările sunt păstrate pentru copilul selectat în baza de test. Favoritele sunt comune familiei. Datele se pot încărca pe un alt dispozitiv după conectare."
+                ? accountCopy.connectedData
                 : "Favoritele, etapa și planul sunt păstrate doar în browserul curent, separat de conturile reale. Nu se sincronizează între dispozitive."}
             </p>
             <p>
               {cloud.connected
-                ? "Folosești un cont sintetic de test. Parola nu este păstrată în aplicație. Evenimentele folosirii nu includ nume, diagnostice sau identificatori ai copilului."
+                ? accountCopy.connectedPrivacy
                 : "Explorarea fără cont nu cere email sau parolă și nu trimite evenimente în afara dispozitivului."}
             </p>
             {cloud.connected ? (
               <Link className="v2-text-link" href="/v2/cont">
-                Gestionează contul de test
+                {accountCopy.manageAccount}
                 <ArrowRight size={16} />
               </Link>
             ) : resetConfirm ? (
               <div className="v2-reset-confirm">
                 <p>
-                  Vei șterge doar alegerile din această versiune demonstrativă.
+                  {accountCopy.guestResetConfirm}
                 </p>
                 <button
                   className="v2-button v2-button-secondary"
@@ -1518,10 +1518,10 @@ export function Profile() {
                     dispatch({ type: "reset" });
                   journeyStore.restart(journeyScope(cloud.userId,cloud.selectedBabyId));
                     setResetConfirm(false);
-                    announce("Datele demonstrative au fost șterse.");
+                    announce(accountCopy.guestResetDone);
                   }}
                 >
-                  Șterge datele demo
+                  {accountCopy.guestResetButton}
                 </button>
                 <button
                   className="v2-text-button"
@@ -1623,7 +1623,7 @@ export function Premium() {
             track("premium_interest", { price: 25 });
             emitGrowth("premium_interest",{},"monthly");
             announce(
-              cloud.connected ? "Interesul a fost înregistrat în contul de test. Nu ai activat un abonament." : "Interesul este notat doar în sesiunea locală. Nu ai activat un abonament.",
+              cloud.connected ? accountCopy.premiumInterest : "Interesul este notat doar în sesiunea locală. Nu ai activat un abonament.",
             );
           }}
         >

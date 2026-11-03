@@ -13,6 +13,7 @@ import type { Action, EventName } from "./model";
 import { previewStore } from "./store";
 import { journeyScope, journeyStore } from "./growth/browser";
 import { cloudStore } from "./cloud/store";
+import { accountCopy } from "./content/copy";
 
 type ContextValue = ReturnType<typeof previewStore.getSnapshot> & {
   dispatch: (action: Action) => void;
@@ -97,7 +98,7 @@ export function PreviewProvider({ children }: { children: React.ReactNode }) {
   const announce = (value: string) =>
     setMessage(
       cloudStore.getSnapshot().saving
-        ? "Se salvează în contul de test…"
+        ? accountCopy.saving
         : value,
     );
   return (

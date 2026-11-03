@@ -17,6 +17,19 @@ export async function sha256Hex(text: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Who may open /v2. Fails CLOSED in production: without invite hashes nobody passes unless the
+// founder explicitly opens V2 to everyone (V2_ACCESS=public). Local scripts set V2_ACCESS=public.
+export async function v2AccessAllowed(options: {
+  production: boolean;
+  access: string | undefined;
+  hashes: string[];
+  code: string | undefined;
+}): Promise<boolean> {
+  if (options.access === "public") return true;
+  if (!options.hashes.length) return !options.production;
+  return inviteAccepted(options.code, options.hashes);
+}
+
 export async function inviteAccepted(code: string | undefined, hashes: string[]): Promise<boolean> {
   const normalized = (code ?? "").trim().toUpperCase();
   if (!/^[A-Z0-9-]{8,64}$/.test(normalized)) return false;

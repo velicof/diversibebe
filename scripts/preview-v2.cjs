@@ -16,6 +16,8 @@ const child = spawn(
     env: {
       ...process.env,
       DIVERSIBEBE_V2_PREVIEW: "1",
+      // Local QA only: production keeps the invite gate (src/lib/security/invite.ts fails closed there).
+      V2_ACCESS: process.env.V2_ACCESS || "public",
       // Local QA only: unreviewed editorial content, clearly labelled in the UI. Never set for real families.
       NEXT_PUBLIC_V2_CONTENT_MODE: process.env.NEXT_PUBLIC_V2_CONTENT_MODE || "preview",
       NEXT_PUBLIC_V2_SUPABASE_URL:

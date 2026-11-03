@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { cloudStore } from "./store";
 import { usePreview } from "../Provider";
+import { accountCopy } from "../content/copy";
 export function SyncStatus() {
   const { cloud } = usePreview();
   // Reserve the banner during server rendering; avoid pushing the page on hydration.
@@ -22,8 +23,8 @@ export function SyncStatus() {
       <span>
         {cloud.connected
           ? cloud.saving
-            ? "Se salvează în contul de test…"
-            : "Date sincronizate cu mediul local de test"
+            ? accountCopy.saving
+            : accountCopy.synced
           : "Explorezi fără cont"}
       </span>
       {cloud.connected ? (
@@ -36,11 +37,11 @@ export function SyncStatus() {
             <RefreshCw size={14} />
             Sincronizează
           </button>
-          <Link href="/v2/cont">Contul de test</Link>
+          <Link href="/v2/cont">{accountCopy.accountLink}</Link>
         </>
       ) : (
         <Link href="/v2/cont">
-          Conectează contul de test <ArrowRight size={14} />
+          {accountCopy.connectLink} <ArrowRight size={14} />
         </Link>
       )}
       {cloud.error && (

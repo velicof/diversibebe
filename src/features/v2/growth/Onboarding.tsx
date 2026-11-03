@@ -6,7 +6,7 @@ import { Onboarding as ClassicOnboarding } from "../screens";
 import { usePreview } from "../Provider";
 import { LoadingState, RecipeCard } from "../components";
 import { ingredients } from "../catalog";
-import { reviewCopy } from "../content/copy";
+import { reviewCopy, accountCopy } from "../content/copy";
 import { emptyState } from "../model";
 import { nativeAuth } from "../cloud/client";
 import { cloudStore } from "../cloud/store";
@@ -81,7 +81,7 @@ function SaveResult({scope,journey,ids,kind}:{scope:string;journey:Journey;ids:s
   const localSaved=ids.length?ids.every(id=>state.favorites.includes(id)):journey.guideSaved;
   const saved=localSaved&&(!cloud.connected||!nativeAuth||JSON.stringify(cloud.journey)===JSON.stringify(journey));
   useEffect(()=>{if(saved&&!cloud.connected)emitGrowth("account_prompt_viewed",{},"prompt",journey.id);},[saved,cloud.connected,journey.id]);
-  return <section className="gw-save-result" aria-labelledby="gw-save-title"><span className="gw-note-icon"><Bookmark size={24}/></span><div><h2 id="gw-save-title">{saved?"Un lucru mai puțin de căutat mâine.":ids.length?"Vrei să păstrezi ideile pentru mai târziu?":"Vrei să păstrezi aceste resurse?"}</h2><p>{saved?cloud.connected?"Rezultatul și preferințele sunt păstrate în contul tău de test.":storageError?"Rezultatul este păstrat în această sesiune.":"Rezultatul este păstrat pe acest dispozitiv. Poți reveni oricând.":cloud.connected&&ids.length?"Adăugăm doar ideile din acest rezultat. Planul și profilul rămân ale tale.":"Le salvăm întâi pe acest dispozitiv. Nu ai nevoie de email sau parolă."}</p><button type="button" className="v2-button v2-button-secondary" disabled={busy||saved||cloud.saving||cloud.loading||(cloud.connected&&!cloud.selectedBabyId)} onClick={async()=>{
+  return <section className="gw-save-result" aria-labelledby="gw-save-title"><span className="gw-note-icon"><Bookmark size={24}/></span><div><h2 id="gw-save-title">{saved?"Un lucru mai puțin de căutat mâine.":ids.length?"Vrei să păstrezi ideile pentru mai târziu?":"Vrei să păstrezi aceste resurse?"}</h2><p>{saved?cloud.connected?accountCopy.savedInAccount:storageError?"Rezultatul este păstrat în această sesiune.":"Rezultatul este păstrat pe acest dispozitiv. Poți reveni oricând.":cloud.connected&&ids.length?"Adăugăm doar ideile din acest rezultat. Planul și profilul rămân ale tale.":"Le salvăm întâi pe acest dispozitiv. Nu ai nevoie de email sau parolă."}</p><button type="button" className="v2-button v2-button-secondary" disabled={busy||saved||cloud.saving||cloud.loading||(cloud.connected&&!cloud.selectedBabyId)} onClick={async()=>{
     setBusy(true);setError("");
     try{
       if(ids.length){if(cloud.connected)await cloudStore.importIdeas({...emptyState,favorites:ids});else for(const recipeId of ids)if(!state.favorites.includes(recipeId))dispatch({type:"favorite",recipeId});}
@@ -91,5 +91,5 @@ function SaveResult({scope,journey,ids,kind}:{scope:string;journey:Journey;ids:s
       announce("Rezultatul a fost păstrat.");
     }catch{setError("Salvarea nu s-a încheiat. Rezultatul rămâne aici și poți reîncerca.");}finally{setBusy(false);}
   }}><Check size={17}/>{busy?"Se salvează…":saved?"Rezultat păstrat":ids.length?"Salvează ideile mele":"Păstrează ghidul meu"}</button>{error&&<p role="alert">{error}</p>}
-  {saved&&!cloud.connected&&<div className="gw-account-invitation"><h3>{nativeAuth?"Păstrează rezultatul și pentru următoarea vizită":"Ai deja un cont de test?"}</h3><p>{nativeAuth?"Creează un cont sintetic sau conectează-te. Preferințele și ideile se vor salva în cont, pentru revenirea din alt browser.":"Poți conecta contul și păstra acest rezultat. Crearea conturilor reale va fi disponibilă după validarea autentificării; înregistrarea nu este simulată aici."}</p><Link href="/v2/cont" className="v2-text-link" onClick={()=>{journeyStore.prepareHandoff(scope);emitGrowth("account_prompt_viewed",{},"prompt",journey.id);}}>{nativeAuth?"Salvează în cont sau creează un cont":"Continuă cu contul de test"} <ArrowRight size={16}/></Link></div>}</div></section>;
+  {saved&&!cloud.connected&&<div className="gw-account-invitation"><h3>{nativeAuth?"Păstrează rezultatul și pentru următoarea vizită":"Ai deja un cont de test?"}</h3><p>{nativeAuth?accountCopy.accountInvitation:"Poți conecta contul și păstra acest rezultat. Crearea conturilor reale va fi disponibilă după validarea autentificării; înregistrarea nu este simulată aici."}</p><Link href="/v2/cont" className="v2-text-link" onClick={()=>{journeyStore.prepareHandoff(scope);emitGrowth("account_prompt_viewed",{},"prompt",journey.id);}}>{nativeAuth?"Salvează în cont sau creează un cont":"Continuă cu contul de test"} <ArrowRight size={16}/></Link></div>}</div></section>;
 }

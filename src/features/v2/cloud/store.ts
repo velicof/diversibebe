@@ -8,6 +8,7 @@ import {
 import { journeyStage, type Journey } from "../growth/journey";
 import { AUTH_SIGNED_OUT_KEY, AUTH_STORAGE_KEY, getV2Repository } from "./client";
 import type { CloudState, V2Repository } from "./repository";
+import { accountCopy } from "../content/copy";
 
 type Snapshot = CloudState & {
   available: boolean;
@@ -103,8 +104,7 @@ export const cloudStore = {
       repository = getV2Repository();
     } catch {
       update({
-        error:
-          "Configurația de test nu este validă. Conexiunea a fost blocată.",
+        error: accountCopy.configError,
       });
       return;
     }
@@ -144,9 +144,7 @@ export const cloudStore = {
       password,
     });
     if (error)
-      throw new Error(
-        "Conectarea nu a reușit. Verifică datele contului de test și conexiunea.",
-      );
+      throw new Error(accountCopy.loginFailed);
     try { window.localStorage.removeItem(AUTH_SIGNED_OUT_KEY); } catch { /* Storage unavailable. */ }
     locallySignedOut = false;
     await repository.client.auth.startAutoRefresh();
@@ -158,11 +156,31 @@ export const cloudStore = {
     authenticating=true;
     try {
     const {data,error}=await repository.client.auth.signUp({email,password});
-    if(error || !data.session)throw new Error("Contul nu a putut fi creat. Verifică adresa sintetică și parola (minimum 8 caractere).");
+    if(error || !data.session)throw new Error(accountCopy.signupFailed);
     try { window.localStorage.removeItem(AUTH_SIGNED_OUT_KEY); } catch { /* Storage unavailable. */ }
     locallySignedOut=false;
     await connect();
     if(!snapshot.connected)throw new Error("Contul a fost creat, dar datele nu s-au încărcat. Reîncearcă autentificarea.");
+    if(!snapshot.children.length)await this.createChild("Profilul meu",pending ? journeyStage(pending) : 0);
+    } finally { authenticating=false; }
+  },
+  async loginWithGoogle() {
+    if(!repository)throw new Error(accountCopy.unavailable);
+    // PKCE: the code verifier stays in this browser; /v2/cont completes the sign-in on return.
+    const {error}=await repository.client.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin+"/v2/cont"}});
+    if(error)throw new Error(accountCopy.googleFailed);
+  },
+  async completeOAuth(code: string, pending: Journey | null) {
+    if(!repository)throw new Error(accountCopy.unavailable);
+    authenticating=true;
+    try {
+    const {error}=await repository.client.auth.exchangeCodeForSession(code);
+    if(error)throw new Error(accountCopy.googleFailed);
+    try { window.localStorage.removeItem(AUTH_SIGNED_OUT_KEY); } catch { /* Storage unavailable. */ }
+    locallySignedOut=false;
+    await repository.client.auth.startAutoRefresh();
+    await connect();
+    if(!snapshot.connected)throw new Error(accountCopy.googleFailed);
     if(!snapshot.children.length)await this.createChild("Profilul meu",pending ? journeyStage(pending) : 0);
     } finally { authenticating=false; }
   },

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LogOut, ShieldCheck } from "lucide-react";
 import { nativeAuth } from "./client";
@@ -11,6 +11,7 @@ import { usePreview } from "../Provider";
 import { previewStore } from "../store";
 import { LoadingState, PageHeading } from "../components";
 import { emitGrowth, journeyStore } from "../growth/browser";
+import { accountCopy, realAccounts } from "../content/copy";
 
 export function Account() {
   const { cloud, announce } = usePreview();
@@ -24,6 +25,29 @@ export function Account() {
   const [busy, setBusy] = useState(false);
   const [childLabel, setChildLabel] = useState("");
   const [imported, setImported] = useState(false);
+  const oauthStarted = useRef(false);
+  useEffect(() => {
+    // Return from Google (PKCE): exchange the one-time code in the browser that started the sign-in.
+    if (!realAccounts || oauthStarted.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (!code && !params.get("error")) return;
+    oauthStarted.current = true;
+    window.history.replaceState(null, "", "/v2/cont");
+    const pending = journeyStore.peekHandoff();
+    void Promise.resolve()
+      .then(async () => {
+        if (!code) throw new Error(accountCopy.googleFailed);
+        setBusy(true);
+        await cloudStore.completeOAuth(code, pending);
+        await transferPending();
+        emitGrowth("login_completed");
+        router.push(pending ? "/v2/onboarding?rezultat=1" : "/v2/azi");
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : accountCopy.googleFailed))
+      .finally(() => setBusy(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   async function transferPending(){
     const pending=journeyStore.peekHandoff();
     if(!nativeAuth || !pending)return;
@@ -37,13 +61,12 @@ export function Account() {
   if (cloud.connected)
     return (
       <>
-        <PageHeading eyebrow="MEDIU LOCAL IZOLAT" title="Contul tău de test">
-          Date persistente pe serverul local. Fără legătură cu utilizatorii din
-          producție.
+        <PageHeading eyebrow={accountCopy.connectedEyebrow} title={accountCopy.connectedTitle}>
+          {accountCopy.connectedIntro}
         </PageHeading>
         <section className="v2-profile-section v2-account-panel">
           <ShieldCheck size={24} />
-          <h2>Conectat în mediul de test</h2>
+          <h2>{accountCopy.connectedStatus}</h2>
           <p>{cloud.email}</p>
           <label htmlFor="v2-child">Profilul activ</label>
           <select
@@ -143,7 +166,7 @@ export function Account() {
                 setEmail("");
                 setChildLabel("");
                 setError("");
-                announce(serverConfirmed ? "Ai ieșit din contul de test." : "Ai ieșit pe acest dispozitiv. Revocarea sesiunii pe server nu a putut fi confirmată.");
+                announce(serverConfirmed ? accountCopy.signedOut : "Ai ieșit pe acest dispozitiv. Revocarea sesiunii pe server nu a putut fi confirmată.");
               }}
             >
               <LogOut size={16} />
@@ -156,14 +179,13 @@ export function Account() {
   return (
     <>
       <PageHeading
-        eyebrow="DOAR CONTURI SINTETICE"
-        title="Conectează contul de test"
+        eyebrow={accountCopy.loginEyebrow}
+        title={accountCopy.loginTitle}
       >
-        Conexiunea acceptă exclusiv un server local izolat. Nu folosi datele
-        unui cont real.
+        {accountCopy.loginIntro}
         {process.env.NEXT_PUBLIC_V2_BACKEND_KIND === "contract-fixture" && " Acest test folosește PostgreSQL și o API compatibilă Supabase, cu autentificare sintetică. Serviciile Supabase complete nu sunt încă validate."}
       </PageHeading>
-      {nativeAuth&&<div className="v2-action-row" aria-label="Operații cont"><button className="v2-button v2-button-secondary" aria-pressed={mode==="login"} onClick={()=>{setMode("login");setError("");setNotice("");}}>Am deja cont</button><button className="v2-button v2-button-secondary" aria-pressed={mode==="signup"} onClick={()=>{setMode("signup");setError("");setNotice("");}}>Creează un cont de test</button></div>}
+      {nativeAuth&&<div className="v2-action-row" aria-label="Operații cont"><button className="v2-button v2-button-secondary" aria-pressed={mode==="login"} onClick={()=>{setMode("login");setError("");setNotice("");}}>Am deja cont</button><button className="v2-button v2-button-secondary" aria-pressed={mode==="signup"} onClick={()=>{setMode("signup");setError("");setNotice("");}}>{accountCopy.signupButton}</button></div>}
       <form
         className="v2-profile-section v2-account-panel"
         onSubmit={async (e) => {
@@ -173,14 +195,14 @@ export function Account() {
             !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
             (mode!=="recover" && password.length < (mode==="signup"?8:6))
           ) {
-            setError("Completează un email valid și parola contului de test.");
+            setError(accountCopy.invalidForm);
             return;
           }
-          if(nativeAuth&&!/^[^\s@]+@example\.test$/i.test(email)){setError("Folosește o adresă sintetică @example.test, de exemplu demo-nou@example.test.");return;}
+          if(nativeAuth&&!realAccounts&&!/^[^\s@]+@example\.test$/i.test(email)){setError("Folosește o adresă sintetică @example.test, de exemplu demo-nou@example.test.");return;}
           setBusy(true);
           try {
             if(mode==="recover"){
-              await cloudStore.recover(email);setNotice("Dacă adresa există, linkul apare în cutia poștală locală. Deschide linkul în acest browser.");setPassword("");return;
+              await cloudStore.recover(email);setNotice(accountCopy.recoverNotice);setPassword("");return;
             }
             emitGrowth(mode==="signup"?"signup_started":"login_started");
             const pending=journeyStore.peekHandoff();
@@ -198,7 +220,7 @@ export function Account() {
           }
         }}
       >
-        <label htmlFor="v2-email">Email de test</label>
+        <label htmlFor="v2-email">{accountCopy.emailLabel}</label>
         <input
           id="v2-email"
           type="email"
@@ -208,7 +230,7 @@ export function Account() {
           required
           maxLength={254}
         />
-        {mode!=="recover"&&<><label htmlFor="v2-password">Parola contului de test</label>
+        {mode!=="recover"&&<><label htmlFor="v2-password">{accountCopy.passwordLabel}</label>
         <input
           id="v2-password"
           type="password"
@@ -220,7 +242,7 @@ export function Account() {
           maxLength={200}
         />
         </>}
-        {notice&&<p role="status">{notice} <a href="http://127.0.0.1:54324" target="_blank" rel="noreferrer">Deschide emailurile locale</a></p>}
+        {notice&&<p role="status">{notice}{!realAccounts&&<> <a href="http://127.0.0.1:54324" target="_blank" rel="noreferrer">Deschide emailurile locale</a></>}</p>}
         {error && (
           <p className="v2-alert" role="alert">
             {error}
@@ -228,21 +250,20 @@ export function Account() {
         )}
         {!cloud.available && (
           <p className="v2-field-note">
-            Conectarea este indisponibilă până la configurarea mediului local.
-            Explorarea fără cont rămâne funcțională.
+            {accountCopy.unavailable}
           </p>
         )}
         <button
           className="v2-button v2-button-primary v2-full-width"
           disabled={busy || !cloud.available}
         >
-          {busy ? "Se procesează…" : mode==="signup"?"Creează și salvează în cont":mode==="recover"?"Trimite linkul de recuperare":"Conectare în test"}
+          {busy ? "Se procesează…" : mode==="signup"?"Creează și salvează în cont":mode==="recover"?"Trimite linkul de recuperare":accountCopy.submitLogin}
           <ArrowRight size={17} />
         </button>
         {nativeAuth&&<button type="button" className="v2-text-button" onClick={()=>{setMode("recover");setPassword("");setError("");}}>Am uitat parola</button>}
+        {realAccounts&&mode!=="recover"&&<button type="button" className="v2-button v2-button-secondary v2-full-width" disabled={busy||!cloud.available} onClick={async()=>{setError("");setBusy(true);try{emitGrowth("login_started");await cloudStore.loginWithGoogle();}catch(e){setError(e instanceof Error?e.message:accountCopy.googleFailed);setBusy(false);}}}>{accountCopy.googleButton}</button>}
         <p className="v2-field-note">
-          Parola nu este salvată de aplicație. Sesiunea de autentificare este
-          păstrată separat de datele demonstrative.
+          {accountCopy.passwordNote}
         </p>
         <Link href="/v2/idei" className="v2-text-link">
           Explorează fără cont

@@ -8,13 +8,13 @@ Efort = ore de lucru efectiv (agent sau om). Cost = cheltuieli externe. „Aprob
 |---|---|---|---|---|---|---|
 | 1 | Contractarea unui pediatru/dietetician pentru lotul 1 (26 rețete, `REVIEW-PACKAGE.md`) | fondator | 1–2 h coordonare + 10–13 h specialist | ~1.500–3.500 lei (de cerut oferte) | da (cost) | G6 |
 | 2 | Transcrierea reviziei în `editorial.ts` (cu `contentHash`), aplicarea corecturilor, retrimiterea celor „modificări” | agent | 4–6 h | 0 | nu | G6 |
-| 3 | Staging: pauzarea `Nuo` + proiect Free `diversibebe-staging` (sau Supabase Pro) | fondator + agent | 2–3 h | 0 (A) / ~25 USD/lună (B) | da | G4, G5 |
-| 4 | Migrații pe staging + E2E pe Vercel Preview cu env de Preview spre staging | agent | 4–6 h | 0 | da (env Vercel) | G3, G4, G5 |
+| 3 | ~~Staging online~~ — înlocuit (decizia „un singur proiect”, 3 nov.) de repetiția locală pe stack real (**făcut**, 27/27) + canary | — | — | 0 | — | G4, G5 |
+| 4 | Vercel Preview pentru `release/v2-rc` în modul vizitator (fără chei Supabase V2 în Preview): build pe Vercel + flux vizitator | agent | 1 h | 0 | da (push) | G3 |
 | 5 | Supabase Auth producție: SMTP Resend + Redirect URLs `/v2/**` | fondator + agent | 1–2 h | 0 | da | G4 |
 | 6 | Backup logic al producției înainte de migrații | fondator (parola DB) + agent | 1 h | 0 | da | G5 |
 | 7 | Publicarea patch-ului V1 `hotfix/v1-v2-schema-compat` (`b12b652`) → verificare live | agent | 1–2 h | 0 | da (push + merge) | G12 |
 | 8 | Migrațiile V2 în producție + advisors + preflight | agent | 2 h | 0 | da | G1, G5 |
-| 9 | Variabile Production + coduri de invitație + merge `release/v2-rc` | agent | 2 h | 0 | da | G13 |
+| 9 | Variabile Production + coduri de invitație + merge `release/v2-rc` → canary 48 h cu contul fondatorului (`MIGRATION-V1-V2.md` §5) | agent + fondator | 2 h + 48 h | 0 | da | G3, G4, G13 |
 | 10 | Test pe telefon fizic (iOS + Android) cu checklist G8 | fondator | 1–2 h | 0 | nu | G8 |
 | 11 | Mențiune analytics în politica de confidențialitate | fondator | 1 h | 0 | da (conținut public) | G9 |
 
@@ -30,7 +30,9 @@ Efort = ore de lucru efectiv (agent sau om). Cost = cheltuieli externe. „Aprob
 | 17 | Redirect apex 307 → 308; variabilele secrete marcate Sensitive | 0,5 h | 0 | G1 |
 | 18 | Alias ASCII pentru `omletă-legume-8` (păstrând favoritele V1) | 1 h | 0 | — |
 | 19 | „Debifarea” în V2 a unui aliment înregistrat în V1 fără copil (familie cu un copil) nu îl ascunde — adopție la salvarea profilului | 2 h | 0 | — |
-| 20 | Pass de copy pentru modul live în ecranele cont/ștergere date („versiune demonstrativă”) | 1 h | 0 | G7 |
+| 20 | ~~Pass de copy pentru conturi reale~~ — **făcut** (`accountCopy`) | — | 0 | G7 |
+| 21 | Jurnalul V1 (1.176 intrări, 95 familii) vizibil și în V2 (citire) | 3–4 h | 0 | — |
+| 22 | V1: păstrarea copilului la înregistrare chiar dacă „Confirm email” ar fi activat (precondiție pentru activarea confirmării) | 2 h | 0 | — |
 
 ## P2 — după lansare
 
@@ -43,4 +45,4 @@ Planificator cu mai multe mese/zi, export PDF, partajarea listei, grupare pe rai
 | Timp calendaristic | 2 săptămâni | 3–4 săptămâni (dominat de revizia clinică) |
 | Efort agent | ~20 h | ~30 h |
 | Efort fondator | ~8 h | ~12 h |
-| Cost extern | ~1.500 lei (revizie) | ~3.500 lei + 25 USD/lună dacă se alege Supabase Pro |
+| Cost extern | ~1.500 lei (revizie) | ~3.500 lei (proiect Supabase comun, Free: 0 lei infrastructură până la beta) |

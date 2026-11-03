@@ -1,6 +1,6 @@
 "use client";
 import { createClient } from "@supabase/supabase-js";
-import { assertIsolatedSupabaseUrl } from "./guard";
+import { assertAllowedSupabaseUrl } from "./guard";
 import { V2Repository } from "./repository";
 export const nativeAuth = process.env.NEXT_PUBLIC_V2_BACKEND_KIND === "supabase-native";
 let repository: V2Repository | null = null;
@@ -10,7 +10,7 @@ export function getV2Repository(): V2Repository | null {
   const url = process.env.NEXT_PUBLIC_V2_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_V2_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
-  assertIsolatedSupabaseUrl(url);
+  assertAllowedSupabaseUrl(url);
   if (!repository) {
     // A navigation may abort network logout. The local intent must survive it.
     if(typeof window!=="undefined")try{if(localStorage.getItem(AUTH_SIGNED_OUT_KEY)==="1"){

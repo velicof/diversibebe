@@ -1,15 +1,19 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { INVITE_COOKIE, inviteAccepted, inviteHashes } from "@/lib/security/invite";
+import { INVITE_COOKIE, inviteHashes, v2AccessAllowed } from "@/lib/security/invite";
 
 export async function proxy(request: NextRequest) {
-  // V2 uses its own isolated test authentication; never the legacy production session.
-  // Its layout is disabled in production unless explicitly enabled for a preview.
+  // V2 keeps its own browser session (separate storage key) on the Supabase project shared with V1;
+  // the V1 cookie session is not refreshed here. Disabled in production unless DIVERSIBEBE_V2_PREVIEW=1.
   if (request.nextUrl.pathname === "/v2" || request.nextUrl.pathname.startsWith("/v2/")) {
     if (process.env.NODE_ENV === "production" && process.env.DIVERSIBEBE_V2_PREVIEW !== "1") return new NextResponse(null, { status: 404 });
-    const hashes = inviteHashes();
-    if (hashes.length && !(await inviteAccepted(request.cookies.get(INVITE_COOKIE)?.value, hashes)))
-      return NextResponse.redirect(new URL("/acces-beta", request.url));
+    const allowed = await v2AccessAllowed({
+      production: process.env.NODE_ENV === "production",
+      access: process.env.V2_ACCESS,
+      hashes: inviteHashes(),
+      code: request.cookies.get(INVITE_COOKIE)?.value,
+    });
+    if (!allowed) return NextResponse.redirect(new URL("/acces-beta", request.url));
     return NextResponse.next();
   }
   let supabaseResponse = NextResponse.next({ request });

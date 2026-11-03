@@ -1,6 +1,259 @@
 {
-  "source": "Supabase project smyimgvxlggggjeoajdo (production), information_schema read-only, 2026-11-03. Columns only, no rows.",
-  "columns": {"allergy_records":["baby_id:uuid","food_id:text","food_name:text!","id:uuid!","notes:text","recorded_at:timestamptz","severity:text","user_id:uuid"],"babies":["avatar_url:text","birthdate:date","created_at:timestamptz","gender:text","id:uuid!","name:text!","updated_at:timestamptz","user_id:uuid","weight_kg:numeric"],"cooked_recipes":["cooked_at:timestamptz","id:uuid!","recipe_id:text!","user_id:uuid"],"custom_foods":["created_at:timestamptz","emoji:text!","id:text!","name:text!","user_id:uuid"],"custom_recipes":["created_at:timestamptz!","id:text!","ingredients:jsonb!","name:text!","user_id:uuid!"],"favorite_recipes":["id:uuid!","recipe_id:text!","saved_at:timestamptz","user_id:uuid"],"feedback":["created_at:timestamptz","id:uuid!","question_1:text","question_2:text","question_3:text","user_id:uuid"],"food_journal":["baby_id:uuid","baby_mood:text","custom_recipe_id:text","food_id:text!","food_name:text!","id:uuid!","logged_at:timestamptz","meal_type:text","notes:text","portion:text","quantity_grams:int4","reaction:text","symptoms:_text","user_id:uuid"],"login_events":["id:uuid!","logged_in_at:timestamptz","platform:text","user_id:uuid"],"profiles":["created_at:timestamptz","email:text!","id:uuid!","image:text","name:text"],"tried_foods":["baby_id:uuid","first_tried_at:timestamptz","food_id:text!","food_name:text!","id:uuid!","try_count:int4","user_id:uuid"]},
-  "uniqueConstraints": ["cooked_recipes(user_id,recipe_id)","favorite_recipes(user_id,recipe_id)","tried_foods(user_id,food_id)","profiles(email)"],
-  "migrationsApplied": ["20261102202323_close_user_login_summary"]
+ "source": "Supabase project smyimgvxlggggjeoajdo (production), PostgreSQL 17.6, pg_catalog/information_schema read-only, 2026-11-03. Schema metadata only, no rows.",
+ "columns": {
+  "allergy_records": [
+   "baby_id:uuid",
+   "food_id:text",
+   "food_name:text!",
+   "id:uuid!",
+   "notes:text",
+   "recorded_at:timestamptz",
+   "severity:text",
+   "user_id:uuid"
+  ],
+  "babies": [
+   "avatar_url:text",
+   "birthdate:date",
+   "created_at:timestamptz",
+   "gender:text",
+   "id:uuid!",
+   "name:text!",
+   "updated_at:timestamptz",
+   "user_id:uuid",
+   "weight_kg:numeric"
+  ],
+  "cooked_recipes": [
+   "cooked_at:timestamptz",
+   "id:uuid!",
+   "recipe_id:text!",
+   "user_id:uuid"
+  ],
+  "custom_foods": [
+   "created_at:timestamptz",
+   "emoji:text!",
+   "id:text!",
+   "name:text!",
+   "user_id:uuid"
+  ],
+  "custom_recipes": [
+   "created_at:timestamptz!",
+   "id:text!",
+   "ingredients:jsonb!",
+   "name:text!",
+   "user_id:uuid!"
+  ],
+  "favorite_recipes": [
+   "id:uuid!",
+   "recipe_id:text!",
+   "saved_at:timestamptz",
+   "user_id:uuid"
+  ],
+  "feedback": [
+   "created_at:timestamptz",
+   "id:uuid!",
+   "question_1:text",
+   "question_2:text",
+   "question_3:text",
+   "user_id:uuid"
+  ],
+  "food_journal": [
+   "baby_id:uuid",
+   "baby_mood:text",
+   "custom_recipe_id:text",
+   "food_id:text!",
+   "food_name:text!",
+   "id:uuid!",
+   "logged_at:timestamptz",
+   "meal_type:text",
+   "notes:text",
+   "portion:text",
+   "quantity_grams:int4",
+   "reaction:text",
+   "symptoms:_text",
+   "user_id:uuid"
+  ],
+  "login_events": [
+   "id:uuid!",
+   "logged_in_at:timestamptz",
+   "platform:text",
+   "user_id:uuid"
+  ],
+  "profiles": [
+   "created_at:timestamptz",
+   "email:text!",
+   "id:uuid!",
+   "image:text",
+   "name:text"
+  ],
+  "tried_foods": [
+   "baby_id:uuid",
+   "first_tried_at:timestamptz",
+   "food_id:text!",
+   "food_name:text!",
+   "id:uuid!",
+   "try_count:int4",
+   "user_id:uuid"
+  ]
+ },
+ "constraints": [
+  "allergy_records|allergy_records_baby_id_fkey|FOREIGN KEY (baby_id) REFERENCES babies(id) ON DELETE CASCADE",
+  "allergy_records|allergy_records_pkey|PRIMARY KEY (id)",
+  "allergy_records|allergy_records_severity_check|CHECK ((severity = ANY (ARRAY['usoara'::text, 'moderata'::text, 'severa'::text])))",
+  "allergy_records|allergy_records_user_id_fkey|FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE",
+  "babies|babies_gender_check|CHECK ((gender = ANY (ARRAY['boy'::text, 'girl'::text])))",
+  "babies|babies_pkey|PRIMARY KEY (id)",
+  "babies|babies_user_id_fkey|FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE",
+  "cooked_recipes|cooked_recipes_pkey|PRIMARY KEY (id)",
+  "cooked_recipes|cooked_recipes_user_id_fkey|FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE",
+  "cooked_recipes|cooked_recipes_user_recipe_unique|UNIQUE (user_id, recipe_id)",
+  "custom_foods|custom_foods_pkey|PRIMARY KEY (id)",
+  "custom_foods|custom_foods_user_id_fkey|FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+  "custom_recipes|custom_recipes_pkey|PRIMARY KEY (id)",
+  "custom_recipes|custom_recipes_user_id_fkey|FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+  "favorite_recipes|favorite_recipes_pkey|PRIMARY KEY (id)",
+  "favorite_recipes|favorite_recipes_user_id_fkey|FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE",
+  "favorite_recipes|favorite_recipes_user_id_recipe_id_key|UNIQUE (user_id, recipe_id)",
+  "feedback|feedback_pkey|PRIMARY KEY (id)",
+  "feedback|feedback_user_id_fkey|FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+  "food_journal|food_journal_baby_id_fkey|FOREIGN KEY (baby_id) REFERENCES babies(id) ON DELETE CASCADE",
+  "food_journal|food_journal_custom_recipe_id_fkey|FOREIGN KEY (custom_recipe_id) REFERENCES custom_recipes(id) ON DELETE SET NULL",
+  "food_journal|food_journal_meal_type_check|CHECK ((meal_type = ANY (ARRAY['mic-dejun'::text, 'pranz'::text, 'cina'::text, 'gustare'::text])))",
+  "food_journal|food_journal_pkey|PRIMARY KEY (id)",
+  "food_journal|food_journal_reaction_check|CHECK ((reaction = ANY (ARRAY['pozitiv'::text, 'neutru'::text, 'negativ'::text, 'alergie'::text, 'loved'::text, 'ok'::text, 'disliked'::text, 'refused'::text])))",
+  "food_journal|food_journal_user_id_fkey|FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE",
+  "login_events|login_events_pkey|PRIMARY KEY (id)",
+  "login_events|login_events_user_id_fkey|FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE",
+  "profiles|profiles_email_key|UNIQUE (email)",
+  "profiles|profiles_pkey|PRIMARY KEY (id)",
+  "tried_foods|tried_foods_baby_id_fkey|FOREIGN KEY (baby_id) REFERENCES babies(id) ON DELETE CASCADE",
+  "tried_foods|tried_foods_pkey|PRIMARY KEY (id)",
+  "tried_foods|tried_foods_user_id_fkey|FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE",
+  "tried_foods|tried_foods_user_id_food_id_key|UNIQUE (user_id, food_id)"
+ ],
+ "indexes": [
+  "allergy_records|allergy_records_pkey|CREATE UNIQUE INDEX allergy_records_pkey ON public.allergy_records USING btree (id)",
+  "babies|babies_pkey|CREATE UNIQUE INDEX babies_pkey ON public.babies USING btree (id)",
+  "cooked_recipes|cooked_recipes_pkey|CREATE UNIQUE INDEX cooked_recipes_pkey ON public.cooked_recipes USING btree (id)",
+  "cooked_recipes|cooked_recipes_user_recipe_unique|CREATE UNIQUE INDEX cooked_recipes_user_recipe_unique ON public.cooked_recipes USING btree (user_id, recipe_id)",
+  "custom_foods|custom_foods_pkey|CREATE UNIQUE INDEX custom_foods_pkey ON public.custom_foods USING btree (id)",
+  "custom_recipes|custom_recipes_created_at_idx|CREATE INDEX custom_recipes_created_at_idx ON public.custom_recipes USING btree (created_at DESC)",
+  "custom_recipes|custom_recipes_pkey|CREATE UNIQUE INDEX custom_recipes_pkey ON public.custom_recipes USING btree (id)",
+  "custom_recipes|custom_recipes_user_id_idx|CREATE INDEX custom_recipes_user_id_idx ON public.custom_recipes USING btree (user_id)",
+  "favorite_recipes|favorite_recipes_pkey|CREATE UNIQUE INDEX favorite_recipes_pkey ON public.favorite_recipes USING btree (id)",
+  "favorite_recipes|favorite_recipes_user_id_recipe_id_key|CREATE UNIQUE INDEX favorite_recipes_user_id_recipe_id_key ON public.favorite_recipes USING btree (user_id, recipe_id)",
+  "feedback|feedback_pkey|CREATE UNIQUE INDEX feedback_pkey ON public.feedback USING btree (id)",
+  "food_journal|food_journal_custom_recipe_id_idx|CREATE INDEX food_journal_custom_recipe_id_idx ON public.food_journal USING btree (custom_recipe_id) WHERE (custom_recipe_id IS NOT NULL)",
+  "food_journal|food_journal_pkey|CREATE UNIQUE INDEX food_journal_pkey ON public.food_journal USING btree (id)",
+  "login_events|login_events_pkey|CREATE UNIQUE INDEX login_events_pkey ON public.login_events USING btree (id)",
+  "profiles|profiles_email_key|CREATE UNIQUE INDEX profiles_email_key ON public.profiles USING btree (email)",
+  "profiles|profiles_pkey|CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)",
+  "tried_foods|tried_foods_pkey|CREATE UNIQUE INDEX tried_foods_pkey ON public.tried_foods USING btree (id)",
+  "tried_foods|tried_foods_user_id_food_id_key|CREATE UNIQUE INDEX tried_foods_user_id_food_id_key ON public.tried_foods USING btree (user_id, food_id)"
+ ],
+ "policies": [
+  "allergy_records|own_allergies|PERMISSIVE|public|ALL|(auth.uid() = user_id)|",
+  "babies|own_babies|PERMISSIVE|public|ALL|(auth.uid() = user_id)|",
+  "cooked_recipes|own_cooked|PERMISSIVE|public|ALL|(auth.uid() = user_id)|",
+  "custom_foods|Users manage own custom foods|PERMISSIVE|public|ALL|(auth.uid() = user_id)|(auth.uid() = user_id)",
+  "custom_recipes|Users can manage own custom recipes|PERMISSIVE|public|ALL|(auth.uid() = user_id)|(auth.uid() = user_id)",
+  "favorite_recipes|own_favorites|PERMISSIVE|public|ALL|(auth.uid() = user_id)|",
+  "feedback|Users can insert own feedback|PERMISSIVE|public|INSERT||(auth.uid() = user_id)",
+  "feedback|Users can view own feedback|PERMISSIVE|public|SELECT|(auth.uid() = user_id)|",
+  "food_journal|own_journal|PERMISSIVE|public|ALL|(auth.uid() = user_id)|",
+  "login_events|Users can insert own login events|PERMISSIVE|authenticated|INSERT||(auth.uid() = user_id)",
+  "login_events|Users can view own login events|PERMISSIVE|authenticated|SELECT|(auth.uid() = user_id)|",
+  "profiles|own_profile|PERMISSIVE|public|ALL|(auth.uid() = id)|",
+  "tried_foods|own_tried_foods|PERMISSIVE|public|ALL|(auth.uid() = user_id)|"
+ ],
+ "triggers": [
+  "auth.users|on_auth_user_created|AFTER INSERT|EXECUTE FUNCTION handle_new_user()"
+ ],
+ "functions": [
+  "handle_new_user()|definer=true|config="
+ ],
+ "rls": [
+  "allergy_records|rls=true|force=false",
+  "babies|rls=true|force=false",
+  "cooked_recipes|rls=true|force=false",
+  "custom_foods|rls=true|force=false",
+  "custom_recipes|rls=true|force=false",
+  "favorite_recipes|rls=true|force=false",
+  "feedback|rls=true|force=false",
+  "food_journal|rls=true|force=false",
+  "login_events|rls=true|force=false",
+  "profiles|rls=true|force=false",
+  "tried_foods|rls=true|force=false"
+ ],
+ "grants": [
+  "allergy_records|anon|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "allergy_records|authenticated|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "babies|anon|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "babies|authenticated|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "cooked_recipes|anon|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "cooked_recipes|authenticated|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "custom_foods|anon|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "custom_foods|authenticated|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "custom_recipes|anon|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "custom_recipes|authenticated|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "favorite_recipes|anon|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "favorite_recipes|authenticated|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "feedback|anon|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "feedback|authenticated|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "food_journal|anon|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "food_journal|authenticated|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "login_events|anon|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "login_events|authenticated|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "profiles|anon|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "profiles|authenticated|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "tried_foods|anon|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE",
+  "tried_foods|authenticated|DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+ ],
+ "views": [
+  "user_login_summary"
+ ],
+ "aggregates": {
+  "note": "Counts only (read-only, 2026-11-03); shape of the synthetic rehearsal dataset. No row was read.",
+  "auth_users": 435,
+  "profiles": 435,
+  "children_per_family": {
+   "0": 11,
+   "1": 409,
+   "2": 14,
+   "3": 1
+  },
+  "tried_foods": 4695,
+  "tried_foods_unassigned": 2967,
+  "tried_foods_unassigned_by_children": {
+   "0": 39,
+   "1": 2828,
+   "2": 100,
+   "3": 0
+  },
+  "tried_foods_per_family": {
+   "0": 191,
+   "1-5": 58,
+   "6-20": 88,
+   "21-60": 94,
+   "61+": 4
+  },
+  "tried_foods_max": 85,
+  "food_journal": 1176,
+  "food_journal_unassigned": 1176,
+  "food_journal_families": 95,
+  "food_journal_max": 410,
+  "food_journal_custom_recipe": 251,
+  "allergy_records": 27,
+  "allergy_unassigned": 27,
+  "favorite_recipes": 38,
+  "favorite_families": 15,
+  "cooked_recipes": 28,
+  "cooked_families": 10,
+  "custom_recipes": 150,
+  "custom_foods": 81,
+  "login_events": 2652,
+  "feedback": 5,
+  "non_ascii_recipe_ids": 0,
+  "database_size": "17 MB",
+  "preflight_anomalies": 0
+ }
 }

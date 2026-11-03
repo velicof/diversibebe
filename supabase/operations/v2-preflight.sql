@@ -1,4 +1,5 @@
--- READ ONLY. Aggregate diagnostics, never export family records.
+-- READ ONLY. Aggregate diagnostics, never export family records. Every anomaly must be 0;
+-- keep the row counts: v2-postflight.sql must show the same numbers after the migrations.
 BEGIN TRANSACTION READ ONLY;
 SELECT table_name,column_name,data_type,is_nullable
 FROM information_schema.columns WHERE table_schema='public'
@@ -11,4 +12,9 @@ UNION ALL SELECT 'allergy_child_owner',count(*) FROM public.allergy_records r WH
 UNION ALL SELECT 'duplicate_child_food',count(*) FROM(SELECT baby_id,food_id FROM public.tried_foods WHERE baby_id IS NOT NULL GROUP BY baby_id,food_id HAVING count(*)>1) duplicates
 UNION ALL SELECT 'custom_recipe_owner',count(*) FROM public.food_journal r WHERE r.custom_recipe_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.custom_recipes c WHERE c.id=r.custom_recipe_id AND c.user_id=r.user_id);
 SELECT grantee,privilege_type FROM information_schema.role_table_grants WHERE table_schema='public' AND table_name='user_login_summary';
+SELECT 'auth.users' t,count(*) n FROM auth.users UNION ALL SELECT 'profiles',count(*) FROM public.profiles
+UNION ALL SELECT 'babies',count(*) FROM public.babies UNION ALL SELECT 'tried_foods',count(*) FROM public.tried_foods
+UNION ALL SELECT 'food_journal',count(*) FROM public.food_journal UNION ALL SELECT 'allergy_records',count(*) FROM public.allergy_records
+UNION ALL SELECT 'favorite_recipes',count(*) FROM public.favorite_recipes UNION ALL SELECT 'cooked_recipes',count(*) FROM public.cooked_recipes
+UNION ALL SELECT 'custom_recipes',count(*) FROM public.custom_recipes UNION ALL SELECT 'custom_foods',count(*) FROM public.custom_foods;
 ROLLBACK;

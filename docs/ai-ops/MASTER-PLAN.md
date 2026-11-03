@@ -26,7 +26,8 @@ Punct de intrare pentru orice agent (Claude, Codex, ChatGPT, Gemini) care contin
 | Fișier | Conținut |
 |---|---|
 | `PRD.md` | produsul de lansare, inclus/amânat, etape, stări de eroare, Free/Premium, criterii |
-| `ARCHITECTURE.md` | producție, compatibilitate V1/V2, migrații, staging, beta, auth, costuri |
+| `MIGRATION-V1-V2.md` | **un singur proiect Supabase**: ce știm despre producție, repetiția migrării, lansare graduală, canary, rollback |
+| `ARCHITECTURE.md` | producție, compatibilitate V1/V2, migrații, beta, auth, costuri (§4 staging: istoric) |
 | `DESIGN-SYSTEM.md` | tokeni, reguli, ecrane, corecturi din capturi |
 | `QUALITY-GATES.md` | G1–G13, comenzi de verificare |
 | `GEMINI-HANDOFF.md` | ce primește Argon / Images și cum se integrează răspunsurile |
@@ -43,8 +44,13 @@ Punct de intrare pentru orice agent (Claude, Codex, ChatGPT, Gemini) care contin
 | Revizie umană obligatorie, AI respins, revizie legată de conținut | `review.ts` (`hasClinicalReview`), `content/editorial.ts` (`recipeFingerprint`) | idem |
 | Lista unică a migrațiilor de lansare | `supabase/v2-release.cjs` | toate testele DB |
 | Compatibilitate V1 ↔ V2 | `tests/v1-compat.test.cjs`, migrarea `v2_legacy_history` | idem |
-| Schema de test = producția | `tests/fixtures/production-metadata.json` | `tests/schema-drift.test.cjs` |
-| Beta cu invitație | `src/lib/security/invite.ts`, `src/proxy.ts`, `/acces-beta` | `tests/invite.test.cjs` |
+| Schema de test = producția (8 categorii) | `tests/fixtures/production-metadata.json` | `tests/schema-drift.test.cjs` |
+| Repetiția migrării (date sintetice cu forma producției) | `tests/fixtures/synthetic-production.cjs`, `scripts/migration-rehearsal.cjs` | `tests/migration-rehearsal.test.cjs` |
+| Preflight / postflight / rollback L1 | `supabase/operations/v2-{preflight,postflight,disable}.sql` | idem |
+| Backup criptat + verificare prin restaurare | `scripts/prod-backup.cjs` | rulat local pe date sintetice |
+| V2 pe proiectul V1, texte pentru conturi reale, Google | `src/features/v2/cloud/guard.ts`, `content/copy.ts` (`accountCopy`) | `tests/release-gates.test.cjs` |
+| Robots: V1 rămâne indexabil cu V2 activ | `src/app/robots.ts` | idem |
+| Beta cu invitație, fail-closed în producție | `src/lib/security/invite.ts` (`v2AccessAllowed`), `src/proxy.ts`, `/acces-beta` | `tests/invite.test.cjs`, `release-gates` |
 | Import fotografii în carantină | `scripts/photo-import.cjs`, `content/gemini-import/` | refuz fără aprobare (verificat manual) |
 | Generare lot editorial + manifest | `scripts/editorial-batch.cjs` | determinist; păstrează deciziile umane |
 
