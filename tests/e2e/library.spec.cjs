@@ -64,7 +64,11 @@ test("the photo gallery shows the candidates locally and approval needs the full
   const items = page.locator(".v2-photo-item");
   await expect(items).toHaveCount(3);
   const first = items.first();
-  await expect(first.locator('img[src*="/v2/recipes/"]')).toBeVisible();
+  // Candidates come only from the review-gated route, never from public/.
+  const candidate = first.locator('img[src*="/v2/revizie/foto/"]').first();
+  await expect(candidate).toBeVisible();
+  await expect.poll(() => candidate.evaluate((img) => img.complete && img.naturalWidth > 0)).toBe(true);
+  await expect(page.locator('img[src*="/v2/recipes/"]')).toHaveCount(0);
   const approve = first.getByRole("button", { name: "Aprob", exact: true });
   await expect(approve).toBeDisabled();
   for (const box of await first.locator(".v2-photo-checklist input").all()) await box.check();

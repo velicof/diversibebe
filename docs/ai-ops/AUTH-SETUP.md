@@ -2,6 +2,14 @@
 
 Le faci tu în Supabase Dashboard → Authentication, în etapa 5 din `MIGRATION-V1-V2.md`, **după** patch-ul V1 și migrații. Cost: 0 lei.
 
+## Conturile existente (read-only, 3 nov.)
+
+- **435 de conturi**: niciunul șters sau blocat, toate confirmate, toate cu profil, fără emailuri duplicate (`supabase/operations/v2-accounts-check.sql`).
+- **370** au parolă și intră direct în V2.
+- **69** au identitate Google, dintre care **65 numai Google**, fără parolă. Pentru ele, V2 oferă „Continuă cu Google”; alternativa este recuperarea parolei, care cere SMTP.
+- **Copii:** 409 conturi cu un copil, 15 cu mai mulți, 11 fără copil.
+- **Activitate:** 3 conturi autentificate în ultimele 30 de zile, 11 în ultimele 90.
+
 ## Ce folosesc azi V1 și V2
 
 | Flux | V1 (producție) | V2 |
@@ -22,7 +30,14 @@ https://www.diversibebe.com/v2/cont
 https://www.diversibebe.com/v2/recuperare
 ```
 
-Fără wildcard-uri largi și fără adrese de Preview: Preview-ul rulează V2 fără conturi.
+Fără wildcard-uri largi. Pentru testul tău cu contul real pe Preview (etapa 2 din `PHONE-PREVIEW.md`) se adaugă temporar și:
+
+```text
+https://diversibebe-git-release-v2-rc-velicofs-projects.vercel.app/v2/cont
+https://diversibebe-git-release-v2-rc-velicofs-projects.vercel.app/v2/recuperare
+```
+
+Le scoți după lansare.
 
 ## 2. Email (SMTP propriu, Resend Free)
 

@@ -15,7 +15,7 @@
 
 - **Pe scheme:** schema actuală a producției și schema după migrațiile V2:
   - `tests/v1-compat.test.cjs`;
-  - repetiția pe PostgreSQL 17 + GoTrue + PostgREST reale: 27/27, inclusiv după rollback-ul L1.
+  - repetiția pe PostgreSQL 17 + GoTrue + PostgREST reale: **36/36**. Acoperă toate căile de scriere V1 (alimente încercate, jurnal cu și fără copil, rețete gătite, favorite, alergii, alimente și rețete proprii, al doilea copil, editarea copilului, înregistrarea), înainte de migrații, după ele și după rollback-ul L1.
 - **Build:** `next build` de producție și TypeScript pe branch: PASS. Lint: identic cu baza pentru fișierele atinse.
 - **Fără schimbare de schemă:** nicio migrare, nicio dată modificată.
 

@@ -4,7 +4,7 @@
 // `publish`. Nothing on this page publishes an image.
 import { useEffect, useState } from "react";
 import { findAnyRecipe } from "../catalog";
-import { recipePhotos } from "../content/photos";
+import { photoUrl, recipePhotos } from "../content/photos";
 import { photoNotes } from "../content/photo-notes";
 import { PageHeading, RecipePhoto } from "../components";
 
@@ -80,7 +80,7 @@ export function PhotoGallery() {
                 <figure><RecipePhoto recipe={{ ...r, photo: undefined, image: "/v2/icon.svg" }} /><figcaption>Înainte (imagine de rezervă)</figcaption></figure>
                 <figure><RecipePhoto recipe={{ ...r, photo: asset }} /><figcaption>După · WebP {Object.entries(asset.bytes).map(([w, b]) => `${w}w ${Math.round(b / 1024)} KB`).join(" · ")}</figcaption></figure>
               </div>
-              <a className="v2-text-link" href={`${asset.base}-1200.webp`} target="_blank" rel="noreferrer">Deschide la 1200 px</a>
+              <a className="v2-text-link" href={photoUrl(asset, 1200)} target="_blank" rel="noreferrer">Deschide la 1200 px</a>
               <div className="v2-photo-columns">
                 <div>
                   <h3>Rețeta</h3>

@@ -1,69 +1,44 @@
 # Release readiness — DiversiBebe 2.0
 
-Evaluare: 3 nov. 2026 (actualizare după decizia „un singur proiect Supabase”) · branch `release/v2-rc` · jurnale: `outputs/release-2026-11-03/tests/migration/` și `outputs/release-2026-11-03/rehearsal/` (evaluarea anterioară: `tests/final/`).
+Evaluare: 3 nov. 2026 · branch `release/v2-rc` · verificări automate: `node scripts/release-check.cjs` · jurnale: `outputs/release-2026-11-03/tests/`.
 
-## Decizie
+## Decizie pe etape
 
-| Treaptă | Decizie |
-|---|---|
-| **Canary (doar contul fondatorului, după invitație)** | **NO-GO** până la etapele 1–5 din `MIGRATION-V1-V2.md` (patch V1, backup, migrații, Auth), toate gratuite și care cer aprobarea ta |
-| **Beta privată (familii invitate)** | **NO-GO** doar până la canary + testul pe telefon. Biblioteca nu mai este un blocaj: 289 de rețete trec verificarea editorială (decizia fondatorului, 3 nov.; vezi `LIBRARY-REPORT.md`) |
-| **Publicare** | **NO-GO** |
+| Etapă | Decizie | Ce lipsește (doar blocaje reale) | Durată după aprobare |
+|---|---|---|---|
+| **1. Preview privat, date sintetice (mod vizitator)** | **GO tehnic**, așteaptă aprobarea ta | A. push `release/v2-rc` · B. 3 variabile Preview (`PHONE-PREVIEW.md`, etapa 1) | ~30 min |
+| **2. Testare cu contul fondatorului** (același Preview, proiectul comun) | **NO-GO** până la 4 acțiuni ale tale sau aprobate de tine | 1. patch V1 în producție · 2. backup verificat · 3. migrații V2 + postflight · 4. Auth (`AUTH-SETUP.md`: Redirect URLs, SMTP Resend, șablon); apoi 3 variabile Preview în plus | ~½ zi de lucru + 48 h de test |
+| **3. Beta restrânsă** (familii invitate, `www.diversibebe.com/v2`, cod de invitație) | **NO-GO** | etapa 2 trecută · decizia ta despre fotografii (candidații nu se publică până nu decizi) · mențiunea din politica de confidențialitate · decizia BebeAsist · merge `release/v2-rc` → `main` (`release-check.cjs main` trebuie să treacă) | ~1 zi + 1–2 săpt. de beta |
+| **4. Lansare publică** | **NO-GO** | beta fără incidente · performanță mobil la prag (LCP < 2,5 s; azi 3,1–3,4 s) · fotografii pentru rețetele principale · revizia de specialitate pentru cele 2 rețete cu ficat (sau rămân nepublicate) · afirmațiile V1 („aprobate de nutriționiști”) · Vercel Pro (20 USD/lună) **doar dacă** apar plăți/monetizare | 2–4 săpt. |
 
-Staging online nu mai este un blocaj: decizia ta (un proiect, cost 0) e acoperită de copia locală izolată, cu schemă dovedită identică cu producția, de repetiția pe stack real și de canary-ul din producție.
+**Cât mai avem până la prima versiune V2 publicabilă (beta pe `www`):**
+- **Tehnic:** aproximativ 1,5 zile de lucru, toate gratuite.
+- **Calendaristic:** depinde de aprobările tale și de cele 48 h de test cu contul tău, realist **4–7 zile**.
 
 ## Gate-uri (dovezi)
 
 | # | Condiție | Stare | Dovadă |
 |---|---|---|---|
-| G1 | Vulnerabilități critice | ✅ | advisors producție: 0 ERROR; P0 reconfirmat; poarta beta acum fail-closed |
-| G2 | Izolare între familii/copii | ✅ local | RLS în repetiție (PGlite + PostgREST real, HTTP 401 pentru anonim), `security`, `persistence` |
-| G3 | Fluxuri E2E esențiale | ✅ local · ⛔ canary | E2E Playwright 108/108 |
-| G4 | Backend online verificat | ⛔ → canary | înlocuit de repetiția locală pe stack real + canary (`MIGRATION-V1-V2.md` §4 etapa 7) |
-| G5 | Migrații și rollback | ✅ local · ⛔ backup producție | repetiție 27/27 pe PostgreSQL 17 + GoTrue + PostgREST; rollback L1 complet (corectat); `prod-backup.cjs` verificat prin restaurare locală |
-| G6 | Conținut verificat | ✅ editorial · ⏳ specialist | 291 inventariate; 289 publicabile editorial (reguli NHS/CDC/UE, 32 corectate cu jurnal); 2 în revizie de specialitate, nepublicate; 0 aprobări medicale (niciuna inventată). Consola `/v2/revizie` + export CSV pentru pediatră |
-| G7 | Fără afirmații nejustificate | ✅ V2 · ⚠️ V1 | texte V2 pentru conturi reale fără „test/sintetic”; V1: „aprobate de nutriționiști” (decizie fondator) |
-| G8 | Telefon fizic + desktop | ⚠️ | capturi 390/1440 ✅; telefon ⛔ |
-| G9 | Analytics + confidențialitate | ✅ local · ⛔ politică | mențiunea în politica de confidențialitate lipsește |
-| G10 | Monitorizare | ⚠️ | runbook canary (`MIGRATION-V1-V2.md` §5) |
-| G11 | Costuri | ✅ | proiect comun, Hobby + Free: 0 până la beta |
-| G12 | V1 funcționează după migrații | ✅ local · ⛔ producție | patch `b12b652` verificat și pe stack real; nepublicat |
-| G13 | Acces controlat la beta | ✅ | fail-closed în producție (`release-gates`) |
-| G14 | **V2 poate folosi infrastructura existentă** (nou) | ✅ local | clientul acceptă proiectul V1, conturile reale, Google; `robots.txt` nu mai scoate V1 din Google |
+| G1 | Fără vulnerabilități critice | ✅ local · ⚠️ producție | advisors 0 ERROR; **releul de email deschis din V1 e retras doar în patch** (nepublicat) |
+| G2 | Izolare între familii | ✅ | RLS: PGlite + PostgREST real (401 pentru anonim, 409 pentru o referință străină) |
+| G3 | Fluxuri E2E | ✅ local · ⏳ telefon | E2E 112/112 |
+| G4 | Backend online | ⏳ etapa 2 | Preview + proiectul comun după migrații |
+| G5 | Migrații și rollback | ✅ local | repetiție pe stack real **36/36** (toate căile de scriere V1, înainte, după migrații și după rollback) |
+| G6 | Conținut | ✅ editorial | 289 publicabile, 2 în coada de specialitate, 0 aprobări medicale inventate |
+| G7 | Afirmații | ✅ V2 · ⚠️ V1 | — |
+| G8 | Telefon | ⏳ | checklist în `PHONE-PREVIEW.md` |
+| G9 | Analytics și confidențialitate | ✅ cod · ⏳ text public | `PRIVACY-AND-MONITORING.md` (text propus) |
+| G10 | Monitorizare | ✅ plan cost 0 | idem, §3 |
+| G11 | Costuri | ✅ 0 lei | — |
+| G12 | V1 după migrații | ✅ local · ⏳ producție | patch `360d05d`: build de producție + TypeScript PASS |
+| G13 | Acces controlat | ✅ | fail-closed; Vercel Authentication pe Preview; cod separat pentru revizie |
+| G14 | Fotografii | ✅ pipeline · ⏳ decizia ta | 3 candidați integrați local; 9 fișiere noi de la Antigravity, neintegrate până la confirmarea ta |
+| G15 | Performanță mobil | ⚠️ | FCP 0,8–0,9 s, CLS < 0,02; LCP 3,1–3,4 s, TBT 0,5–0,6 s |
 
-## Rezultatele rulării (`outputs/release-2026-11-03/tests/migration/`)
+## Conturile (read-only, `v2-accounts-check.sql`)
 
-| Verificare | Rezultat |
-|---|---|
-| Build Next.js | PASS |
-| TypeScript | PASS |
-| Lint V2 | PASS, 0 probleme |
-| Lint întreg repository | 46 erori + 29 avertismente — identic cu baza (un avertisment nou din `migration-rehearsal.cjs`, corectat) |
-| Unit / SQL / HTTP / Auth | **101/101** (95 anterioare + drift extins, repetiție PGlite, 4 teste de lansare) |
-| Repetiție pe stack real | **27/27** (`rehearsal/REPORT.md`) |
-| Backup → restaurare locală | 12/12 tabele identice (pe baza locală sintetică) |
-| E2E Playwright | **108/108** (`e2e.log`) |
+- **435 de conturi:** 0 șterse sau blocate, toate cu profil, 0 emailuri duplicate.
+- **370** cu parolă.
+- **65** numai cu Google: pentru ele există butonul Google în V2, iar recuperarea parolei cere SMTP.
 
-## Blocaje rămase
-
-### Gratuite, dar cer aprobarea sau acțiunea ta
-
-| # | Acțiune | Efort | Cine |
-|---|---|---|---|
-| 1 | Push + PR + merge pentru patch-ul V1 (`hotfix/v1-v2-schema-compat`, 3 commituri; include retragerea releului de email deschis din producție) | 1 h | agent, după aprobare |
-| 2 | Backup producție cu `scripts/prod-backup.cjs` (parola bazei rămâne la tine) | 20 min | tu |
-| 3 | Migrațiile V2 în producție (preflight → 7 fișiere → postflight) | 30 min | agent, după aprobare |
-| 4 | Supabase Auth: Redirect URL `https://www.diversibebe.com/v2/**` + SMTP Resend; „Confirm email” rămâne dezactivat | 30 min | tu, cu ghidaj |
-| 5 | Push `release/v2-rc` → Vercel Preview (verifică build-ul pe Vercel), apoi variabilele Production + merge pentru canary | 2 h | agent, după aprobare |
-| 6 | Canary 48 h cu contul tău (email + Google), checklist §5 | 1 h în 2 zile | tu |
-| 7 | Test pe telefon (iOS + Android) | 1–2 h | tu |
-| 8 | Mențiunea despre analytics în politica de confidențialitate | 1 h | tu |
-| 8b | **Decizie BebeAsist** după lansare: oprit (varianta V2, recomandată la buget 0) sau activ ca acum în V1 (`MIGRATION-V1-V2.md` §5b, F5) | 1 min | tu |
-| 8c | Preview pentru telefon: push `release/v2-rc` + 3 variabile Preview (`PHONE-PREVIEW.md`) | 15 min | agent, după aprobare |
-
-### Cu cost
-
-| # | Acțiune | Cost |
-|---|---|---|
-| 9 | Revizia de specialitate (recomandată, nu mai blochează beta): întâi cele 2 excepții și lotul prioritar, prin consola `/v2/revizie` | buget 0 acum; ~1.500–3.500 lei când decizi |
-| 10 | Înainte de monetizare: Vercel Pro (20 USD/lună); recomandat Supabase Pro (25 USD/lună, backup zilnic) | recurent |
+Toate conturile pot intra în V2 după etapa 2.

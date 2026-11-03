@@ -20,7 +20,9 @@ Verificarea tehnică (`photo-import.cjs check`) nu a găsit probleme.
 | iaurt-unt-migdale | 16 KB | 32 KB | 58 KB | −99% |
 | clatite-ovaz-mar-8 | 20 KB | 43 KB | 76 KB | −99% |
 
-Toate sunt sub limita de 150 KB la 800w și nu au metadate. Fișierele sunt în `public/v2/recipes/`, iar intrările în `photos.ts` au `approved: false`.
+Toate sunt sub limita de 150 KB la 800w și nu au metadate. Intrările în `photos.ts` au `approved: false`.
+
+**Locul fișierelor:** candidații sunt în `content/photo-candidates/`, **nu** în `public/`. Sunt serviți numai prin ruta `/v2/revizie/foto/<id>/<lățime>`, aflată în spatele codului de revizie (fail-closed în producție: fără cod → `/acces-revizie`). Doar `photo-import publish`, după aprobarea ta, copiază o imagine în `public/v2/recipes/` și șterge candidatul.
 
 ## 3. Încărcare și deformare (măsurat în browser)
 

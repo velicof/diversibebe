@@ -18,6 +18,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { contentMode, type Recipe } from "./catalog";
+import { photoUrl } from "./content/photos";
 import { reviewCopy } from "./content/copy";
 import { usePreview } from "./Provider";
 import { SyncStatus } from "./cloud/SyncStatus";
@@ -235,8 +236,8 @@ export function RecipePhoto({
         {/* Pre-generated responsive WebP (scripts/photo-import.cjs): no runtime image optimization cost. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`${photo.base}-800.webp`}
-          srcSet={photo.widths.map((w) => `${photo.base}-${w}.webp ${w}w`).join(", ")}
+          src={photoUrl(photo, 800)}
+          srcSet={photo.widths.map((w) => `${photoUrl(photo, w)} ${w}w`).join(", ")}
           sizes={sizes}
           width={photo.width}
           height={photo.height}

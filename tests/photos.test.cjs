@@ -21,9 +21,11 @@ test('every photo has 480/800/1200 WebP variants, 4:3, ≤150 KB at 800w, tracea
   for(const [id,p] of Object.entries(recipePhotos)){
     assert.deepEqual([...p.widths],[480,800,1200]);
     for(const w of p.widths){
-      const file=path.join(repo,'public',`${p.base}-${w}.webp`);
+      // Candidates live outside public/ (never served statically); approved photos are static files.
+      const file=p.approved?path.join(repo,'public',`${p.base}-${w}.webp`):path.join(repo,'content/photo-candidates',`${id}-${w}.webp`);
       assert.ok(fs.existsSync(file),file);
       assert.equal(fs.statSync(file).size,p.bytes[w]);
+      if(!p.approved)assert.equal(fs.existsSync(path.join(repo,'public',`${p.base}-${w}.webp`)),false,`${id}-${w} must not be in public/`);
     }
     assert.ok(p.bytes[800]<=150*1024,`${id} 800w ${p.bytes[800]} bytes`);
     assert.match(p.sourceSha256,/^[a-f0-9]{64}$/);
@@ -45,4 +47,19 @@ test('photo decisions must come from a person; publish refuses without approval 
   assert.notEqual(publish.status,0);assert.match(publish.stderr,/Nu public/);
   assert.equal(fs.readFileSync(path.join(repo,'docs/ai-ops/photos/manifest.json'),'utf8'),before,'manifest untouched');
   fs.rmSync(tmp,{force:true});
+});
+
+test('candidates are reachable only through the review-gated route, never as static files',async()=>{
+  const {photoUrl}=load('src/features/v2/content/photos.ts');
+  const [id,p]=Object.entries(recipePhotos).find(([,x])=>!x.approved);
+  assert.equal(photoUrl(p,800),`/v2/revizie/foto/${id}/800`);
+  assert.equal(photoUrl({...p,approved:true},800),`${p.base}-800.webp`);
+  // The proxy (review gate) runs for the candidate URL: the matcher only skips static asset extensions.
+  const proxySrc=fs.readFileSync(path.join(repo,'src/proxy.ts'),'utf8'),start=proxySrc.indexOf('"/((?!');
+  const matcher=JSON.parse(proxySrc.slice(start,proxySrc.indexOf('"',start+1)+1));
+  assert.match(`/v2/revizie/foto/${id}/800`,new RegExp('^'+matcher+'$'));
+  assert.doesNotMatch(`/v2/revizie/foto/${id}-800.webp`,new RegExp('^'+matcher+'$'),'a .webp URL would bypass the gate');
+  assert.ok(fs.readFileSync(path.join(repo,'src/proxy.ts'),'utf8').includes('startsWith("/v2/revizie/")'));
+  for(const file of fs.existsSync(path.join(repo,'public/v2/recipes'))?fs.readdirSync(path.join(repo,'public/v2/recipes')):[])
+    assert.ok(Object.entries(recipePhotos).some(([k,x])=>x.approved&&file.startsWith(k+'-')),`${file} in public/ is not an approved photo`);
 });

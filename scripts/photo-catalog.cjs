@@ -24,8 +24,10 @@ const main = (r) => r.ingredients
   .filter((l) => l && !/^(apă|apa|ulei|sare|piper|condimente|optional)/i.test(l))
   .slice(0, 6);
 
-const published = catalog.filter((r) => r.published && !r.hasPhoto && !recipePhotos[r.id] && !pilotIds.has(r.id))
-  .sort((a, b) => MEAL_ORDER[a.mealType] - MEAL_ORDER[b.mealType] || a.minimumMonths - b.minimumMonths || a.id.localeCompare(b.id));
+// Old generic V2 illustrations (food-oats, food-soup, generated demos) also get a real photo, in the LAST batch,
+// so batches already being produced keep their recipes.
+const published = catalog.filter((r) => r.published && !recipePhotos[r.id] && !pilotIds.has(r.id))
+  .sort((a, b) => Number(a.hasPhoto) - Number(b.hasPhoto) || MEAL_ORDER[a.mealType] - MEAL_ORDER[b.mealType] || a.minimumMonths - b.minimumMonths || a.id.localeCompare(b.id));
 const batchOf = new Map(published.map((r, i) => [r.id, 1 + Math.floor(i / 20)]));
 
 const photos = catalog.map((r) => {

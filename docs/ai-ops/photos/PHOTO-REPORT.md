@@ -7,8 +7,8 @@ Generat de `scripts/photo-catalog.cjs`. Total rețete: **291**.
 | Fotografie aprobată și publicată (`photos.ts`) | 0 |
 | Ilustrație existentă (imagini V2 vechi, generice) | 8 |
 | Candidat WebP generat, așteaptă aprobarea ta (/v2/revizie/fotografii) | 3 |
-| Importată, așteaptă verificarea umană | 0 |
-| Pilot cerut (manifest 12) | 9 |
+| Importată, așteaptă verificarea umană | 9 |
+| Pilot cerut (manifest 12) | 0 |
 | Lipsă (prompt pregătit) | 271 |
 
 Până la fotografie, cardul afișează o imagine de rezervă (culoarea momentului mesei, emoji-ul rețetei, ingredientele principale, „Fotografie în pregătire”).
@@ -37,7 +37,7 @@ Nu trebuie să apară: text sau logo; persoane sau mâini; sare, zahăr sau mier
 | 11 | 20 | cina |
 | 12 | 20 | cina |
 | 13 | 20 | gustare, cina |
-| 14 | 9 | gustare |
+| 14 | 17 | pranz, mic-dejun, cina, gustare |
 
 Rețete fără lot (în revizie de specialitate, nepublicate): `pate-ficat-pui-pere`, `ficatel-pui-piure-cartofi-12`.
 

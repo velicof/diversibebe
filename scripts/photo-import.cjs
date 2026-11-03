@@ -1,4 +1,5 @@
 // Recipe photos from Gemini Images → checked → (human approval) → responsive WebP in public/v2/recipes.
+//   node scripts/photo-import.cjs which <file>   dry run: which recipe a file name belongs to (writes nothing)
 //   node scripts/photo-import.cjs check            validate every file in content/gemini-import/incoming, write review previews + REPORT.md
 //   node scripts/photo-import.cjs stage [id ...]   WebP candidates (approved: false) for local review; originals untouched
 //   node scripts/photo-import.cjs decide <file>    record the human decisions exported from /v2/revizie/fotografii
@@ -12,11 +13,33 @@ const importDir = path.join(repo, 'content/gemini-import');
 const manifestFile = path.join(repo, 'docs/ai-ops/photos/manifest.json');
 const photosModule = path.join(repo, 'src/features/v2/content/photos.ts');
 const publicDir = path.join(repo, 'public/v2/recipes');
+// Candidates are NOT in public/: served only by the review-gated route /v2/revizie/foto/<id>/<width>.
+const candidateDir = path.join(repo, 'content/photo-candidates');
 const WIDTHS = [480, 800, 1200];
 const MAX_800_BYTES = 150 * 1024;
 
 const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
-const entryFor = (file) => manifest.photos.find((p) => path.parse(p.fileName).name === path.parse(file).name);
+// manifest.json is the decision ledger (status + provenance). Recipes beyond the pilot come from the full-catalog
+// plan (catalog-manifest.json, scripts/photo-catalog.cjs) and get a ledger entry the first time a file is imported.
+const catalogManifestFile = path.join(repo, 'docs/ai-ops/photos/catalog-manifest.json');
+const catalogPlan = fs.existsSync(catalogManifestFile) ? JSON.parse(fs.readFileSync(catalogManifestFile, 'utf8')).photos : [];
+const ledgerEntry = (plan) => ({
+  recipeId: plan.recipeId, title: plan.title, stageMonths: plan.minimumMonths, mealType: plan.mealType,
+  exactIngredients: plan.exactIngredients, finalResult: plan.finalResult, mustNotAppear: plan.mustNotAppear,
+  prompt: plan.prompt, fileName: plan.fileName, publishedBase: plan.publishedBase, alt: plan.alt, batch: plan.batch,
+  imageStatus: 'requested', editorialStatus: plan.editorialStatus,
+  provenance: { generator: null, model: null, generatedAt: null, promptVersion: 1, commercialUseTermsChecked: false, termsUrl: null, aiGeneratedLabel: true, reviewedBy: null, decision: null, rejectionReason: null },
+});
+const entryFor = (file) => {
+  const name = path.parse(file).name;
+  const known = manifest.photos.find((p) => path.parse(p.fileName).name === name);
+  if (known) return known;
+  const plan = catalogPlan.find((p) => path.parse(p.fileName).name === name && p.published);
+  if (!plan) return undefined;
+  const entry = ledgerEntry(plan);
+  manifest.photos.push(entry);
+  return entry;
+};
 
 async function inspect(file) {
   const buffer = fs.readFileSync(file), problems = [];
@@ -51,11 +74,11 @@ async function check() {
 }
 
 // Responsive WebP variants from the original (read-only): metadata stripped, 4:3 cover crop, 800w ≤ 150 KB.
-async function variants(recipeId, source) {
-  fs.mkdirSync(publicDir, { recursive: true });
+async function variants(recipeId, source, dir) {
+  fs.mkdirSync(dir, { recursive: true });
   const sizes = {};
   for (const width of WIDTHS) {
-    const height = Math.round(width * 3 / 4), target = path.join(publicDir, `${recipeId}-${width}.webp`);
+    const height = Math.round(width * 3 / 4), target = path.join(dir, `${recipeId}-${width}.webp`);
     let quality = 80;
     do { await sharp(source).rotate().resize({ width, height, fit: 'cover' }).webp({ quality, effort: 6 }).toFile(target); quality -= 6; }
     while (width === 800 && fs.statSync(target).size > MAX_800_BYTES && quality >= 50);
@@ -83,7 +106,7 @@ async function stage(ids) {
     const result = await inspect(source);
     const blocking = result.problems.filter((p) => !/metadate/.test(p));
     if (blocking.length) { console.log(`${entry.recipeId}: NU — ${blocking.join('; ')}`); continue; }
-    const sizes = await variants(entry.recipeId, source);
+    const sizes = await variants(entry.recipeId, source, candidateDir);
     writePhotos(entry.recipeId, entry, sizes, false, result.sha256);
     if (['requested', 'candidate'].includes(entry.imageStatus)) entry.imageStatus = 'candidate';
     entry.provenance.sourceSha256 = result.sha256;
@@ -130,14 +153,22 @@ async function publish(recipeId) {
   const sha256 = (await inspect(source)).sha256;
   if (entry.provenance.sourceSha256 && entry.provenance.sourceSha256 !== sha256)
     throw new Error(`${recipeId}: fișierul din incoming/ nu mai este cel verificat (sha256 diferit). Rulează din nou stage și verifică.`);
-  const sizes = await variants(recipeId, source);
+  const sizes = await variants(recipeId, source, publicDir);
   writePhotos(recipeId, entry, sizes, true, sha256);
+  for (const width of WIDTHS) fs.rmSync(path.join(candidateDir, `${recipeId}-${width}.webp`), { force: true });
   entry.imageStatus = 'published';
   fs.writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + '\n');
   console.log(`${recipeId}: ${WIDTHS.map((w) => `${w}w ${Math.round(sizes[w] / 1024)} KB`).join(', ')}. Apare pe rețetele publicate din bibliotecă; o rețetă aflată în revizie de specialitate nu este afișată familiilor.`);
 }
 
+// Dry run: which recipe a file name maps to. Writes nothing.
+function which(file) {
+  const before = manifest.photos.length, entry = entryFor(file);
+  if (!entry) { console.log(`${file}: necunoscut — nu corespunde unei rețete publicabile (rețetele din revizia de specialitate nu primesc fotografie)`); process.exitCode = 1; return; }
+  console.log(`${file} → ${entry.recipeId} · ${entry.title} · ${entry.batch === null || entry.batch === undefined ? (manifest.photos.length > before ? 'fără lot' : 'pilot') : `lot ${entry.batch}`} · ${manifest.photos.length > before ? 'intrare nouă la import' : `în registru (${entry.imageStatus})`}`);
+}
+
 const [command, arg] = process.argv.slice(2);
 const ids = process.argv.slice(3);
-(command === 'check' ? check() : command === 'stage' ? stage(ids) : command === 'decide' && arg ? Promise.resolve(decide(arg)) : command === 'publish' && arg ? publish(arg) : Promise.reject(new Error('Folosire: check | stage [recipeId ...] | decide <fișier.json> | publish <recipeId>')))
+(command === 'which' && arg ? Promise.resolve(which(arg)) : command === 'check' ? check() : command === 'stage' ? stage(ids) : command === 'decide' && arg ? Promise.resolve(decide(arg)) : command === 'publish' && arg ? publish(arg) : Promise.reject(new Error('Folosire: check | stage [recipeId ...] | decide <fișier.json> | publish <recipeId>')))
   .catch((e) => { console.error(e.message); process.exit(1); });
