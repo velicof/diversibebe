@@ -91,3 +91,14 @@ test('V1 user associations keep resolving and no medical approval is invented',(
   assert.deepEqual(plain(manifest.photos.map(p=>p.recipeId)).sort(),plain(catalog.map(r=>r.id)).sort());
   assert.equal(manifest.photos.filter(p=>p.batch===0).length,12);
 });
+
+test('no page claims a specialist approval that no recipe has',()=>{
+  // V1 home page said "aprobate de nutriționiști" (removed with the founder's approval, 4 Nov. 2026).
+  if(catalog.some(r=>r.editorialStatus==='specialist_approved'))return;
+  const fs=require('node:fs'),path=require('node:path'),root=path.join(__dirname,'../src');
+  const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):/\.(ts|tsx)$/.test(e.name)?[path.join(d,e.name)]:[]);
+  const claim=/(aprobat|validat|testat)[ăeai]* (de|și aprobat[ăeai]* de) (nutri[tț]ioni[sș]t|medic|pediatr|speciali[sș]t|dietetician)|validat[ăe]? medical/i;
+  // Labels tied to the specialist_approved status are shown only for recipes that really have it.
+  const offenders=walk(root).filter(f=>fs.readFileSync(f,'utf8').split(/\r?\n/).some(line=>claim.test(line)&&!line.includes('specialist_approved'))).map(f=>path.relative(root,f));
+  assert.deepEqual(offenders,[]);
+});
