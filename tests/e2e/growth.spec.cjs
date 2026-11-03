@@ -36,7 +36,7 @@ test('growth: full journey survives back, refresh, save and repeated result view
  await page.getByRole('button',{name:'Continuă',exact:true}).click();await page.getByRole('button',{name:/^Sub 15 minute/}).click();await page.getByRole('button',{name:'Vezi rezultatul meu',exact:true}).click();
  await expect(page.locator('[data-result-recipe]')).toHaveCount(3);const ids=await page.locator('[data-result-recipe]').evaluateAll(xs=>xs.map(x=>x.dataset.resultRecipe));
  for(const text of await page.locator('.gw-result-grid .v2-time-badge').allTextContents())expect(parseInt(text)).toBeLessThan(15);
- await expect(page.getByRole('link',{name:process.env.V2_TEST_API_URL==='http://127.0.0.1:54321'?'Salvează în cont sau creează un cont':'Continuă cu contul de test',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('link',{name:process.env.V2_NATIVE==='1'?'Salvează în cont sau creează un cont':'Continuă cu contul de test',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Salvează ideile mele',exact:true}).click();await expect(page.getByRole('button',{name:'Rezultat păstrat',exact:true})).toBeDisabled();
  await page.reload();await expect(page.locator('[data-result-recipe]')).toHaveCount(ids.length);expect(await page.locator('[data-result-recipe]').evaluateAll(xs=>xs.map(x=>x.dataset.resultRecipe))).toEqual(ids);
  await expect(page.getByRole('button',{name:'Rezultat păstrat',exact:true})).toBeDisabled();
@@ -68,7 +68,7 @@ for(const [challenge,context] of [['Refuză multe alimente','Mese fără presiun
 });
 test('growth: result handoff survives test login and explicit save to account',async({page})=>{
  await choose(page,'Nu mai știu','Aproximativ 6–8','O idee pentru masa');const ids=await page.locator('[data-result-recipe]').evaluateAll(xs=>xs.map(x=>x.dataset.resultRecipe));
- await page.getByRole('button',{name:'Salvează ideile mele',exact:true}).click();await page.getByRole('link',{name:process.env.V2_TEST_API_URL==='http://127.0.0.1:54321'?'Salvează în cont sau creează un cont':'Continuă cu contul de test',exact:true}).click();
+ await page.getByRole('button',{name:'Salvează ideile mele',exact:true}).click();await page.getByRole('link',{name:process.env.V2_NATIVE==='1'?'Salvează în cont sau creează un cont':'Continuă cu contul de test',exact:true}).click();
  await page.getByLabel('Email de test').fill(accounts[0].email);await page.getByLabel('Parola contului de test').fill(accounts[0].password);await page.getByRole('button',{name:'Conectare în test',exact:true}).click();
  await expect(page).toHaveURL(/onboarding\?rezultat=1/);await expect(page.getByRole('heading',{level:1})).toContainText('Un punct de pornire');expect(await page.locator('[data-result-recipe]').evaluateAll(xs=>xs.map(x=>x.dataset.resultRecipe))).toEqual(ids);
  const save=page.getByRole('button',{name:'Salvează ideile mele',exact:true});if(await save.count())await save.click();await expect(page.getByRole('button',{name:'Rezultat păstrat',exact:true})).toBeDisabled();await page.reload();await expect(page.getByRole('button',{name:'Rezultat păstrat',exact:true})).toBeDisabled();

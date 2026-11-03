@@ -52,7 +52,7 @@ test('authenticated persistence, second device and sibling isolation', async ({p
   await page.screenshot({path:path.join(captures,'incarcare-390.png'),fullPage:true});
   await synced(page); await page.unroute('**/rest/v1/rpc/v2_load_state');
   await expect(page.getByRole('button',{name:'Confirmată azi',exact:true})).toBeDisabled();
-  const device=await browser.newContext({baseURL:'http://127.0.0.1:3100',viewport:{width:1440,height:1000}});
+  const device=await browser.newContext({baseURL:`http://127.0.0.1:${process.env.V2_PORT||3100}`,viewport:{width:1440,height:1000}});
   await restrict(device); const second=await device.newPage();
   try {
     await login(second,accounts[0]); await second.goto('/v2/plan'); await synced(second);

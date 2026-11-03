@@ -2,11 +2,13 @@
 const http=require('node:http'),path=require('node:path'),fs=require('node:fs');
 const runtime=path.resolve(__dirname,'../../real-supabase-runtime');
 if(!fs.existsSync(path.join(runtime,'private/runtime.json')))throw new Error('Native runtime not initialized');
-const allowedOrigins=new Set(['http://127.0.0.1:3100','http://localhost:3100']);
+// V2_PORT adds the origin of a second preview; V2_GATEWAY_PORT runs this gateway beside the default one.
+const appPort=process.env.V2_PORT||'3100',gatewayPort=Number(process.env.V2_GATEWAY_PORT||54321);
+const allowedOrigins=new Set([`http://127.0.0.1:${appPort}`,`http://localhost:${appPort}`]);
 const server=http.createServer(async(req,res)=>{
  const origin=req.headers.origin;
  if(origin&&!allowedOrigins.has(origin)){res.writeHead(403).end();return;}
- res.setHeader('Access-Control-Allow-Origin',origin||'http://127.0.0.1:3100');
+ res.setHeader('Access-Control-Allow-Origin',origin||`http://127.0.0.1:${appPort}`);
  res.setHeader('Access-Control-Allow-Headers','authorization,apikey,content-type,x-client-info,x-supabase-api-version,prefer,range,range-unit');
  res.setHeader('Access-Control-Allow-Methods','GET,HEAD,POST,PATCH,PUT,DELETE,OPTIONS');
  res.setHeader('Access-Control-Expose-Headers','content-range');res.setHeader('Cache-Control','no-store');
@@ -34,4 +36,4 @@ const server=http.createServer(async(req,res)=>{
  upstream.setTimeout(15000,()=>upstream.destroy());upstream.on('error',()=>{if(!res.headersSent)res.writeHead(503,{'Content-Type':'application/json'});res.end(JSON.stringify({message:'Serviciul local nu răspunde.'}));});
  upstream.end(body);
 });
-server.listen(54321,'127.0.0.1',()=>console.log('Native GoTrue/PostgREST gateway: http://127.0.0.1:54321; synthetic email addresses only'));
+server.listen(gatewayPort,'127.0.0.1',()=>console.log(`Native GoTrue/PostgREST gateway: http://127.0.0.1:${gatewayPort} for origin ${appPort}; synthetic email addresses only`));

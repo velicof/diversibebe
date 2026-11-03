@@ -3,6 +3,7 @@
 # dependencies
 /node_modules
 /.next-v2/
+/.next-perf*/
 /.pnp
 .pnp.*
 .yarn/*

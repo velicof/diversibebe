@@ -1,6 +1,6 @@
 const {test,expect}=require('@playwright/test'),crypto=require('node:crypto'),path=require('node:path'),fs=require('node:fs');
 const {createClient}=require('@supabase/supabase-js');
-const native=process.env.V2_TEST_API_URL==='http://127.0.0.1:54321';
+const native=process.env.V2_NATIVE==='1';
 const out=process.env.V2_QA_CAPTURE_DIR||path.resolve(__dirname,'../../../../outputs/master-2026-11-01/captures');
 fs.mkdirSync(out,{recursive:true});
 async function restrict(context){await context.route('**/*',r=>['127.0.0.1','localhost'].includes(new URL(r.request().url()).hostname)?r.continue():r.abort());}
@@ -102,7 +102,7 @@ test('planner (real Auth): two children of one family and a second family stay s
  await expect.poll(()=>plannedNames(page),{timeout:20000}).toEqual([]);
  await page.getByLabel('Planifici pentru',{exact:true}).selectOption({label:'Primul copil'});
  await expect.poll(()=>plannedNames(page),{timeout:20000}).toEqual(chosen);
- const second=await browser.newContext({baseURL:'http://127.0.0.1:3100',viewport:{width:390,height:844}});await restrict(second);
+ const second=await browser.newContext({baseURL:`http://127.0.0.1:${process.env.V2_PORT||3100}`,viewport:{width:390,height:844}});await restrict(second);
  try{
   const p2=await second.newPage();await login(p2,other);await addChild(p2,'Alt copil','8');await p2.goto('/v2/plan');
   await expect(p2.locator('.v2-planner-builder')).toBeVisible();

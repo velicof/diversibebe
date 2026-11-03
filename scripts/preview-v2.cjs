@@ -8,7 +8,7 @@ const child = spawn(
     "--hostname",
     "127.0.0.1",
     "--port",
-    "3100",
+    process.env.V2_PORT || "3100",
   ],
   {
     cwd: path.resolve(__dirname, ".."),
