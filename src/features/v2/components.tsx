@@ -18,6 +18,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { contentMode, type Recipe } from "./catalog";
+import { reviewCopy } from "./content/copy";
 import { usePreview } from "./Provider";
 import { SyncStatus } from "./cloud/SyncStatus";
 import { GrowthTelemetry } from "./growth/Telemetry";
@@ -180,9 +181,7 @@ export function ReviewNote() {
     <div className="v2-review-note">
       <Leaf size={18} />
       <p>
-        <strong>La masă, cu informații clare.</strong> Aceste rețete provin din
-        biblioteca existentă și așteaptă revizia unui specialist. Filtrele sunt
-        demonstrative și nu confirmă siguranța pentru un copil.
+        <strong>La masă, cu informații clare.</strong> {reviewCopy.footer}
       </p>
     </div>
   );

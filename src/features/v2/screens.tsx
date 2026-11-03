@@ -25,6 +25,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { activeCatalog, catalog, contentMode, ingredients, type Recipe } from "./catalog";
+import { reviewCopy } from "./content/copy";
 import { initialFilters, recommend, type Filters } from "./recommendations";
 import { usePreview } from "./Provider";
 import {
@@ -392,9 +393,9 @@ export function Dashboard() {
           </span>
           <p className="v2-eyebrow">DIN CE AI DEJA ACASĂ</p>
           <h2>
-            Un morcov,
+            Un morcov,{" "}
             <br />
-            puțin timp,
+            puțin timp,{" "}
             <br />
             <em>o idee bună.</em>
           </h2>
@@ -1171,7 +1172,7 @@ export function Planner() {
               <p className="v2-field-note">
                 {blocked
                   ? "Planificarea meselor începe după alegerea etapei de diversificare. Pentru nevoi individuale este necesară îndrumarea unui specialist."
-                  : `${planEligible.length} idei potrivite în catalogul demonstrativ. Siguranța și etapa sunt verificate înaintea preferințelor; sezonul doar ordonează ideile.`}
+                  : reviewCopy.planCount(planEligible.length)}
               </p>
             </section>
           )}
@@ -1194,7 +1195,7 @@ export function Planner() {
                             <h2>{recipe.name}</h2>
                             <span>
                               <Clock3 size={13} />
-                              {recipe.minutes} min · în curs de revizie
+                              {recipe.minutes} min · {reviewCopy.recipeBadge}
                             </span>
                           </div>
                         </Link>

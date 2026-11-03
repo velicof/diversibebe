@@ -7,6 +7,7 @@ import { Landing as ClassicLanding } from "../screens";
 import { RecipeCard } from "../components";
 import { usePreview } from "../Provider";
 import { activeCatalog, contentMode } from "../catalog";
+import { reviewCopy } from "../content/copy";
 import { initialFilters, recommend } from "../recommendations";
 import { challenges, newJourney } from "./journey";
 import { journeyScope, journeyStore, useJourney, useExperiment } from "./browser";
@@ -46,11 +47,11 @@ export function GrowthHome(){
     <section id="incearca" className="gw-demo-section" aria-labelledby="gw-demo-title">
       <div className="gw-demo-intro"><p className="gw-eyebrow">UN PIC DE VALOARE, CHIAR AICI</p><h2 id="gw-demo-title">O idee de masă.<br/><em>Mai puțină căutare.</em></h2><p>Schimbă timpul și deschide o rețetă din aplicație. Acesta este produsul, nu o animație de prezentare.</p>
         <fieldset className="gw-time-options"><legend>Cât timp vrei să explorezi?</legend>{[15,30].map(n=><button key={n} type="button" aria-pressed={n===minutes} onClick={()=>setMinutes(n)}><Clock3 size={15}/>{n} minute</button>)}</fieldset>
-        <p className="gw-fine-print">Catalog demonstrativ, în curs de revizie clinică. Filtrul de timp nu confirmă că o rețetă este potrivită copilului tău.</p>
+        <p className="gw-fine-print">{reviewCopy.homeFinePrint}</p>
       </div>
       <div className="gw-demo-recipes">{demo.length?demo.map(r=><RecipeCard key={r.id} recipe={r} reason={`${r.minutes} minute în catalog`}/>):<div className="gw-no-results"><Leaf size={28}/><h3>Deocamdată, fără idei în acest filtru.</h3><p>Poți schimba timpul sau poți porni cu resursele despre pregătire.</p><Link className="v2-text-link" href="/v2/onboarding">Alege un punct de pornire <ArrowRight size={16}/></Link></div>}</div>
     </section>
     <section className="gw-continuity"><div><p className="gw-eyebrow">ȘI MÂINE POATE FI MAI SIMPLU</p><h2>Nu începi de la zero.<br/><em>Păstrezi ce vă ajută.</em></h2><p>Salvezi o idee, o așezi în plan și revii când ai nevoie. Fără liste de bifat în fiecare zi.</p><Link href="/v2/onboarding" className="v2-text-link">Găsește punctul vostru de pornire <ArrowRight size={17}/></Link></div><div className="gw-continuity-cards"><div><Bookmark size={22}/><p><strong>Idei păstrate aproape</strong>Salvatele tale, fără căutarea de la capăt.</p></div><div><CalendarDays size={22}/><p><strong>Doar următoarele zile</strong>Un plan pe care îl poți schimba oricând.</p></div><div><Leaf size={22}/><p><strong>În ritmul familiei voastre</strong>Fără serii zilnice și fără zile „pierdute”.</p></div></div></section>
-    <section className="gw-trust"><span className="gw-note-icon"><Leaf size={24}/></span><div><h2>Încrederea se construiește cu lucruri clare.</h2><p>Rețetele sunt exemple demonstrative, în curs de revizie. Resursele despre pregătire și servire au sursa la vedere și rămân accesibile fără cont. Nu promitem recomandări medicale personalizate.</p><Link href="/v2/pregatire" className="v2-text-link">Vezi resursele de început <ArrowUpRight size={16}/></Link></div></section>
+    <section className="gw-trust"><span className="gw-note-icon"><Leaf size={24}/></span><div><h2>Încrederea se construiește cu lucruri clare.</h2><p>{reviewCopy.homeTrust}</p><Link href="/v2/pregatire" className="v2-text-link">Vezi resursele de început <ArrowUpRight size={16}/></Link></div></section>
   </div>;
 }

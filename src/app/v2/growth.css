@@ -91,6 +91,7 @@
 .gw-result-grid .v2-reason{align-items:start;font-size:11px}
 .gw-recipe-ingredients{font-size:12px;line-height:1.8;color:var(--v2-muted);padding:16px 3px 7px}
 .gw-serving-note{font-size:11px;color:var(--v2-muted);padding:0 3px}
+.gw-result-grid>.gw-serving-note{grid-column:1/-1;font-size:12px;margin:0}
 .gw-serving-note a{text-decoration:underline!important;text-underline-offset:2px}
 .gw-education-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px;margin:30px 0}
 .gw-education-card{padding:25px 23px;background:var(--v2-paper);border:1px solid var(--v2-line);border-radius:14px;display:flex;flex-direction:column;align-items:start}
