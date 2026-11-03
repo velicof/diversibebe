@@ -134,10 +134,10 @@ export function appReducer(state: AppState, action: Action): AppState {
 /** Import only the current demo schema; never read the legacy account store. */
 export function readState(
   raw: string | null,
-  allowedRecipes: Set<string>,
-  allowedIngredients: Set<string>,
-  allowedShopping = new Set<string>(),
-  allowedPantry: Set<string> = allowedIngredients,
+  allowedRecipes: ReadonlySet<string>,
+  allowedIngredients: ReadonlySet<string>,
+  allowedShopping: ReadonlySet<string> = new Set<string>(),
+  allowedPantry: ReadonlySet<string> = allowedIngredients,
 ): AppState {
   if (!raw) return { ...emptyState };
   try {
@@ -150,7 +150,7 @@ export function readState(
     )
       return { ...emptyState };
     const value = data as Record<string, unknown>;
-    const strings = (v: unknown, allowed: Set<string>) =>
+    const strings = (v: unknown, allowed: ReadonlySet<string>) =>
       Array.isArray(v)
         ? [
             ...new Set(

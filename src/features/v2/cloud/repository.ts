@@ -18,13 +18,21 @@ export type CloudState = {
 };
 const recipeIds = new Set(catalog.map((r) => r.id));
 const ingredientIds = new Set<string>(ingredients.map((i) => i.id));
-const shoppingKeys = shoppingKeyUniverse(catalog);
-// Pantry stores legacy ingredient ids and shopping keys marked "am acasă".
-const pantryKeys = new Set<string>([...ingredientIds, ...shoppingKeys]);
+// Built on the first cloud response, not at page load: visitors without an account never need them.
+let keys: { shopping: ReadonlySet<string>; pantry: Set<string> } | null = null;
+function knownKeys() {
+  if (!keys) {
+    const shopping = shoppingKeyUniverse(catalog);
+    // Pantry stores legacy ingredient ids and shopping keys marked "am acasă".
+    keys = { shopping, pantry: new Set<string>([...ingredientIds, ...shopping]) };
+  }
+  return keys;
+}
 function parse(value: unknown): CloudState {
   if (!value || typeof value !== "object")
     throw new Error("Invalid state response");
   const data = value as Record<string, unknown>;
+  const { shopping: shoppingKeys, pantry: pantryKeys } = knownKeys();
   const state = readState(
     JSON.stringify(data),
     recipeIds,

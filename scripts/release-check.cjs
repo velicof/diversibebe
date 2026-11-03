@@ -11,7 +11,7 @@ const has = (ref) => git('rev-parse', '--verify', '--quiet', ref).status === 0;
 
 const { catalog, publishedCatalog } = load('src/features/v2/catalog.ts');
 const { recipePhotos } = load('src/features/v2/content/photos.ts');
-const V1_PATCH = ['b12b652', 'ef8b028', '360d05d'];
+const V1_PATCH = ['b12b652', 'ef8b028', '360d05d', '8f7780d'];
 
 const checks = [];
 const add = (stage, name, ok, action) => checks.push({ stage, name, ok, action });
@@ -24,11 +24,12 @@ add('all', 'release/v2-rc conține producția (origin/main)', has('origin/main')
 
 // Stage 1 — private preview, synthetic/guest data.
 add('preview', 'branch-ul există pe GitHub (Preview Vercel)', git('ls-remote', '--exit-code', '--heads', 'origin', branch).status === 0, 'push release/v2-rc (aprobare)');
+add('all', 'catalog.generated.json corespunde regulilor actuale', spawnSync(process.execPath, ['scripts/generate-catalog.cjs', '--check'], { cwd: repo }).status === 0, 'node scripts/generate-catalog.cjs + commit');
 add('preview', 'biblioteca publicabilă ≥ 280 rețete', publishedCatalog.length >= 280, 'vezi LIBRARY-REPORT.md');
 
 // Stage 2 — founder account on the shared production project.
 const patchLive = V1_PATCH.every((c) => has(c) && has('origin/main') && ancestor(c, 'origin/main'));
-add('founder', 'patch-ul V1 (3 commituri) este în producție (origin/main)', patchLive, 'push + PR + merge hotfix/v1-v2-schema-compat (aprobare)');
+add('founder', 'patch-ul V1 (4 commituri) este în producție (origin/main)', patchLive, 'push + PR + merge hotfix/v1-v2-schema-compat (aprobare)');
 
 // Stage 3/4 — merge release/v2-rc into main (beta, then public).
 const candidates = Object.entries(recipePhotos).filter(([, p]) => !p.approved).map(([id]) => id);

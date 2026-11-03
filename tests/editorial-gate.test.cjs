@@ -58,14 +58,15 @@ test('every recipe V2 can show is storable by the database; the legacy diacritic
 });
 
 test('a signed review is void as soon as the reviewed recipe text changes',()=>{
-  // The hash is taken from the corrected recipe as published; the registry is filled before the catalog loads.
+  // The hash is taken from the corrected recipe as published; the registry is filled before the catalog is built.
+  // The rules live in catalog-build.ts; the shipped catalog is its output (catalog-snapshot.test.cjs).
   const reviewed=loader({NEXT_PUBLIC_V2_CONTENT_MODE:''})('src/features/v2/catalog.ts').catalog.find(r=>r.id==='piure-broccoli-cartof-6');
   const fresh=loader({NEXT_PUBLIC_V2_CONTENT_MODE:''});
   const {editorialRegistry,recipeFingerprint}=fresh('src/features/v2/content/editorial.ts');
   const first=reviewed;
   editorialRegistry[first.id]={status:'specialist_approved',review:signed,contentHash:recipeFingerprint(first)};
   editorialRegistry['piure-dovlecel']={status:'specialist_approved',review:signed,contentHash:'00000000'};
-  const live=fresh('src/features/v2/catalog.ts');
-  assert.equal(live.catalog.find(r=>r.id==='piure-broccoli-cartof-6').editorialStatus,'specialist_approved');
-  assert.equal(live.catalog.find(r=>r.id==='piure-dovlecel').editorialStatus,'imported','stale review ignored');
+  const built=fresh('src/features/v2/catalog-build.ts').buildRecipes();
+  assert.equal(built.find(r=>r.id==='piure-broccoli-cartof-6').editorialStatus,'specialist_approved');
+  assert.equal(built.find(r=>r.id==='piure-dovlecel').editorialStatus,'imported','stale review ignored');
 });

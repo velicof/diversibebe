@@ -1,9 +1,13 @@
 "use client";
 
-import AIChat from "./AIChat";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { clearLegacyRegistrationCredentials } from "@/lib/security/registration-credentials";
+
+// Still server-rendered on V1 pages, but in its own chunk: /v2 never renders it, so V2 pages no longer
+// download the V1 store and recipe database it depends on.
+const AIChat = dynamic(() => import("./AIChat"));
 
 export default function ClientLayout({
   children,

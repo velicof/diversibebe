@@ -270,12 +270,17 @@ export function formatAmounts(amounts: Amount[]) {
 }
 
 /** Every key the shopping list can produce, used to validate stored check marks. */
-export function shoppingKeyUniverse(recipes: Recipe[]) {
+// The universe depends only on the (immutable) catalog array; both stores ask for it at startup.
+const universeCache = new WeakMap<Recipe[], ReadonlySet<string>>();
+export function shoppingKeyUniverse(recipes: Recipe[]): ReadonlySet<string> {
+  const cached = universeCache.get(recipes);
+  if (cached) return cached;
   const keys = new Set<string>();
   for (const r of recipes)
     for (const line of r.ingredients) {
       keys.add(normalize(line).trim()); // keys stored by the earlier exact-line list
       keys.add(shoppingKeyFor(line, parseIngredient(line).name).key);
     }
+  universeCache.set(recipes, keys);
   return keys;
 }
