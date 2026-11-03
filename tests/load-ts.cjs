@@ -8,7 +8,7 @@ function loader(env = {}) {
     if (cache.has(file)) return cache.get(file);
     const compiledModule = { exports: {} }; cache.set(file, compiledModule.exports);
     const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-    vm.runInNewContext(code, { exports: compiledModule.exports, module: compiledModule, console, Intl, Date, URL, URLSearchParams, Set, Map, AbortSignal, crypto: require('node:crypto').webcrypto,
+    vm.runInNewContext(code, { exports: compiledModule.exports, module: compiledModule, console, Intl, Date, URL, URLSearchParams, Set, Map, AbortSignal, TextEncoder, Uint8Array, crypto: require('node:crypto').webcrypto,
       process: { env: processEnv },
       require(name) {
         if (name.startsWith('@/')) return load(path.join(root, 'src', name.slice(2) + '.ts'));

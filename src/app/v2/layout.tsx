@@ -4,8 +4,9 @@ import { PreviewProvider } from "@/features/v2/Provider";
 import { Shell } from "@/features/v2/components";
 import "./v2.css";
 import "./growth.css";
+import { SITE_URL } from "@/app/lib/site";
 export const metadata: Metadata = {
-  metadataBase: new URL("http://127.0.0.1:3100"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "DiversiBebe - Mese mici, momente mari",
     template: "%s · DiversiBebe",
