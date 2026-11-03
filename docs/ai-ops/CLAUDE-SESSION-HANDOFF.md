@@ -9,7 +9,7 @@ Pentru următoarea conversație. Nu relua auditul: faptele de mai jos sunt verif
 | Repository | `E:\App creation\DiversiBebe\Documents\Codex\2026-10-26\files-pasted-by-the-user-misiune\work\diversibebe` (GitHub `velicof/diversibebe`) |
 | Branch | **`release/v2-rc`**, doar local: **nepublicat pe GitHub** |
 | Checkpoint restaurabil | tag **`checkpoint/v2-handoff-20261103`**. Restaurare: `git checkout checkpoint/v2-handoff-20261103` sau `git reset --hard checkpoint/v2-handoff-20261103` (pe release/v2-rc) |
-| Commituri | ultimul commit de cod și acest document: vezi `git log --oneline -3` (secțiunea 10) |
+| Commituri | cod: **`45163e1`** (precedat de `396023e`); acest document este în commitul următor, marcat cu tag-ul de mai sus |
 | Producție | `origin/main` = `db14a4c`, neschimbată în această sesiune; `release/v2-rc` o conține deja |
 | Patch V1 | branch **`hotfix/v1-v2-schema-compat`**, worktree `..\seo-hotfix-legacy`, 3 commituri peste `db14a4c`: `b12b652`, `ef8b028`, `360d05d`. Nepublicat |
 | Git status la final | curat pentru fișierele mele. Rămân **intenționat necomise**, fiind gestionate de Antigravity: `content/gemini-import/REPORT.md` (rescris de rularea lor a `check`), `BATCH-1-PREPARATION.md`, `PILOT-3-QUALITY-REPORT.md`, `PILOT-BATCH-0-PROGRESS.md`. Folderul `incoming/` este ignorat de git |
@@ -157,7 +157,7 @@ node scripts/native-command.cjs build           # build de producție cu backend
 node scripts/native-command.cjs preview         # preview local: http://127.0.0.1:3100/v2 (revizie: /v2/revizie, foto: /v2/revizie/fotografii)
 node scripts/native-command.cjs typecheck
 npx eslint src/features/v2 src/app/v2 src/lib/security src/app/api src/proxy.ts
-node scripts/native-command.cjs test            # 115 teste unitare/SQL/HTTP/Auth (~4 min, include expirarea reală a JWT)
+node scripts/native-command.cjs test            # 113 teste unitare/SQL/HTTP/Auth (~4 min, include expirarea reală a JWT)
 node scripts/native-command.cjs e2e             # E2E Playwright (~4,5 min; pornește preview-ul dacă nu rulează)
 node scripts/migration-rehearsal.cjs            # repetiția migrării pe stack real (~2 min), raport în ../../outputs/release-2026-11-03/rehearsal
 node scripts/release-check.cjs main             # GO/NO-GO tehnic pentru merge în main
@@ -173,4 +173,16 @@ Get-NetTCPConnection -LocalPort 3100 -State Listen | % { Stop-Process -Id $_.Own
 
 ## 10. Rezultatele finale ale acestei sesiuni
 
-*(completat după ultima rulare; jurnale în `outputs/release-2026-11-03/tests/handoff/`)*
+Jurnale: `outputs/release-2026-11-03/tests/handoff/`.
+
+| Verificare | Rezultat |
+|---|---|
+| TypeScript | PASS |
+| Lint V2 | PASS (0 probleme) |
+| Lint întreg repository | 46 erori + 29 avertismente: baza moștenită din V1, neschimbată |
+| Unit / SQL / HTTP / Auth | **113/113** |
+| E2E Playwright | **112/112**. Prima rulare a dat 111/112: testul galeriei căuta vechea adresă `/v2/recipes/`. Selectorul a fost actualizat la ruta protejată și acum verifică și că imaginea se încarcă. Rularea completă de după a trecut |
+| Repetiția migrării (stack real) | **36/36** |
+| Acces la candidați (HTTP, build de producție) | local: 200 `image/webp` prin ruta protejată; adresa statică veche → 404; configurație de producție fără cod → 307 `/acces-revizie` |
+| `release-check.cjs main` | NO-GO așteptat: singurul blocaj real este patch-ul V1, care nu e în producție. Fotografii neaprobate în `public/`: 0 |
+| Producție | neatinsă: fără push, merge, deploy sau scrieri în baza live; citiri doar read-only (metadate și agregate) |
