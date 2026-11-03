@@ -4,6 +4,7 @@
 /node_modules
 /.next-v2/
 /.next-perf*/
+/.next-phone/
 /.pnp
 .pnp.*
 .yarn/*

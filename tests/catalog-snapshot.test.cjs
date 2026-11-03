@@ -15,7 +15,8 @@ test('the browser catalog keeps every rule result and only resolves photos at ru
     const built=JSON.parse(JSON.stringify(load('src/features/v2/catalog-build.ts').buildRecipes()));
     const {catalog}=load('src/features/v2/catalog.ts');
     const {recipePhotos}=load('src/features/v2/content/photos.ts');
-    assert.deepEqual(JSON.parse(JSON.stringify(catalog.map(({photo,hasPhoto,...r})=>r))),built);
+    const withoutPhoto=r=>{const copy={...r};delete copy.photo;delete copy.hasPhoto;return copy;};
+    assert.deepEqual(JSON.parse(JSON.stringify(catalog.map(withoutPhoto))),built);
     for(const r of catalog){
       const asset=recipePhotos[r.id];
       assert.equal(Boolean(r.photo),Boolean(asset&&(asset.approved||mode==='preview')),r.id);

@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     // Default ignores of eslint-config-next:
     ".next/**",
     ".next-v2/**",
+    // Extra builds (V2_DIST_DIR): performance comparisons and the private phone preview.
+    ".next-perf*/**",
+    ".next-phone/**",
     ".local-supabase/**",
     ".local-test-db/**",
     "test-results/**",
