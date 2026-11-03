@@ -95,4 +95,69 @@ const md = [
   '',
 ].join('\n');
 fs.writeFileSync(path.join(out, 'PHOTO-REPORT.md'), md);
+
+// Batch 0 kit: the 12 pilot prompts, ready to paste one by one into the Gemini app.
+const ASK = 'Generează o singură fotografie realistă, format 4:3 (orizontal), minimum 1600×1200, după descrierea de mai jos. Respectă strict lista „Nu trebuie să apară”. Dacă nu poți respecta o restricție, spune-o în loc să generezi.';
+const kit = [
+  '# Lotul 0 — 12 fotografii pilot (Gemini Pro)',
+  '',
+  'Generat de `scripts/photo-catalog.cjs` din `photos/manifest.json`. Prompturile corespund rețetelor **corectate** (ex. supa de broccoli fără crutoane).',
+  '',
+  '## Pentru fiecare fotografie',
+  '',
+  '1. În aplicația Gemini, deschide **o conversație nouă** pentru fiecare rețetă (ca stilul să nu se amestece între rețete).',
+  '2. Copiază blocul „De lipit în Gemini” al rețetei și trimite-l.',
+  '3. Dacă rezultatul încalcă vreun punct din „Nu trebuie să apară”, cere o variantă nouă în aceeași conversație. Nu edita manual imaginea.',
+  '4. Descarcă imaginea la rezoluția maximă și salveaz-o **exact** cu numele din „Salvează ca”, în `content/gemini-import/incoming/`. Niciodată în `public/`.',
+  '5. După toate cele 12 (sau după câteva), rulează:',
+  '',
+  '```bash',
+  'node scripts/photo-import.cjs check',
+  '```',
+  '',
+  '6. Deschide `content/gemini-import/review/` și verifică fiecare imagine cu checklist-ul de mai jos (persoană, nu AI).',
+  '',
+  '**Checklist (respinge dacă):**',
+  '- apare un ingredient care nu e în rețetă;',
+  '- textura nu se potrivește etapei;',
+  '- apare orice element din „Nu trebuie să apară”;',
+  '- porția e de adult;',
+  '- apar text, logo, persoane sau mâini;',
+  '- arată ca o reclamă;',
+  '- are detalii AI false (linguri deformate, boluri duble).',
+  '',
+  '**Condiții de utilizare:** înainte de publicare, verifică în condițiile Google pentru Gemini că imaginile pot fi folosite comercial pe site. Notează linkul în `provenance.termsUrl` și setează `commercialUseTermsChecked: true` doar dacă ești sigur. Fără asta, `photo-import publish` refuză publicarea.',
+  '',
+  '**După aprobare**, în `docs/ai-ops/photos/manifest.json`, la rețeta respectivă:',
+  '- `imageStatus: "approved"`;',
+  '- `provenance.generator: "Gemini"`, `model`, `generatedAt`, `reviewedBy` (numele tău), `decision`;',
+  '- verifici `alt`.',
+  '',
+  'Apoi:',
+  '',
+  '```bash',
+  'node scripts/photo-import.cjs publish <recipeId>',
+  '```',
+  '',
+  ...pilot.flatMap((p, i) => {
+    const r = catalog.find((x) => x.id === p.recipeId);
+    return [
+      `## ${i + 1}. ${p.title}`,
+      '',
+      `\`${p.recipeId}\` · ${r.age} · status: ${r.editorialStatus}${r.published ? '' : ' (nepublicată)'}`,
+      '',
+      `**Salvează ca:** \`content/gemini-import/incoming/${p.fileName}\``,
+      '',
+      '**De lipit în Gemini:**',
+      '',
+      '```text',
+      `${ASK}\n\n${p.prompt}\n\nNu trebuie să apară: ${p.mustNotAppear.join('; ')}.`,
+      '```',
+      '',
+      `**Rezultatul așteptat:** ${p.finalResult} · **Textură:** ${p.texture} · **Servire:** ${p.presentation}`,
+      '',
+    ];
+  }),
+].join('\n');
+fs.writeFileSync(path.join(out, 'PILOT-BATCH-0.md'), kit);
 console.log(`photos: ${photos.length} · approved ${count('approved')} · illustration ${count('existing-illustration')} · imported ${count('imported-pending-review')} · pilot ${count('pilot-requested')} · missing ${count('missing')} · batches ${batches.length}`);

@@ -78,7 +78,7 @@ async function publish(recipeId) {
   fs.writeFileSync(photosModule, `${header}export const recipePhotos: Record<string, RecipePhotoAsset> = ${JSON.stringify(photos, null, 2)};\n`);
   entry.imageStatus = 'published';
   fs.writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + '\n');
-  console.log(`${recipeId}: ${WIDTHS.map((w) => `${w}w ${Math.round(sizes[w] / 1024)} KB`).join(', ')}. Se afișează online numai după ce rețeta are status editorial "published".`);
+  console.log(`${recipeId}: ${WIDTHS.map((w) => `${w}w ${Math.round(sizes[w] / 1024)} KB`).join(', ')}. Apare pe rețetele publicate din bibliotecă; o rețetă aflată în revizie de specialitate nu este afișată familiilor.`);
 }
 
 const [command, arg] = process.argv.slice(2);

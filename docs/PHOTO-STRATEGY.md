@@ -41,7 +41,7 @@ Aspectul corect este definit din ingrediente, etapă și pasul final al rețetei
 | 9 | Pain perdu cu fructe (`paine-perdue-fructe-12`) | mic dejun · 12+ | pictogramă | pâine aurie în bețișoare, fructe moi tăiate (banană, căpșuni sferturi) | fructe tăiate pe lungime, fără zahăr pudră |
 | 10 | Cuscus cu legume mediteraneene (`cus-cus-legume-12`) | cină · 12+ | pictogramă | cuscus pufos cu dovlecel și roșie tăiate cubulețe, verdeață | roșii tăiate, nu cherry întregi |
 | 11 | Biluțe cu măr și cremă de brânză (`biluze-mar-crema-branza-12`) | gustare · 12+ | pictogramă | biluțe mici, moi, pudrate ușor cu scorțișoară | mărime potrivită apucării, nu rotunde-tari |
-| 12 | Supă cremă de broccoli (`supa-crema-broccoli-12`) | prânz · 12+ | pictogramă | supă cremă verde, netedă, în cană/bol mic, eventual crutoane moi | fără sare vizibilă, temperatură călduță (fără abur puternic) |
+| 12 | Supă cremă de broccoli (`supa-crema-broccoli-12`) | prânz · 12+ | pictogramă | supă cremă verde, netedă, în cană/bol mic, eventual câteva cubulețe de pâine moale | fără sare vizibilă, fără crutoane tari sau prăjite, temperatură călduță (fără abur puternic) |
 
 Rețetele cu ilustrații deja generate (`piure-dovlecel`, `piure-morcov`) rămân ca referință de stil.
 

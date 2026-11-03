@@ -1,6 +1,6 @@
 // Builds launch batch 1 for specialist review and the 12-photo manifest for Gemini Images.
 // Deterministic: reads the catalog, the editorial shortlist and docs/PHOTO-STRATEGY.md. Writes docs/ai-ops/{editorial,photos}.
-// Nothing here approves anything: every record leaves with status review_required and an empty review block.
+// Nothing here approves anything: every record carries its current editorial status and an empty review block.
 const fs = require('node:fs'), path = require('node:path');
 const { load } = require('../tests/load-ts.cjs');
 const { catalog, storableId } = load('src/features/v2/catalog.ts');
@@ -14,7 +14,9 @@ const out = path.join(repo, 'docs/ai-ops');
 const QUOTA = { 'mic-dejun': 7, pranz: 9, cina: 6, gustare: 4 }; // 26 recipes
 const STAGES = [6, 8, 10, 12];
 const stageOf = (months) => STAGES.filter((s) => s <= months).pop() ?? 6;
-const byId = new Map(catalog.map((r) => [r.id, r]));
+// Legacy ids (e.g. "omletă-legume-8") resolve to their V2 alias; aliased recipes stay out of batch selection,
+// so batch 1 keeps the composition it was prepared with.
+const byId = new Map(catalog.flatMap((r) => [[r.id, r], ...(r.legacyId ? [[r.legacyId, r]] : [])]));
 const score = new Map(editorialShortlist.map((r) => [r.id, r.score]));
 
 // Duplicates inside the shortlist: same normalized name stem.
@@ -36,7 +38,7 @@ const simple = (r) => r.ingredients.length <= 7 && (r.minutes ?? 99) <= 30;
 const chosen = new Map(photoIds.map((id) => [id, 'pilot foto']));
 for (const [meal, quota] of Object.entries(QUOTA)) {
   const pool = editorialShortlist.map(({ id }) => byId.get(id))
-    .filter((r) => r.mealType === meal && storableId(r.id) && !duplicateIds.has(r.id) && !chosen.has(r.id))
+    .filter((r) => r.mealType === meal && storableId(r.id) && !r.legacyId && !duplicateIds.has(r.id) && !chosen.has(r.id))
     .sort((a, b) => Number(quantified(b) && simple(b) && !importedHeavy(b)) - Number(quantified(a) && simple(a) && !importedHeavy(a)) || score.get(b.id) - score.get(a.id));
   let have = [...chosen.keys()].filter((id) => byId.get(id).mealType === meal).length;
   for (let round = 0; have < quota && round < 10; round++) for (const stage of STAGES) {
@@ -61,7 +63,7 @@ const recipes = [...chosen].map(([id, reason]) => {
     proposedTexture: texture[stage], proposedServing: serving[stage],
     automaticFlags: flags.reasons, quantitiesComplete: quantified(r), localSeasonMonths: season.detectProduce(r.ingredients).filter((p) => p.local).map((p) => p.name),
     selectionReason: reason, photoPilot: photoIds.includes(id),
-    editorialStatus: 'review_required',
+    editorialStatus: r.editorialStatus,
     // The review is valid only for this exact text (src/features/v2/content/editorial.ts).
     contentHash: recipeFingerprint(r),
     review: { decision: null, reviewer: null, credentials: null, reviewedAt: null, sourceUrls: [], version: null, corrections: null },

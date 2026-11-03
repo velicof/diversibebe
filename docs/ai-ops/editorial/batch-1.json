@@ -42,8 +42,8 @@
       ],
       "selectionReason": "pilot foto",
       "photoPilot": true,
-      "editorialStatus": "review_required",
-      "contentHash": "3519e5b5",
+      "editorialStatus": "imported",
+      "contentHash": "0f210e73",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -86,8 +86,8 @@
       "localSeasonMonths": [],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
-      "contentHash": "d7cf2709",
+      "editorialStatus": "imported",
+      "contentHash": "9dc52505",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -138,8 +138,8 @@
       ],
       "selectionReason": "pilot foto",
       "photoPilot": true,
-      "editorialStatus": "review_required",
-      "contentHash": "81dc3dd4",
+      "editorialStatus": "imported",
+      "contentHash": "13ac83be",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -186,8 +186,8 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
-      "contentHash": "e0f0df14",
+      "editorialStatus": "imported",
+      "contentHash": "d48c3260",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -237,8 +237,8 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
-      "contentHash": "889e7aaa",
+      "editorialStatus": "imported",
+      "contentHash": "46cb0148",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -263,7 +263,7 @@
         "3 linguri lapte",
         "1 linguriță scorțișoară",
         "1 lingură unt",
-        "½ cană fructe (căpșuni, afine, banane)"
+        "½ cană fructe (căpșuni, afine tăiate în jumătăți, banane)"
       ],
       "steps": [
         "Bate ouăle cu laptele și scorțișoara.",
@@ -289,8 +289,8 @@
       ],
       "selectionReason": "pilot foto",
       "photoPilot": true,
-      "editorialStatus": "review_required",
-      "contentHash": "6085ae0a",
+      "editorialStatus": "editorially_corrected",
+      "contentHash": "7e103832",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -339,8 +339,8 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
-      "contentHash": "9e108487",
+      "editorialStatus": "imported",
+      "contentHash": "f6956d35",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -386,8 +386,8 @@
       ],
       "selectionReason": "pilot foto",
       "photoPilot": true,
-      "editorialStatus": "review_required",
-      "contentHash": "6b13dea5",
+      "editorialStatus": "imported",
+      "contentHash": "c8d006d9",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -433,8 +433,8 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
-      "contentHash": "c3cf205b",
+      "editorialStatus": "imported",
+      "contentHash": "8468897f",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -480,8 +480,8 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
-      "contentHash": "7b695b6d",
+      "editorialStatus": "imported",
+      "contentHash": "a7cf6f61",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -532,8 +532,8 @@
       ],
       "selectionReason": "pilot foto",
       "photoPilot": true,
-      "editorialStatus": "review_required",
-      "contentHash": "6a9dea37",
+      "editorialStatus": "imported",
+      "contentHash": "cec32139",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -578,7 +578,7 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "contentHash": "62c44077",
       "review": {
         "decision": null,
@@ -629,8 +629,8 @@
       ],
       "selectionReason": "pilot foto",
       "photoPilot": true,
-      "editorialStatus": "review_required",
-      "contentHash": "600f0f07",
+      "editorialStatus": "imported",
+      "contentHash": "b2a6833d",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -680,8 +680,8 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
-      "contentHash": "bf447349",
+      "editorialStatus": "imported",
+      "contentHash": "66d28155",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -709,7 +709,7 @@
       "steps": [
         "Fierbe legumele 20-25 minute.",
         "Blenduiește fin.",
-        "Servește cu crutoane."
+        "Servește cu cubulețe de pâine moale."
       ],
       "storage": "Se păstrează la frigider 3 zile sau congelator 2 luni.",
       "allergens": [],
@@ -723,8 +723,8 @@
       ],
       "selectionReason": "pilot foto",
       "photoPilot": true,
-      "editorialStatus": "review_required",
-      "contentHash": "3656901d",
+      "editorialStatus": "editorially_corrected",
+      "contentHash": "51f8df95",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -770,7 +770,7 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "contentHash": "053e5148",
       "review": {
         "decision": null,
@@ -818,7 +818,7 @@
       ],
       "selectionReason": "pilot foto",
       "photoPilot": true,
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "contentHash": "4933a12f",
       "review": {
         "decision": null,
@@ -866,8 +866,8 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
-      "contentHash": "3657b092",
+      "editorialStatus": "imported",
+      "contentHash": "ba9d7b82",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -919,8 +919,8 @@
       ],
       "selectionReason": "pilot foto",
       "photoPilot": true,
-      "editorialStatus": "review_required",
-      "contentHash": "f62ba940",
+      "editorialStatus": "imported",
+      "contentHash": "c3de17b6",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -966,8 +966,8 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
-      "contentHash": "10da3323",
+      "editorialStatus": "imported",
+      "contentHash": "2cb7dfc7",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -1018,7 +1018,7 @@
       ],
       "selectionReason": "pilot foto",
       "photoPilot": true,
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "contentHash": "411b6abc",
       "review": {
         "decision": null,
@@ -1066,7 +1066,7 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "contentHash": "b01f9622",
       "review": {
         "decision": null,
@@ -1111,8 +1111,8 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
-      "contentHash": "7019a0f2",
+      "editorialStatus": "imported",
+      "contentHash": "c9ee2f12",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -1156,8 +1156,8 @@
       ],
       "selectionReason": "pilot foto",
       "photoPilot": true,
-      "editorialStatus": "review_required",
-      "contentHash": "88084856",
+      "editorialStatus": "imported",
+      "contentHash": "fb028c42",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -1201,8 +1201,8 @@
       ],
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
-      "editorialStatus": "review_required",
-      "contentHash": "e48b93f2",
+      "editorialStatus": "imported",
+      "contentHash": "45d206ae",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -1244,8 +1244,8 @@
       ],
       "selectionReason": "pilot foto",
       "photoPilot": true,
-      "editorialStatus": "review_required",
-      "contentHash": "9bbe7ec0",
+      "editorialStatus": "imported",
+      "contentHash": "3872e7fc",
       "review": {
         "decision": null,
         "reviewer": null,

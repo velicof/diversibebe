@@ -38,7 +38,7 @@
       "publishedBase": "/v2/recipes/piure-broccoli-cartof-6",
       "alt": "Piure de broccoli cu cartof: piure verde-pal, omogen, fără bucăți, în bol mic, linguriță de silicon.",
       "imageStatus": "requested",
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "provenance": {
         "generator": null,
         "model": null,
@@ -86,7 +86,7 @@
       "publishedBase": "/v2/recipes/iaurt-unt-migdale",
       "alt": "Iaurt cu unt de migdale: iaurt alb cu un fir subțire de unt de migdale fin amestecat, eventual măr ras fin.",
       "imageStatus": "requested",
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "provenance": {
         "generator": null,
         "model": null,
@@ -135,7 +135,7 @@
       "publishedBase": "/v2/recipes/clatite-ovaz-mar-8",
       "alt": "Clătite de ovăz cu măr ras: clătite mici, moi, tăiate în fâșii de mărimea unui deget, măr ras vizibil.",
       "imageStatus": "requested",
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "provenance": {
         "generator": null,
         "model": null,
@@ -180,7 +180,7 @@
       "publishedBase": "/v2/recipes/branza-vaci-afine-8",
       "alt": "Brânză de vaci cu afine: brânză de vaci în bol, afine strivite amestecate (pete violet).",
       "imageStatus": "requested",
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "provenance": {
         "generator": null,
         "model": null,
@@ -230,7 +230,7 @@
       "publishedBase": "/v2/recipes/dip-sfecla-nuci",
       "alt": "Dip de sfeclă cu nuci și castravete: dip roz-magenta, neted, cu bețișoare de castravete curățat.",
       "imageStatus": "requested",
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "provenance": {
         "generator": null,
         "model": null,
@@ -278,7 +278,7 @@
       "publishedBase": "/v2/recipes/naut-piure-tahini-morcov",
       "alt": "Piure de năut cu tahini și morcov fiert: hummus neted, bej, morcov fiert în bețișoare moi.",
       "imageStatus": "requested",
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "provenance": {
         "generator": null,
         "model": null,
@@ -327,7 +327,7 @@
       "publishedBase": "/v2/recipes/paste-somon-smantana",
       "alt": "Paste cu somon și smântânică: fusilli mici, sos cremos pal, spanac tocat, somon fulgi.",
       "imageStatus": "requested",
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "provenance": {
         "generator": null,
         "model": null,
@@ -376,7 +376,7 @@
       "publishedBase": "/v2/recipes/mancare-spanac-ou",
       "alt": "Mâncare de spanac cu ou: spanac cremos verde închis, ou fiert tare tăiat în sferturi.",
       "imageStatus": "requested",
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "provenance": {
         "generator": null,
         "model": null,
@@ -401,7 +401,7 @@
         "3 linguri lapte",
         "1 linguriță scorțișoară",
         "1 lingură unt",
-        "½ cană fructe (căpșuni, afine, banane)"
+        "½ cană fructe (căpșuni, afine tăiate în jumătăți, banane)"
       ],
       "finalResult": "pâine aurie în bețișoare, fructe moi tăiate (banană, căpșuni sferturi)",
       "texture": "mâncarea familiei, tăiată în bucăți mici, moi",
@@ -425,7 +425,7 @@
       "publishedBase": "/v2/recipes/paine-perdue-fructe-12",
       "alt": "Pain perdu (pâine prăjită în ou) cu fructe: pâine aurie în bețișoare, fructe moi tăiate (banană, căpșuni sferturi).",
       "imageStatus": "requested",
-      "editorialStatus": "review_required",
+      "editorialStatus": "editorially_corrected",
       "provenance": {
         "generator": null,
         "model": null,
@@ -475,7 +475,7 @@
       "publishedBase": "/v2/recipes/cus-cus-legume-12",
       "alt": "Cuscus cu legume mediteraneene: cuscus pufos cu dovlecel și roșie tăiate cubulețe, verdeață.",
       "imageStatus": "requested",
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "provenance": {
         "generator": null,
         "model": null,
@@ -521,7 +521,7 @@
       "publishedBase": "/v2/recipes/biluze-mar-crema-branza-12",
       "alt": "Biluțe cu măr, cremă de brânză și scorțișoară: biluțe mici, moi, pudrate ușor cu scorțișoară.",
       "imageStatus": "requested",
-      "editorialStatus": "review_required",
+      "editorialStatus": "imported",
       "provenance": {
         "generator": null,
         "model": null,
@@ -546,11 +546,12 @@
         "1 cățel usturoi",
         "600ml apă"
       ],
-      "finalResult": "supă cremă verde, netedă, în cană/bol mic, eventual crutoane moi",
+      "finalResult": "supă cremă verde, netedă, în cană/bol mic, eventual câteva cubulețe de pâine moale",
       "texture": "mâncarea familiei, tăiată în bucăți mici, moi",
       "presentation": "în farfurie, bucăți mici; supraveghere continuă",
       "mustNotAppear": [
         "fără sare vizibilă",
+        "fără crutoane tari sau prăjite",
         "temperatură călduță (fără abur puternic)",
         "sare sau solniță",
         "miere",
@@ -563,12 +564,12 @@
         "tacâmuri metalice ascuțite, pahare de sticlă",
         "abur puternic sau mâncare fierbinte"
       ],
-      "prompt": "Fotografie realistă de mâncare gătită acasă, porție pentru copil mic: supă cremă verde, netedă, în cană/bol mic, eventual crutoane moi. Ingrediente vizibile doar din: broccoli, morcov, usturoi. Bol ceramic mic mat, linguriță de silicon, fundal in bej și lemn deschis, lumină naturală de dimineață din stânga, umbre moi, unghi 3/4, profunzime de câmp mică, culori naturale. Fără text, fără logo, fără persoane. Fără sare vizibilă, temperatură călduță (fără abur puternic). Format 4:3, minimum 1600×1200.",
+      "prompt": "Fotografie realistă de mâncare gătită acasă, porție pentru copil mic: supă cremă verde, netedă, în cană/bol mic, eventual câteva cubulețe de pâine moale. Ingrediente vizibile doar din: broccoli, morcov, usturoi. Bol ceramic mic mat, linguriță de silicon, fundal in bej și lemn deschis, lumină naturală de dimineață din stânga, umbre moi, unghi 3/4, profunzime de câmp mică, culori naturale. Fără text, fără logo, fără persoane. Fără sare vizibilă, fără crutoane tari sau prăjite, temperatură călduță (fără abur puternic). Format 4:3, minimum 1600×1200.",
       "fileName": "supa-crema-broccoli-12.png",
       "publishedBase": "/v2/recipes/supa-crema-broccoli-12",
       "alt": "Supă cremă de broccoli: supă cremă verde, netedă, în cană/bol mic, eventual crutoane moi.",
       "imageStatus": "requested",
-      "editorialStatus": "review_required",
+      "editorialStatus": "editorially_corrected",
       "provenance": {
         "generator": null,
         "model": null,
