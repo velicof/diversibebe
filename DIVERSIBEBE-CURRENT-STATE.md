@@ -1,5 +1,7 @@
 # DiversiBebe — starea exactă a implementării (2 noiembrie 2026)
 
+> **Actualizare 3 nov. 2026:** sursa curentă pentru V2 (arhitectură, PRD, quality gates, backlog, GO/NO-GO) este `docs/ai-ops/` — începeți cu `docs/ai-ops/MASTER-PLAN.md`. Acest document descrie starea la 2 nov.
+
 Acest document descrie ce există **efectiv** în cod și ce a fost verificat. Modificări de producție, toate aprobate de fondator pe 2 nov. 2026: (1) închiderea P0 `user_login_summary`; (2) **hotfixurile legacy SEO + securitate publicate** prin PR #1 → `main` = `db14a4c`, deployment `dpl_z6E6xAaCN17TEq2goKUmkjJgV9EQ`, verificat live. Codul V2 nu este publicat.
 
 ## 1. Versiunea reală și branch-uri

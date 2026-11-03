@@ -1,5 +1,7 @@
 # DiversiBebe — backlog prioritar și criterii de acceptare
 
+> **Actualizare 3 nov. 2026:** sursa curentă pentru V2 (arhitectură, PRD, quality gates, backlog, GO/NO-GO) este `docs/ai-ops/` — începeți cu `docs/ai-ops/MASTER-PLAN.md`. Acest document descrie starea la 2 nov.
+
 Ordinea respectă regula: securitate → SEO → consolidare → conținut → experiență premium → pilot. Fiecare element are un criteriu verificabil.
 
 ## Decizii care necesită aprobarea fondatorului
