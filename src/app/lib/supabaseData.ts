@@ -206,20 +206,21 @@ export async function upsertTriedFood(input: {
     .select("id,try_count,first_tried_at")
     .eq("user_id", userId)
     .eq("food_id", input.foodId)
+    .order("first_tried_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
+  // Plain insert after the existence check: V2 keeps uniqueness per child via partial
+  // indexes, which PostgREST `onConflict` cannot target.
   if (!existing?.id) {
-    await supabase.from("tried_foods").upsert(
-      {
-        user_id: userId,
-        baby_id: baby.id,
-        food_id: input.foodId,
-        food_name: input.foodName,
-        first_tried_at: new Date().toISOString(),
-        try_count: 1,
-      },
-      { onConflict: "user_id,food_id" }
-    );
+    await supabase.from("tried_foods").insert({
+      user_id: userId,
+      baby_id: baby.id,
+      food_id: input.foodId,
+      food_name: input.foodName,
+      first_tried_at: new Date().toISOString(),
+      try_count: 1,
+    });
     return;
   }
 
@@ -316,22 +317,12 @@ export async function markRecipeCooked(
   const userId = await getCurrentUserId();
   if (!userId) return false;
 
-  const { data: existingRow } = await supabase
+  // The production table has no `notes` column, and V2 replaces the (user_id, recipe_id)
+  // constraint with a partial index on legacy rows. Insert only: an existing legacy row
+  // surfaces as a unique violation (already cooked), and V2 confirmation rows are never touched.
+  const { error } = await supabase
     .from("cooked_recipes")
-    .select("notes")
-    .eq("user_id", userId)
-    .eq("recipe_id", recipeId)
-    .maybeSingle();
-
-  const { error } = await supabase.from("cooked_recipes").upsert(
-    {
-      user_id: userId,
-      recipe_id: recipeId,
-      cooked_at: new Date().toISOString(),
-      notes: existingRow?.notes ?? null,
-    },
-    { onConflict: "user_id,recipe_id", ignoreDuplicates: false }
-  );
+    .insert({ user_id: userId, recipe_id: recipeId, cooked_at: new Date().toISOString() });
   if (error && !error.message.includes("duplicate") && !error.message.includes("unique")) {
     return false;
   }
