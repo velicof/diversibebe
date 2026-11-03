@@ -1,0 +1,1234 @@
+{
+  "generatedAt": "2026-11-03",
+  "generator": "scripts/editorial-batch.cjs",
+  "note": "Propuneri editoriale. Textura și forma de servire sunt PROPUNERI de validat de specialist. Nicio rețetă nu este aprobată.",
+  "duplicatesInShortlist": [],
+  "coverageGaps": [
+    "cina · 6+"
+  ],
+  "recipes": [
+    {
+      "id": "iaurt-unt-migdale",
+      "title": "Iaurt cu unt de migdale",
+      "mealType": "mic-dejun",
+      "stageMonths": 6,
+      "catalogAge": "6+ luni",
+      "minutes": 5,
+      "servings": 1,
+      "ingredients": [
+        "1 cană iaurt natural integral fără zahăr",
+        "1 lingură unt de migdale fin (fără bucăți)",
+        "1 măr mic (opțional)",
+        "1 vârf scorțișoară (opțional)"
+      ],
+      "steps": [
+        "Amestecă iaurtul cu untul de migdale într-un castron până e omogen. Nu trebuie să rămână bucăți de unt.",
+        "Spală, curăță și rade mărul pe răzătoarea fină.",
+        "Pune mărul ras peste iaurt.",
+        "Presară un vârf de scorțișoară deasupra.",
+        "Servește și lasă bebelușul să mănânce singur cu mâinile sau cu lingurița pre-încărcată."
+      ],
+      "storage": "Se păstrează la frigider în recipient închis 3 zile.",
+      "allergens": [
+        "lactate",
+        "nuci"
+      ],
+      "proposedTexture": "piure fin, omogen, fără bucăți",
+      "proposedServing": "cu lingurița, porții mici (2–4 linguri)",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Măr"
+      ],
+      "selectionReason": "pilot foto",
+      "photoPilot": true,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "iaurt-unt-arahide",
+      "title": "Iaurt cu unt de arahide și banană",
+      "mealType": "mic-dejun",
+      "stageMonths": 6,
+      "catalogAge": "6+ luni",
+      "minutes": 5,
+      "servings": 1,
+      "ingredients": [
+        "1 cană iaurt natural integral",
+        "1 lingură unt de arahide fin (fără bucăți)",
+        "1 banană coaptă (opțional)",
+        "1 vârf arahide măcinate (opțional)"
+      ],
+      "steps": [
+        "Amestecă iaurtul cu untul de arahide până e complet omogen.",
+        "Adaugă mai mult iaurt dacă e prea dens.",
+        "Taie banana în bețișoare și rostogolește prin arahide măcinate.",
+        "Servește iaurtul cu bețișoarele de banană pe lângă."
+      ],
+      "storage": "Se păstrează la frigider 3 zile.",
+      "allergens": [
+        "lactate",
+        "arahide"
+      ],
+      "proposedTexture": "piure fin, omogen, fără bucăți",
+      "proposedServing": "cu lingurița, porții mici (2–4 linguri)",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "clatite-ovaz-mar-8",
+      "title": "Clătite de ovăz cu măr ras",
+      "mealType": "mic-dejun",
+      "stageMonths": 8,
+      "catalogAge": "8+ luni",
+      "minutes": 20,
+      "servings": "3-4",
+      "ingredients": [
+        "1 cană fulgi de ovăz (măcinați)",
+        "1 ou",
+        "½ cană lapte",
+        "1 măr ras",
+        "1 vârf scorțișoară",
+        "2 linguri ulei de cocos"
+      ],
+      "steps": [
+        "Mixează fulgii de ovăz fin (sau folosește făină de ovăz).",
+        "Amestecă cu oul, laptele și scorțișoara.",
+        "Rade mărul și adaugă-l în aluat.",
+        "Încălzește uleiul la foc mediu.",
+        "Pune câte 2 linguri de aluat, aplatizează.",
+        "Gătește 2-3 minute pe fiecare parte.",
+        "Servește călduțe."
+      ],
+      "storage": "Se păstrează la frigider 2 zile sau congelator 2 luni.",
+      "allergens": [
+        "ou",
+        "lactate",
+        "gluten"
+      ],
+      "proposedTexture": "piure grosier sau bucăți foarte moi, ușor de strivit între degete",
+      "proposedServing": "cu lingurița sau ca finger food moale în fâșii de mărimea unui deget",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Măr"
+      ],
+      "selectionReason": "pilot foto",
+      "photoPilot": true,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "omleta-morcov-branza-8",
+      "title": "Omletă cu morcov ras și brânză",
+      "mealType": "mic-dejun",
+      "stageMonths": 8,
+      "catalogAge": "8+ luni",
+      "minutes": 15,
+      "servings": 1,
+      "ingredients": [
+        "2 ouă",
+        "1 morcov mic ras",
+        "2 linguri brânză de vaci",
+        "1 linguriță ulei",
+        "1 vârf mărar (opțional)"
+      ],
+      "steps": [
+        "Bate ouăle. Adaugă morcovul ras și brânza.",
+        "Încălzește uleiul într-o tigaie mică.",
+        "Toarnă amestecul, acoperă.",
+        "Gătește la foc mic 5-7 minute.",
+        "Taie în bețișoare. Presară mărar."
+      ],
+      "storage": "Se păstrează la frigider 2 zile.",
+      "allergens": [
+        "ou",
+        "lactate"
+      ],
+      "proposedTexture": "piure grosier sau bucăți foarte moi, ușor de strivit între degete",
+      "proposedServing": "cu lingurița sau ca finger food moale în fâșii de mărimea unui deget",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Morcov"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "budinca-gris-fructe-10",
+      "title": "Budincă de griș cu fructe",
+      "mealType": "mic-dejun",
+      "stageMonths": 10,
+      "catalogAge": "10+ luni",
+      "minutes": 20,
+      "servings": "2-3",
+      "ingredients": [
+        "3 linguri griș",
+        "1 cană lapte",
+        "1 ou",
+        "¼ cană fructe tocate (căpșuni, piersici, etc.)",
+        "1 linguriță unt pentru formă"
+      ],
+      "steps": [
+        "Fierbe grișul cu laptele 5 minute amestecând.",
+        "Lasă să se răcească 5 minute.",
+        "Amestecă oul bine. Adaugă fructele.",
+        "Unge o formă mică cu unt.",
+        "Toarnă compoziția. Coace la 180°C, 15 minute.",
+        "Lasă să se răcească. Taie felii."
+      ],
+      "storage": "Se păstrează la frigider 3 zile.",
+      "allergens": [
+        "ou",
+        "lactate",
+        "gluten"
+      ],
+      "proposedTexture": "bucăți mici și moi, tăiate mărunt",
+      "proposedServing": "finger food moale și cu lingurița; copilul exersează singur",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Piersici",
+        "Căpșuni"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "paine-perdue-fructe-12",
+      "title": "Pain perdu (pâine prăjită în ou) cu fructe",
+      "mealType": "mic-dejun",
+      "stageMonths": 12,
+      "catalogAge": "12+ luni",
+      "minutes": 10,
+      "servings": "1-2",
+      "ingredients": [
+        "2 felii pâine albă",
+        "2 ouă",
+        "3 linguri lapte",
+        "1 linguriță scorțișoară",
+        "1 lingură unt",
+        "½ cană fructe (căpșuni, afine, banane)"
+      ],
+      "steps": [
+        "Bate ouăle cu laptele și scorțișoara.",
+        "Înmoaie pâinea pe ambele părți.",
+        "Topește untul la foc mediu.",
+        "Prăjește pâinea 2 minute pe fiecare parte.",
+        "Taie fructele. Pune deasupra.",
+        "Taie în cuburi sau bețișoare."
+      ],
+      "storage": "Se servește proaspăt.",
+      "allergens": [
+        "ou",
+        "lactate",
+        "gluten"
+      ],
+      "proposedTexture": "mâncarea familiei, tăiată în bucăți mici, moi",
+      "proposedServing": "în farfurie, bucăți mici; supraveghere continuă",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Căpșuni",
+        "Afine"
+      ],
+      "selectionReason": "pilot foto",
+      "photoPilot": true,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "sandwich-ou-branza-12",
+      "title": "Mini sandwich cu ou și brânză",
+      "mealType": "mic-dejun",
+      "stageMonths": 12,
+      "catalogAge": "12+ luni",
+      "minutes": 10,
+      "servings": 1,
+      "ingredients": [
+        "2 felii pâine toast",
+        "1 ou fiert",
+        "2 linguri brânză de vaci",
+        "2 felii castravete",
+        "1 vârf mărar"
+      ],
+      "steps": [
+        "Fierbe oul 10 minute. Curăță și taie felii.",
+        "Prăjește ușor pâinea.",
+        "Întinde brânza pe o felie.",
+        "Pune oul feliat și castravetele deasupra.",
+        "Presară mărar. Acoperă cu cealaltă felie.",
+        "Taie în 4 pătrate mici."
+      ],
+      "storage": "Se servește proaspăt.",
+      "allergens": [
+        "ou",
+        "lactate",
+        "gluten"
+      ],
+      "proposedTexture": "mâncarea familiei, tăiată în bucăți mici, moi",
+      "proposedServing": "în farfurie, bucăți mici; supraveghere continuă",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Castravete"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "piure-broccoli-cartof-6",
+      "title": "Piure de broccoli cu cartof",
+      "mealType": "pranz",
+      "stageMonths": 6,
+      "catalogAge": "6+ luni",
+      "minutes": 20,
+      "servings": "2-3",
+      "ingredients": [
+        "1 cană broccoli buchețele",
+        "1 cartof mediu",
+        "1 linguriță unt",
+        "¼ cană lapte matern sau formulă"
+      ],
+      "steps": [
+        "Curăță cartoful, taie cuburi. Fierbe 15 minute.",
+        "Adaugă broccoli în ultimele 8 minute de fiert.",
+        "Scurge. Pasează cu untul și laptele.",
+        "Piureul va fi verde-deschis și cremos.",
+        "Lasă să se răcească. Servește la temperatura camerei."
+      ],
+      "storage": "Se păstrează la frigider 2 zile.",
+      "allergens": [
+        "lactate"
+      ],
+      "proposedTexture": "piure fin, omogen, fără bucăți",
+      "proposedServing": "cu lingurița, porții mici (2–4 linguri)",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Cartof",
+        "Broccoli"
+      ],
+      "selectionReason": "pilot foto",
+      "photoPilot": true,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "piure-fasole-verde-cartof-6",
+      "title": "Piure de fasole verde cu cartof și unt",
+      "mealType": "pranz",
+      "stageMonths": 6,
+      "catalogAge": "6+ luni",
+      "minutes": 20,
+      "servings": "2-3",
+      "ingredients": [
+        "150g fasole verde",
+        "1 cartof mic",
+        "1 linguriță unt",
+        "50ml apă de la fiert"
+      ],
+      "steps": [
+        "Fierbe fasolea verde 12-15 minute. Scurge bine.",
+        "Fierbe cartoful cuburi 15 minute. Scurge.",
+        "Pasează ambele cu untul și apa.",
+        "Trece printr-o sită dacă mai rămân fibre.",
+        "Servește la temperatura camerei."
+      ],
+      "storage": "Se păstrează la frigider 2 zile.",
+      "allergens": [
+        "lactate"
+      ],
+      "proposedTexture": "piure fin, omogen, fără bucăți",
+      "proposedServing": "cu lingurița, porții mici (2–4 linguri)",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Cartof",
+        "Fasole verde"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "piure-morcov-fasole-verde",
+      "title": "Piure de morcov cu fasole verde",
+      "mealType": "pranz",
+      "stageMonths": 6,
+      "catalogAge": "6+ luni",
+      "minutes": 20,
+      "servings": "2-3",
+      "ingredients": [
+        "2 morcovi medii",
+        "100g fasole verde",
+        "1 linguriță unt nesărat",
+        "¼ cană lapte matern sau formulă"
+      ],
+      "steps": [
+        "Curăță morcovii și taie-i rondele. Fierbe 15 minute.",
+        "Taie fasolea verde bucăți mici. Fierbe separat 12 minute.",
+        "Scurge ambele. Pasează împreună cu untul și laptele.",
+        "Textura trebuie să fie fin omogenă, fără fibre.",
+        "Servește imediat sau păstrează la frigider."
+      ],
+      "storage": "Se păstrează la frigider 2 zile.",
+      "allergens": [
+        "lactate"
+      ],
+      "proposedTexture": "piure fin, omogen, fără bucăți",
+      "proposedServing": "cu lingurița, porții mici (2–4 linguri)",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Morcov",
+        "Fasole verde"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "dip-sfecla-nuci",
+      "title": "Dip de sfeclă cu nuci și castravete",
+      "mealType": "pranz",
+      "stageMonths": 8,
+      "catalogAge": "8+ luni",
+      "minutes": 10,
+      "servings": "1-2",
+      "ingredients": [
+        "½ cană sfeclă fiartă (din conservă e ok)",
+        "¼ cană iaurt natural",
+        "1 lingură ulei de măsline",
+        "1 lingură nuci măcinate",
+        "1 lingură suc de lămâie",
+        "1 vârf chimion și coriandru",
+        "1 castravete mic"
+      ],
+      "steps": [
+        "Pune sfecla în blender sau robot de bucătărie.",
+        "Adaugă iaurtul, uleiul, nucile măcinate, sucul de lămâie și condimentele.",
+        "Mixează până e cremos și roz.",
+        "Curăță castravetele și taie-l în bețișoare.",
+        "Pune dip-ul în castronul bebelușului.",
+        "Servește cu bețișoarele de castravete pe lângă."
+      ],
+      "storage": "Se păstrează la frigider 5 zile.",
+      "allergens": [
+        "lactate",
+        "nuci"
+      ],
+      "proposedTexture": "piure grosier sau bucăți foarte moi, ușor de strivit între degete",
+      "proposedServing": "cu lingurița sau ca finger food moale în fâșii de mărimea unui deget",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Sfeclă roșie",
+        "Castravete"
+      ],
+      "selectionReason": "pilot foto",
+      "photoPilot": true,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "broccoli-ou-orez-8",
+      "title": "Broccoli cu ou fiert și orez",
+      "mealType": "pranz",
+      "stageMonths": 8,
+      "catalogAge": "8+ luni",
+      "minutes": 20,
+      "servings": "1-2",
+      "ingredients": [
+        "1 cană broccoli buchețele",
+        "2 ouă",
+        "½ cană orez fiert moale",
+        "1 linguriță ulei de măsline"
+      ],
+      "steps": [
+        "Fierbe ouăle 10 minute. Curăță. Taie mărunt.",
+        "Fierbe broccoli la abur 8 minute. Taie bucățele mici.",
+        "Pune orezul în castron.",
+        "Adaugă broccoli și oul tocat.",
+        "Stropește cu ulei. Amestecă."
+      ],
+      "storage": "Se servește proaspăt.",
+      "allergens": [
+        "ou"
+      ],
+      "proposedTexture": "piure grosier sau bucăți foarte moi, ușor de strivit între degete",
+      "proposedServing": "cu lingurița sau ca finger food moale în fâșii de mărimea unui deget",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Broccoli"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "paste-somon-smantana",
+      "title": "Paste cu somon și smântânică",
+      "mealType": "pranz",
+      "stageMonths": 10,
+      "catalogAge": "10+ luni",
+      "minutes": 20,
+      "servings": "2-3",
+      "ingredients": [
+        "80g paste fusilli mici",
+        "100g somon proaspăt fără oase",
+        "2 linguri smântână pentru gătit",
+        "1 linguriță suc de lămâie",
+        "½ cană spanac proaspăt",
+        "1 linguriță ulei de măsline"
+      ],
+      "steps": [
+        "Fierbe pastele conform instrucțiunilor. Scurge.",
+        "Gătește somonul la abur 10 minute. Verifică oasele! Sfărâmă.",
+        "Încălzește uleiul, adaugă spanacul, gătește 2 minute.",
+        "Adaugă smântâna și sucul de lămâie. Amestecă.",
+        "Combină pastele cu sosul și somonul.",
+        "Servește călduț."
+      ],
+      "storage": "Se păstrează la frigider 2 zile.",
+      "allergens": [
+        "lactate",
+        "gluten",
+        "pește"
+      ],
+      "proposedTexture": "bucăți mici și moi, tăiate mărunt",
+      "proposedServing": "finger food moale și cu lingurița; copilul exersează singur",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Spanac"
+      ],
+      "selectionReason": "pilot foto",
+      "photoPilot": true,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "supa-crema-mazare-menta",
+      "title": "Supă cremă de mazăre cu mentă",
+      "mealType": "pranz",
+      "stageMonths": 10,
+      "catalogAge": "10+ luni",
+      "minutes": 20,
+      "servings": "3-4",
+      "ingredients": [
+        "2 căni mazăre congelată",
+        "1 cartof mic",
+        "1 ceapă mică",
+        "1 lingură unt",
+        "2 căni apă",
+        "3-4 frunze mentă proaspătă",
+        "2 linguri iaurt (opțional)"
+      ],
+      "steps": [
+        "Taie cartoful și ceapa mărunt.",
+        "Topește untul, călește ceapa 3 minute.",
+        "Adaugă cartoful și apa. Fierbe 10 minute.",
+        "Adaugă mazărea congelată. Gătește 5 minute.",
+        "Adaugă menta. Pasează cu blenderul.",
+        "Servește cu o lingură de iaurt deasupra."
+      ],
+      "storage": "Se păstrează la frigider 4 zile sau congelator 2 luni.",
+      "allergens": [
+        "lactate"
+      ],
+      "proposedTexture": "bucăți mici și moi, tăiate mărunt",
+      "proposedServing": "finger food moale și cu lingurița; copilul exersează singur",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Cartof",
+        "Mazăre"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "supa-crema-broccoli-12",
+      "title": "Supă cremă de broccoli",
+      "mealType": "pranz",
+      "stageMonths": 12,
+      "catalogAge": "12+ luni",
+      "minutes": 30,
+      "servings": "3-4",
+      "ingredients": [
+        "200g broccoli",
+        "80g morcov",
+        "1 cățel usturoi",
+        "600ml apă"
+      ],
+      "steps": [
+        "Fierbe legumele 20-25 minute.",
+        "Blenduiește fin.",
+        "Servește cu crutoane."
+      ],
+      "storage": "Se păstrează la frigider 3 zile sau congelator 2 luni.",
+      "allergens": [],
+      "proposedTexture": "mâncarea familiei, tăiată în bucăți mici, moi",
+      "proposedServing": "în farfurie, bucăți mici; supraveghere continuă",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Morcov",
+        "Broccoli"
+      ],
+      "selectionReason": "pilot foto",
+      "photoPilot": true,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "file-salau-spanac-mei-12",
+      "title": "File de șalău cu spanac, broccoli și mei",
+      "mealType": "pranz",
+      "stageMonths": 12,
+      "catalogAge": "12+ luni",
+      "minutes": 30,
+      "servings": "2",
+      "ingredients": [
+        "150g file de șalău",
+        "80g spanac proaspăt",
+        "80g broccoli",
+        "30g mei",
+        "un vârf pătrunjel măcinat"
+      ],
+      "steps": [
+        "Fierbe șalăul la foc mic 10-12 minute.",
+        "Fierbe spanacul și broccoli 5-7 minute.",
+        "Fierbe meiul separat 15-18 minute.",
+        "Verifică peștele de oase! Combină toate."
+      ],
+      "storage": "Se servește proaspăt.",
+      "allergens": [
+        "pește"
+      ],
+      "proposedTexture": "mâncarea familiei, tăiată în bucăți mici, moi",
+      "proposedServing": "în farfurie, bucăți mici; supraveghere continuă",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Broccoli",
+        "Spanac"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "naut-piure-tahini-morcov",
+      "title": "Piure de năut cu tahini și morcov fiert",
+      "mealType": "cina",
+      "stageMonths": 8,
+      "catalogAge": "8+ luni",
+      "minutes": 15,
+      "servings": "1-2",
+      "ingredients": [
+        "½ cană năut fiert (clătit bine)",
+        "1 lingură tahini",
+        "1 linguriță suc de lămâie",
+        "1 linguriță ulei de măsline",
+        "1 morcov mediu fiert",
+        "1 vârf chimion"
+      ],
+      "steps": [
+        "Pasează năutul cu tahini, sucul de lămâie, uleiul și chimionul.",
+        "Adaugă 1-2 linguri apă pentru consistență cremoasă.",
+        "Taie morcovul fiert în bețișoare.",
+        "Pune piureul de năut în castron.",
+        "Servește cu bețișoarele de morcov pe lângă."
+      ],
+      "storage": "Se păstrează la frigider 4 zile.",
+      "allergens": [
+        "susan"
+      ],
+      "proposedTexture": "piure grosier sau bucăți foarte moi, ușor de strivit între degete",
+      "proposedServing": "cu lingurița sau ca finger food moale în fâșii de mărimea unui deget",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Morcov"
+      ],
+      "selectionReason": "pilot foto",
+      "photoPilot": true,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "paste-broccoli-ricotta-cina",
+      "title": "Paste cu broccoli și ricotta",
+      "mealType": "cina",
+      "stageMonths": 8,
+      "catalogAge": "8+ luni",
+      "minutes": 15,
+      "servings": 1,
+      "ingredients": [
+        "50g paste mici (stelline sau risoni)",
+        "½ cană broccoli buchețele",
+        "2 linguri ricotta",
+        "1 linguriță ulei de măsline",
+        "1 linguriță suc de lămâie"
+      ],
+      "steps": [
+        "Fierbe pastele conform instrucțiunilor. Cu 3 minute înainte de final adaugă broccoli.",
+        "Scurge totul. Pune în castron.",
+        "Adaugă ricotta, uleiul și sucul de lămâie.",
+        "Amestecă bine — ricotta va deveni un sos cremos.",
+        "Servește călduț."
+      ],
+      "storage": "Se păstrează la frigider 2 zile.",
+      "allergens": [
+        "lactate",
+        "gluten"
+      ],
+      "proposedTexture": "piure grosier sau bucăți foarte moi, ușor de strivit între degete",
+      "proposedServing": "cu lingurița sau ca finger food moale în fâșii de mărimea unui deget",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Broccoli"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "mancare-spanac-ou",
+      "title": "Mâncare de spanac cu ou",
+      "mealType": "cina",
+      "stageMonths": 10,
+      "catalogAge": "10+ luni",
+      "minutes": 20,
+      "servings": "2-3",
+      "ingredients": [
+        "2 căni spanac proaspăt sau congelat",
+        "1 ceapă mică",
+        "1 lingură ulei",
+        "1 lingură făină",
+        "½ cană lapte",
+        "2 ouă fierte tare",
+        "1 vârf nucșoară"
+      ],
+      "steps": [
+        "Gătește spanacul 3 minute. Stoarce bine.",
+        "Călește ceapa în ulei 3 minute.",
+        "Adaugă făina, amestecă 1 minut.",
+        "Toarnă laptele treptat. Gătește 3 minute.",
+        "Adaugă spanacul stoarce și nucșoara.",
+        "Fierbe ouăle 10 minute. Curăță și taie în sferturi.",
+        "Servește spanacul cu ouăle deasupra."
+      ],
+      "storage": "Se păstrează la frigider 3 zile.",
+      "allergens": [
+        "ou",
+        "lactate",
+        "gluten"
+      ],
+      "proposedTexture": "bucăți mici și moi, tăiate mărunt",
+      "proposedServing": "finger food moale și cu lingurița; copilul exersează singur",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Spanac"
+      ],
+      "selectionReason": "pilot foto",
+      "photoPilot": true,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "quinoa-broccoli-branza-cina",
+      "title": "Quinoa cu broccoli și brânză topită",
+      "mealType": "cina",
+      "stageMonths": 10,
+      "catalogAge": "10+ luni",
+      "minutes": 20,
+      "servings": "1-2",
+      "ingredients": [
+        "½ cană quinoa",
+        "1 cană broccoli buchețele",
+        "30g brânză rasă (cașcaval sau mozzarella)",
+        "1 linguriță unt",
+        "1 vârf usturoi pudră"
+      ],
+      "steps": [
+        "Fierbe quinoa 15 minute. Scurge.",
+        "Fierbe broccoli la abur 8 minute. Tocă grosier.",
+        "Amestecă quinoa caldă cu broccoli și brânza rasă.",
+        "Brânza se va topi ușor. Adaugă unt și usturoi pudră.",
+        "Servește călduț."
+      ],
+      "storage": "Se păstrează la frigider 2 zile.",
+      "allergens": [
+        "lactate"
+      ],
+      "proposedTexture": "bucăți mici și moi, tăiate mărunt",
+      "proposedServing": "finger food moale și cu lingurița; copilul exersează singur",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Broccoli"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "cus-cus-legume-12",
+      "title": "Cuscus cu legume mediteraneene",
+      "mealType": "cina",
+      "stageMonths": 12,
+      "catalogAge": "12+ luni",
+      "minutes": 20,
+      "servings": "3-4",
+      "ingredients": [
+        "1 cană cuscus",
+        "1 cană apă fierbinte",
+        "1 dovlecel",
+        "1 roșie",
+        "½ ardei gras",
+        "1 linguriță ulei de măsline",
+        "1 vârf mentă sau pătrunjel"
+      ],
+      "steps": [
+        "Toarnă apa fierbinte peste cuscus. Acoperă 5 minute.",
+        "Aerisește cu furculița.",
+        "Taie legumele cuburi mici.",
+        "Sotează legumele în ulei 5-7 minute.",
+        "Amestecă cuscusul cu legumele.",
+        "Adaugă iarba aromată. Servește caldă sau rece."
+      ],
+      "storage": "Se păstrează la frigider 3 zile.",
+      "allergens": [
+        "gluten"
+      ],
+      "proposedTexture": "mâncarea familiei, tăiată în bucăți mici, moi",
+      "proposedServing": "în farfurie, bucăți mici; supraveghere continuă",
+      "automaticFlags": [],
+      "quantitiesComplete": false,
+      "localSeasonMonths": [
+        "Dovlecel",
+        "Roșii",
+        "Ardei"
+      ],
+      "selectionReason": "pilot foto",
+      "photoPilot": true,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "somon-legume-abur-12",
+      "title": "Somon la abur cu broccoli",
+      "mealType": "cina",
+      "stageMonths": 12,
+      "catalogAge": "12+ luni",
+      "minutes": 20,
+      "servings": "2",
+      "ingredients": [
+        "200g file somon",
+        "1 căpățână broccoli",
+        "1 lămâie (sucul)",
+        "1 vârf mărar",
+        "1 linguriță ulei de măsline"
+      ],
+      "steps": [
+        "Pune somonul și broccoli-ul în vaporizator sau pe o sită deasupra apei.",
+        "Fierbe acoperit 12-15 minute.",
+        "Verifică că somonul e complet gătit.",
+        "Sfărâmă somonul cu furculița (verifică oasele!).",
+        "Stoarce lămâia deasupra.",
+        "Stropește cu ulei și presară mărar."
+      ],
+      "storage": "Se servește proaspăt. Max 1 zi frigider.",
+      "allergens": [
+        "pește"
+      ],
+      "proposedTexture": "mâncarea familiei, tăiată în bucăți mici, moi",
+      "proposedServing": "în farfurie, bucăți mici; supraveghere continuă",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Broccoli"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "pere-iaurt-ghimbir",
+      "title": "Compot de pere cu iaurt",
+      "mealType": "gustare",
+      "stageMonths": 6,
+      "catalogAge": "7+ luni",
+      "minutes": 15,
+      "servings": "2",
+      "ingredients": [
+        "2 pere coapte",
+        "2 linguri iaurt natural",
+        "1 vârf ghimbir pudră (opțional)"
+      ],
+      "steps": [
+        "Curăță perele, taie cuburi.",
+        "Fierbe cu 2 linguri apă 10 minute.",
+        "Lasă să se răcească.",
+        "Pune iaurtul în castron, perele deasupra.",
+        "Presară ghimbir dacă bebelușul îl tolerează."
+      ],
+      "storage": "Se păstrează la frigider 2 zile.",
+      "allergens": [
+        "lactate"
+      ],
+      "proposedTexture": "piure fin, omogen, fără bucăți",
+      "proposedServing": "cu lingurița, porții mici (2–4 linguri)",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Pară"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "branza-vaci-afine-8",
+      "title": "Brânză de vaci cu afine",
+      "mealType": "gustare",
+      "stageMonths": 8,
+      "catalogAge": "8+ luni",
+      "minutes": 5,
+      "servings": "1",
+      "ingredients": [
+        "3 linguri brânză de vaci",
+        "¼ cană afine proaspete sau congelate (decongelate)",
+        "1 vârf vanilie (opțional)"
+      ],
+      "steps": [
+        "Dacă folosești afine congelate, dezgheață-le.",
+        "Zdrobește ușor afinele cu furculița.",
+        "Pune brânza de vaci în castron.",
+        "Adaugă afinele zdrobite deasupra.",
+        "Amestecă ușor sau lasă stratificate."
+      ],
+      "storage": "Se păstrează la frigider 1 zi.",
+      "allergens": [
+        "lactate"
+      ],
+      "proposedTexture": "piure grosier sau bucăți foarte moi, ușor de strivit între degete",
+      "proposedServing": "cu lingurița sau ca finger food moale în fâșii de mărimea unui deget",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Afine"
+      ],
+      "selectionReason": "pilot foto",
+      "photoPilot": true,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "capsuni-banane-iaurt-10",
+      "title": "Căpșuni cu banană și iaurt grecesc",
+      "mealType": "gustare",
+      "stageMonths": 10,
+      "catalogAge": "10+ luni",
+      "minutes": 5,
+      "servings": "1",
+      "ingredients": [
+        "3-4 căpșuni coapte",
+        "½ banană",
+        "2 linguri iaurt grecesc natural"
+      ],
+      "steps": [
+        "Spală și toacă căpșunile mărunt.",
+        "Feliază banana.",
+        "Pune iaurtul în castron.",
+        "Adaugă fructele deasupra.",
+        "La 10 luni poți lăsa bucăți — finger food!"
+      ],
+      "storage": "Se servește proaspăt.",
+      "allergens": [
+        "lactate"
+      ],
+      "proposedTexture": "bucăți mici și moi, tăiate mărunt",
+      "proposedServing": "finger food moale și cu lingurița; copilul exersează singur",
+      "automaticFlags": [],
+      "quantitiesComplete": false,
+      "localSeasonMonths": [
+        "Căpșuni"
+      ],
+      "selectionReason": "acoperire masă × etapă",
+      "photoPilot": false,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    },
+    {
+      "id": "biluze-mar-crema-branza-12",
+      "title": "Biluțe cu măr, cremă de brânză și scorțișoară",
+      "mealType": "gustare",
+      "stageMonths": 12,
+      "catalogAge": "12+ luni",
+      "minutes": 10,
+      "servings": "6-8",
+      "ingredients": [
+        "100g măr ras",
+        "40g cremă de brânză",
+        "un vârf scorțișoară"
+      ],
+      "steps": [
+        "Amestecă ingredientele.",
+        "Formează biluțe.",
+        "Păstrează la frigider."
+      ],
+      "storage": "Frigider 2 zile.",
+      "allergens": [
+        "lactate"
+      ],
+      "proposedTexture": "mâncarea familiei, tăiată în bucăți mici, moi",
+      "proposedServing": "în farfurie, bucăți mici; supraveghere continuă",
+      "automaticFlags": [],
+      "quantitiesComplete": true,
+      "localSeasonMonths": [
+        "Măr"
+      ],
+      "selectionReason": "pilot foto",
+      "photoPilot": true,
+      "editorialStatus": "review_required",
+      "review": {
+        "decision": null,
+        "reviewer": null,
+        "credentials": null,
+        "reviewedAt": null,
+        "sourceUrls": [],
+        "version": null,
+        "corrections": null
+      }
+    }
+  ]
+}

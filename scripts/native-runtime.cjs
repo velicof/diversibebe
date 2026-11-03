@@ -44,12 +44,12 @@ function migrate(){
  sql(`CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE SET search_path='' AS $$SELECT coalesce(nullif(current_setting('request.jwt.claim.sub',true),''),(nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub'))::uuid$$;CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE SET search_path='' AS $$SELECT coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb)$$;GRANT USAGE ON SCHEMA auth,public TO anon,authenticated,service_role;GRANT EXECUTE ON FUNCTION auth.uid(),auth.jwt() TO anon,authenticated,service_role;`);
  if(sql("SELECT coalesce(to_regclass('public.user_preferences')::text,'')")===''){
   sql(fs.readFileSync(path.join(repo,'tests/fixtures/current-schema.sql'),'utf8'));
-  for(const name of ['20261027055351_protect_family_data.sql','20261027055353_bebeasist_quota.sql','20261027133719_v2_persistence_and_events.sql'])sql(fs.readFileSync(path.join(repo,'supabase/migrations',name),'utf8'));
+  for(const name of require(path.join(repo,'supabase/v2-release.cjs')).BASELINE)sql(fs.readFileSync(path.join(repo,'supabase/migrations',name),'utf8'));
   console.log('Applied existing schema and three existing security/persistence migrations to the new local database.');
  }
  sql(fs.readFileSync(path.join(repo,'supabase/operations/security-hotfix/01-close-login-summary.sql'),'utf8'));
  sql(`CREATE OR REPLACE FUNCTION auth.mark_native_test_user() RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$BEGIN NEW.raw_app_meta_data=coalesce(NEW.raw_app_meta_data,'{}'::jsonb)||'{"is_test":true}'::jsonb;RETURN NEW;END$$;DROP TRIGGER IF EXISTS native_synthetic_user ON auth.users;CREATE TRIGGER native_synthetic_user BEFORE INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION auth.mark_native_test_user();GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated,service_role;`);
- for(const name of fs.readdirSync(path.join(repo,'supabase/migrations')).filter(n=>n.includes('real_auth_journey')||n.includes('v2_planner_events'))){
+ for(const name of require(path.join(repo,'supabase/v2-release.cjs')).INCREMENTAL){
   sql('CREATE TABLE IF NOT EXISTS app_private.native_applied_migrations(name text PRIMARY KEY,applied_at timestamptz NOT NULL DEFAULT now())');
   if(sql(`SELECT count(*) FROM app_private.native_applied_migrations WHERE name=${quote(name)}`)==='0'){sql(fs.readFileSync(path.join(repo,'supabase/migrations',name),'utf8'));sql(`INSERT INTO app_private.native_applied_migrations(name) VALUES(${quote(name)})`);}
  }

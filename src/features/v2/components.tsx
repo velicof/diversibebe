@@ -17,7 +17,7 @@ import {
   Clock3,
   ArrowUpRight,
 } from "lucide-react";
-import type { Recipe } from "./catalog";
+import { contentMode, type Recipe } from "./catalog";
 import { usePreview } from "./Provider";
 import { SyncStatus } from "./cloud/SyncStatus";
 import { GrowthTelemetry } from "./growth/Telemetry";
@@ -105,12 +105,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Sparkles size={16} /> DiversiBebe Plus
           </Link>
         </header>
-        <div className="v2-preview-note">
-          <span>VERSIUNE LOCALĂ</span>{" "}
-          {cloud.connected
-            ? "Conținut în curs de revizie. Datele sunt salvate în mediul local de test."
-            : "Conținut în curs de revizie. Datele demo rămân pe acest dispozitiv."}
-        </div>
+        {contentMode === "preview" && (
+          <div className="v2-preview-note">
+            <span>VERSIUNE DE TEST</span>{" "}
+            {cloud.connected
+              ? "Rețetele sunt în curs de revizie de specialitate. Datele sunt salvate în mediul de test."
+              : "Rețetele sunt în curs de revizie de specialitate. Datele demo rămân pe acest dispozitiv."}
+          </div>
+        )}
         {(!marketing || cloud.connected) && <SyncStatus />}
         <GrowthTelemetry />
         {storageError && (
@@ -224,6 +226,26 @@ export function RecipePhoto({
   priority?: boolean;
   className?: string;
 }) {
+  const photo = recipe.photo;
+  if (photo)
+    return (
+      <div className={`v2-photo ${className}`}>
+        {/* Pre-generated responsive WebP (scripts/photo-import.cjs): no runtime image optimization cost. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`${photo.base}-800.webp`}
+          srcSet={photo.widths.map((w) => `${photo.base}-${w}.webp ${w}w`).join(", ")}
+          sizes="(max-width: 600px) 90vw, 45vw"
+          width={photo.width}
+          height={photo.height}
+          alt={photo.alt}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
+        />
+        <span className="v2-photo-caption">{photo.aiGenerated ? "Imagine generată, verificată editorial" : "Fotografie"}</span>
+      </div>
+    );
   return (
     <div className={`v2-photo ${recipe.image.endsWith("icon.svg") ? "v2-ingredient-photo" : ""} ${className}`}>
       <Image

@@ -24,7 +24,7 @@ import {
   ShieldCheck,
   CheckCircle2,
 } from "lucide-react";
-import { catalog, ingredients, previewCatalog, type Recipe } from "./catalog";
+import { activeCatalog, catalog, contentMode, ingredients, type Recipe } from "./catalog";
 import { initialFilters, recommend, type Filters } from "./recommendations";
 import { usePreview } from "./Provider";
 import {
@@ -57,10 +57,10 @@ import { emitGrowth, journeyScope, journeyStore } from "./growth/browser";
 function useEligible(filters?: Filters, month?: number) {
   const { state, clinicalGuidance } = usePreview();
   return recommend(
-    previewCatalog,
+    activeCatalog,
     filters ?? { ...initialFilters, months: state.stage },
     {
-      mode: "preview",
+      mode: contentMode,
       favorites: state.favorites,
       introduced: state.introduced,
       used: state.uses.map((u) => u.recipeId),
@@ -338,7 +338,7 @@ export function Dashboard() {
   const today = state.plan.find((p) => p.slot === days[0].key);
   const planned = matches.find((r) => r.id === today?.recipeId);
   const featured = planned ?? matches[0];
-  const saved = catalog.filter((r) => state.favorites.includes(r.id));
+  const saved = activeCatalog.filter((r) => state.favorites.includes(r.id));
   return (
     <>
       <PageHeading
@@ -913,10 +913,10 @@ export function Planner() {
   const activePlan = state.plan
     .filter((p) => days.some((d) => d.key === p.slot))
     .sort((a, b) => a.slot.localeCompare(b.slot));
-  const { toBuy, atHome } = buildShoppingList(activePlan, catalog, state.pantry);
+  const { toBuy, atHome } = buildShoppingList(activePlan, activeCatalog, state.pantry);
   const checkedCount = toBuy.filter((r) => state.shoppingChecked.includes(r.key)).length;
   if (!ready) return <LoadingState />;
-  const recipeById = (id: string) => catalog.find((r) => r.id === id);
+  const recipeById = (id: string) => activeCatalog.find((r) => r.id === id);
   const dayLabel = (slot: string) => {
     const i = days.findIndex((d) => d.key === slot);
     return i === 0 ? "Azi" : `${days[i]?.label} ${days[i]?.number}`;
@@ -1179,7 +1179,7 @@ export function Planner() {
             <section className="v2-plan-days" aria-label="Planul pentru 7 zile">
               {days.map((day, i) => {
                 const entry = activePlan.find((p) => p.slot === day.key);
-                const recipe = catalog.find((r) => r.id === entry?.recipeId);
+                const recipe = activeCatalog.find((r) => r.id === entry?.recipeId);
                 return (
                   <article className={`v2-plan-day ${i === 0 ? "is-today" : ""}`} key={day.key}>
                     <div className="v2-day-label">

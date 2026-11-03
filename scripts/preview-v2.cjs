@@ -16,6 +16,8 @@ const child = spawn(
     env: {
       ...process.env,
       DIVERSIBEBE_V2_PREVIEW: "1",
+      // Local QA only: unreviewed editorial content, clearly labelled in the UI. Never set for real families.
+      NEXT_PUBLIC_V2_CONTENT_MODE: process.env.NEXT_PUBLIC_V2_CONTENT_MODE || "preview",
       NEXT_PUBLIC_V2_SUPABASE_URL:
         process.env.NEXT_PUBLIC_V2_SUPABASE_URL || "http://127.0.0.1:54329",
       NEXT_PUBLIC_V2_SUPABASE_ANON_KEY:

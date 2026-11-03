@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { usePreview } from "../Provider";
 import { emitGrowth, recordVisit, useExperiment } from "./browser";
-import { previewCatalog } from "../catalog";
+import { activeCatalog, contentMode } from "../catalog";
 import { initialFilters, recommend } from "../recommendations";
 
 export function GrowthTelemetry(){
@@ -18,7 +18,7 @@ export function GrowthTelemetry(){
   },[path,experiment.ready]);
   useEffect(()=>{
     if(path!=="/v2/azi"||!ready||!experiment.ready||experiment.flow!=="classic")return;
-    const count=recommend(previewCatalog,{...initialFilters,months:state.stage},{mode:"preview",favorites:[],introduced:[],used:[],excludedIngredients:[],requiresClinicalGuidance:false}).length;
+    const count=recommend(activeCatalog,{...initialFilters,months:state.stage},{mode:contentMode,favorites:[],introduced:[],used:[],excludedIngredients:[],requiresClinicalGuidance:false}).length;
     emitGrowth("personalized_result_viewed",{flow:"classic",count,valueKind:count?"demo":"empty"},"classic-result");
   },[path,ready,experiment.ready,experiment.flow,state.stage]);
   useEffect(()=>{

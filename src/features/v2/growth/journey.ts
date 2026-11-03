@@ -1,5 +1,5 @@
 import type { AppState, Stage } from "../model";
-import { ingredients, previewCatalog, type Recipe } from "../catalog";
+import { activeCatalog, contentMode, ingredients, type Recipe } from "../catalog";
 import { initialFilters, recommend } from "../recommendations";
 
 export const challenges = [
@@ -67,14 +67,14 @@ export function readJourney(raw: string | null, fallback: Journey): Journey {
       pantry:Array.isArray(v.pantry)?[...new Set<string>(v.pantry.filter((x:unknown)=>ingredients.some(i=>i.id===x)))].slice(0,8):[],
       startedAt:typeof v.startedAt==="number" && Number.isFinite(v.startedAt) && v.startedAt>0 ? v.startedAt : fallback.startedAt,
       completed:v.completed===true && step===3,guideSaved:v.guideSaved===true,
-      resultIds:Array.isArray(v.resultIds)?[...new Set<string>(v.resultIds.filter((id:unknown)=>previewCatalog.some(r=>r.id===id)))].slice(0,3):[]};
+      resultIds:Array.isArray(v.resultIds)?[...new Set<string>(v.resultIds.filter((id:unknown)=>activeCatalog.some(r=>r.id===id)))].slice(0,3):[]};
   } catch { return fallback; }
 }
 export function journeyStage(j: Journey): Stage {
   return (ageBands.find(a=>a.id===j.ageBand)?.stage ?? 0) as Stage;
 }
 export function journeyMinutes(j: Journey) { return j.context==="under15"?14:j.context==="over30"?90:30; }
-export function personalizedResult(j: Journey, state: AppState, blocked: boolean, authenticated=false, recipes: Recipe[]=previewCatalog, mode:"preview"|"live"="preview") {
+export function personalizedResult(j: Journey, state: AppState, blocked: boolean, authenticated=false, recipes: Recipe[]=activeCatalog, mode:"preview"|"live"=contentMode) {
   const stage = authenticated || state.onboarded ? Math.min(state.stage, journeyStage(j)) : journeyStage(j);
   const guide = stage===0 || j.context==="readiness" || j.context==="safety" || j.context==="serving" || j.context==="no-pressure";
   const matches = guide || blocked ? [] : recommend(recipes,{...initialFilters,months:stage,maxMinutes:journeyMinutes(j),ingredientIds:j.context==="fridge"?j.pantry:[]},{

@@ -6,7 +6,7 @@ import { ArrowRight, ArrowUpRight, Check, Clock3, Leaf, Bookmark, CalendarDays }
 import { Landing as ClassicLanding } from "../screens";
 import { RecipeCard } from "../components";
 import { usePreview } from "../Provider";
-import { previewCatalog } from "../catalog";
+import { activeCatalog, contentMode } from "../catalog";
 import { initialFilters, recommend } from "../recommendations";
 import { challenges, newJourney } from "./journey";
 import { journeyScope, journeyStore, useJourney, useExperiment } from "./browser";
@@ -18,7 +18,7 @@ export function GrowthHome(){
   const scope=journeyScope(cloud.userId,cloud.selectedBabyId);
   const draft=useJourney(scope);
   const [minutes,setMinutes]=useState(30);
-  const demo=recommend(previewCatalog,{...initialFilters,months:state.stage,maxMinutes:minutes},{mode:"preview",favorites:state.favorites,introduced:state.introduced,used:[],excludedIngredients:[],requiresClinicalGuidance:clinicalGuidance}).filter(r=>["piure-dovlecel","piure-morcov"].includes(r.id));
+  const demo=recommend(activeCatalog,{...initialFilters,months:state.stage,maxMinutes:minutes},{mode:contentMode,favorites:state.favorites,introduced:state.introduced,used:[],excludedIngredients:[],requiresClinicalGuidance:clinicalGuidance}).filter(r=>["piure-dovlecel","piure-morcov"].includes(r.id));
   if(experiment.flow==="classic")return <ClassicLanding/>;
   const headline=headlines[experiment.message];
   const resume=draft.ready && Boolean(draft.data.challenge) && !draft.data.completed;

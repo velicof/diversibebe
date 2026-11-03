@@ -80,6 +80,7 @@ export function canTransition(
 export function isPublishable(status: EditorialStatus, review: ClinicalReview) {
   return status === "published" && hasClinicalReview(review);
 }
+const automatedReviewer = /\b(?:ai|ia|llm|gpt|chatgpt|openai|gemini|claude|anthropic|copilot|bard|bot|automat\w*)\b/i;
 export function hasClinicalReview(review: ClinicalReview): boolean {
   return (
     review.status === "reviewed" &&
@@ -88,6 +89,7 @@ export function hasClinicalReview(review: ClinicalReview): boolean {
         review.credentials.trim() &&
         review.version.trim(),
     ) &&
+    !automatedReviewer.test(`${review.reviewer} ${review.credentials}`) &&
     Number.isFinite(Date.parse(review.reviewedAt)) &&
     review.sourceUrls.some((source) => source.startsWith("https://"))
   );
