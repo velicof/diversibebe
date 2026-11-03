@@ -355,12 +355,23 @@ Numele părintelui: ${user?.parentName || "Părintele"}
         }),
       });
 
-      const data = (await response.json()) as { content?: string };
+      const data = (await response.json()) as { content?: string; error?: string };
 
       if (data.content) {
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: data.content as string },
+        ]);
+      } else if (response.status === 401 || response.status === 429 || response.status === 503) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content:
+              response.status === 401
+                ? "Pentru a folosi BebeAsist, intră în contul tău DiversiBebe. 🙏"
+                : data.error || "Încearcă din nou în câteva minute. 🙏",
+          },
         ]);
       } else {
         throw new Error("No content");

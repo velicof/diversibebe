@@ -103,7 +103,6 @@ async function upsertTriedFoodForUser(
   const { data: existing } = await supabaseClient
     .from("tried_foods")
     .select("id, try_count, first_tried_at")
-    .is("baby_id", null)
     .eq("user_id", userId)
     .eq("food_id", foodId)
     .order("first_tried_at", { ascending: true })

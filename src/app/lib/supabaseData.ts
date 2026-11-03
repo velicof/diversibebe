@@ -207,20 +207,21 @@ export async function upsertTriedFood(input: {
     .select("id,try_count,first_tried_at")
     .eq("user_id", userId)
     .eq("food_id", input.foodId)
-    .eq("baby_id", baby.id)
+    .order("first_tried_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
+  // Plain insert after the existence check: V2 keeps uniqueness per child via partial
+  // indexes, which PostgREST `onConflict` cannot target. Works before and after the V2 migrations.
   if (!existing?.id) {
-    await supabase.from("tried_foods").insert(
-      {
-        user_id: userId,
-        baby_id: baby.id,
-        food_id: input.foodId,
-        food_name: input.foodName,
-        first_tried_at: new Date().toISOString(),
-        try_count: 1,
-      }
-    );
+    await supabase.from("tried_foods").insert({
+      user_id: userId,
+      baby_id: baby.id,
+      food_id: input.foodId,
+      food_name: input.foodName,
+      first_tried_at: new Date().toISOString(),
+      try_count: 1,
+    });
     return;
   }
 
@@ -317,8 +318,15 @@ export async function markRecipeCooked(
   const userId = await getCurrentUserId();
   if (!userId) return false;
 
-  const { error } = await supabase.rpc("v2_mark_legacy_recipe",{p_recipe_id:recipeId});
-  if(error)return false;
+  // Plain table insert, not the V2 RPC: it works before the V2 migrations, after them, and after the
+  // operational rollback (v2-disable.sql revokes the V2 RPCs). An existing legacy row surfaces as a
+  // unique violation (already cooked); V2 confirmation rows are never touched.
+  const { error } = await supabase
+    .from("cooked_recipes")
+    .insert({ user_id: userId, recipe_id: recipeId, cooked_at: new Date().toISOString() });
+  if (error && !error.message.includes("duplicate") && !error.message.includes("unique")) {
+    return false;
+  }
 
   if (relatedFoods && relatedFoods.length > 0) {
     for (const foodId of relatedFoods) {
