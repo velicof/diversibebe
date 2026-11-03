@@ -17,7 +17,7 @@ test('account accessibility, local SEO and manifest have no private offline cach
  const axe=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
  expect(axe.violations.map(v=>v.id)).toEqual([]);
  await expect(page.locator('html')).toHaveAttribute('lang','ro');
- await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href','http://127.0.0.1:3100/v2/cont');
+ await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href',`${process.env.NEXT_PUBLIC_SITE_URL||'https://www.diversibebe.com'}/v2/cont`); // canonical = public site, never the local host
  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content',/noindex/);
  const robots=await request.get('/robots.txt');expect(await robots.text()).toContain('Disallow: /');
  const sitemap=await request.get('/v2/sitemap.xml');expect(await sitemap.text()).not.toContain('<loc>');

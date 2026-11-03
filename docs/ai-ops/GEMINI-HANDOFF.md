@@ -4,7 +4,7 @@ Gemini nu are acces la disc, la repository, la Supabase sau la conturi. Primeșt
 
 ## A. Gemini 4 Argon — evaluare independentă UX
 
-**Ce încarci:** capturile din `outputs/release-2026-11-03/captures-before/` (13 ecrane × mobil 390 px și desktop 1440 px, sesiune de vizitator, fără cont). Sunt anonimizate: nu conțin email, nume sau date reale.
+**Ce încarci:** capturile din `outputs/release-2026-11-03/review-pack/` (13 ecrane × mobil 390 px și desktop 1440 px, sesiune de vizitator, fără cont). Sunt anonimizate: nu conțin email, nume sau date reale.
 
 **Prompt de pornire (copiază):**
 
