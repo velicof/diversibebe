@@ -82,5 +82,5 @@ test('V1 code never depends on V2 RPCs, so the operational rollback (v2-disable.
   const offenders=v1.filter(f=>/\.rpc\(\s*["'`]v2_/.test(fs.readFileSync(f,'utf8')));
   assert.deepEqual(offenders.map(f=>path.relative(path.join(__dirname,'..'),f)),[]);
   const data=fs.readFileSync(path.join(__dirname,'../src/app/lib/supabaseData.ts'),'utf8');
-  assert.doesNotMatch(data,/onConflicts*:/,'PostgREST onConflict cannot target the V2 partial indexes');
+  assert.doesNotMatch(data,/onConflict\s*:/,'PostgREST onConflict cannot target the V2 partial indexes');
 });
