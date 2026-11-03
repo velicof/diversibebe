@@ -106,6 +106,8 @@ async function upsertTriedFoodForUser(
     .is("baby_id", null)
     .eq("user_id", userId)
     .eq("food_id", foodId)
+    .order("first_tried_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (existing) {

@@ -82,6 +82,8 @@ export default function FoodDetailPage({
     .is("baby_id", null)
       .eq("user_id", userId)
       .eq("food_id", id)
+      .order("first_tried_at", { ascending: true })
+      .limit(1)
       .maybeSingle()
       .then(({ data }) => setTriedData(data));
 
