@@ -30,19 +30,21 @@ function toIsoDate(input: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Always ask Supabase for the current user: a cached id outlives a sign-out in another tab or an
+// expired session, and the next account would read or write with the previous family's id.
 export async function getCurrentUserId(): Promise<string | null> {
-  if (cachedUserId) return cachedUserId;
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.id) return null;
+  if (!user?.id) { clearSupabaseDataCache(); return null; }
+  if (cachedUserId !== user.id) cachedBaby = null;
   cachedUserId = user.id;
   return cachedUserId;
 }
 
 export async function getCurrentBaby(): Promise<DbBaby | null> {
-  if (cachedBaby) return cachedBaby;
   const userId = await getCurrentUserId();
+  if (cachedBaby && cachedBaby.user_id === userId) return cachedBaby;
   if (!userId) return null;
   const { data, error } = await supabase
     .from("babies")
