@@ -74,3 +74,13 @@ test('V1 history without a child shows in V2 only when the family has exactly on
     assert.equal((await asUser(db,USERS.B,d=>d.query('SELECT count(*)::int n FROM public.tried_foods'))).rows[0].n,1);
   }finally{await db.close();}
 });
+
+test('V1 code never depends on V2 RPCs, so the operational rollback (v2-disable.sql) cannot break V1',()=>{
+  const fs=require('node:fs'),path=require('node:path');
+  const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?(e.name==='v2'?[]:walk(path.join(d,e.name))):/\.(ts|tsx)$/.test(e.name)?[path.join(d,e.name)]:[]);
+  const v1=[...walk(path.join(__dirname,'../src/app')),...walk(path.join(__dirname,'../src/lib'))];
+  const offenders=v1.filter(f=>/\.rpc\(\s*["'`]v2_/.test(fs.readFileSync(f,'utf8')));
+  assert.deepEqual(offenders.map(f=>path.relative(path.join(__dirname,'..'),f)),[]);
+  const data=fs.readFileSync(path.join(__dirname,'../src/app/lib/supabaseData.ts'),'utf8');
+  assert.doesNotMatch(data,/onConflict/,'PostgREST onConflict cannot target the V2 partial indexes');
+});
