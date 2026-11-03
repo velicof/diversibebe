@@ -182,6 +182,8 @@ function RetetPageInner() {
       .from("babies")
       .select("avatar_url")
       .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle()
       .then(({ data }) => setBabyAvatarUrl(data?.avatar_url ?? null));
   }, [userId]);

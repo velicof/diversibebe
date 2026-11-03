@@ -160,6 +160,8 @@ export default function DashboardPage() {
       .from("babies")
       .select("name, birthdate, gender, avatar_url")
       .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle()
       .then(({ data }) => {
         if (data) {

@@ -105,6 +105,8 @@ export function useRecommendedRecipes(): {
         .from("babies")
         .select("id, name, birthdate")
         .eq("user_id", userId)
+        .order("created_at", { ascending: true })
+        .limit(1)
         .maybeSingle();
 
       if (cancelled) return;

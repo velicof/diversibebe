@@ -179,6 +179,8 @@ export default function ProfilPage() {
       .from("babies")
       .select("id, name, birthdate, avatar_url")
       .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
