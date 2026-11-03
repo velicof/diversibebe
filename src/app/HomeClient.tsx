@@ -214,7 +214,7 @@ export default function Home() {
               className="text-[14px] font-bold"
               style={{ color: "#6B5B71" }}
             >
-              Rețete testate și aprobate de nutriționiști
+              Rețete verificate editorial, după ghiduri publice
             </p>
           </div>
           <blockquote
