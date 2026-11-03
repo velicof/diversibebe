@@ -279,7 +279,7 @@ export function SaveButton({
   recipe: Recipe;
   compact?: boolean;
 }) {
-  const { state, dispatch, announce, track, cloud } = usePreview();
+  const { state, ready, dispatch, announce, track, cloud } = usePreview();
   const saved = state.favorites.includes(recipe.id);
   return (
     <button
@@ -289,7 +289,7 @@ export function SaveButton({
           : "v2-button v2-button-secondary"
       }
       type="button"
-      disabled={cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
+      disabled={!ready || cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
       aria-label={
         saved ? `Elimină ${recipe.name} din salvate` : `Salvează ${recipe.name}`
       }

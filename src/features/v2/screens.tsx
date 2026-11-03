@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   ArrowRight,
   ArrowLeft,
@@ -74,6 +74,11 @@ function useEligible(filters?: Filters, month?: number) {
       month,
     },
   );
+}
+// False in the server HTML and during hydration: controls rendered on the server stay disabled until they work.
+const noSubscription = () => () => {};
+function useHydrated() {
+  return useSyncExternalStore(noSubscription, () => true, () => false);
 }
 function useDays() {
   const [now] = useState(() => new Date());
@@ -456,9 +461,24 @@ export function Dashboard() {
   );
 }
 
+// Static headings render on the server, so the largest text is painted before the client
+// bundle runs; only the parts that depend on the family wait for `ready`.
+const discoverHeading = (
+  <PageHeading
+    eyebrow="PUȚINE INGREDIENTE. MULTE POSIBILITĂȚI."
+    title="Ce gătim azi?"
+  >
+    Pornește de la ce ai. Alege ceva care vi se potrivește.
+  </PageHeading>
+);
 export function Discover() {
   const { ready } = usePreview();
-  return ready ? <DiscoverReady /> : <LoadingState />;
+  return (
+    <>
+      {discoverHeading}
+      {ready ? <DiscoverReady /> : <LoadingState />}
+    </>
+  );
 }
 function DiscoverReady() {
   const { state, ready, track, clinicalGuidance } = usePreview();
@@ -502,12 +522,6 @@ function DiscoverReady() {
   if (!ready) return <LoadingState />;
   return (
     <>
-      <PageHeading
-        eyebrow="PUȚINE INGREDIENTE. MULTE POSIBILITĂȚI."
-        title="Ce gătim azi?"
-      >
-        Pornește de la ce ai. Alege ceva care vi se potrivește.
-      </PageHeading>
       <div className="v2-discover-layout">
         <aside className="v2-filter-panel" aria-label="Filtre de rețete">
           <div className="v2-filter-title">
@@ -717,10 +731,11 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
   const [checked, setChecked] = useState<number[]>([]);
   const [step, setStep] = useState(0);
   const [cookMode, setCookMode] = useState(false);
+  const hydrated = useHydrated();
   useEffect(() => {
     if (ready) track("recipe_viewed");
   }, [ready, recipe.id, track]);
-  if (!ready) return <LoadingState />;
+  // The recipe itself renders on the server; actions stay disabled until the family's state is loaded.
   const alreadyConfirmed = state.uses.some(
     (u) => u.recipeId === recipe.id && u.day === days[0].key,
   );
@@ -777,19 +792,33 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
             </span>
             <span>Vârstă orientativă: {recipe.age}</span>
             <span>{MEAL_LABELS[recipe.mealType]} · {recipe.servings} {Number(recipe.servings) === 1 ? "porție" : "porții"}</span>
-            {recipe.seasonMonths.includes(new Date().getMonth() + 1) && <span><Leaf size={18} />De sezon acum</span>}
+            {ready && recipe.seasonMonths.includes(new Date().getMonth() + 1) && <span><Leaf size={18} />De sezon acum</span>}
           </div>
-          <div className="v2-action-row">
-            <SaveButton recipe={recipe} />
-            <button
-              className="v2-button v2-button-primary"
-              onClick={addToPlan}
-              disabled={state.stage === 0 || clinicalGuidance || cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
-            >
-              <CalendarDays size={18} />
-              Adaugă în plan
-            </button>
-          </div>
+          {ready ? (
+            <div className="v2-action-row">
+              <SaveButton recipe={recipe} />
+              <button
+                className="v2-button v2-button-primary"
+                onClick={addToPlan}
+                disabled={state.stage === 0 || clinicalGuidance || cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
+              >
+                <CalendarDays size={18} />
+                Adaugă în plan
+              </button>
+            </div>
+          ) : (
+            // Same footprint as the buttons (no layout shift); the saved state is unknown until the family's data loads.
+            <div className="v2-action-row" role="status" aria-label="Se încarcă">
+              <span className="v2-button v2-button-secondary v2-button-pending" aria-hidden="true">
+                <Bookmark size={19} />
+                Salvează
+              </span>
+              <span className="v2-button v2-button-primary v2-button-pending" aria-hidden="true">
+                <CalendarDays size={18} />
+                Adaugă în plan
+              </span>
+            </div>
+          )}
           <p className="v2-field-note">
             {recipe.editorialStatus === "specialist_approved"
               ? "Verificată și aprobată de un specialist pentru etapa indicată."
@@ -811,6 +840,7 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
                   <input
                     type="checkbox"
                     checked={checked.includes(i)}
+                    disabled={!hydrated}
                     onChange={() =>
                       setChecked((old) =>
                         old.includes(i)
@@ -871,6 +901,7 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
             <button
               className="v2-text-button"
               aria-pressed={cookMode}
+              disabled={!hydrated}
               onClick={() => setCookMode((value) => !value)}
             >
               {cookMode ? "Toți pașii" : "Un pas pe ecran"}
@@ -954,7 +985,7 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
         </div>
         <button
           className="v2-button v2-button-primary"
-          disabled={state.stage === 0 || alreadyConfirmed || clinicalGuidance || cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
+          disabled={!ready || state.stage === 0 || alreadyConfirmed || clinicalGuidance || cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
           onClick={confirm}
         >
           {alreadyConfirmed ? <CheckCircle2 size={18} /> : <Check size={18} />}
@@ -973,6 +1004,11 @@ const planMeals = [
 ];
 const planTimes = [15, 20, 30];
 type PlanPrefs = { meal: string; maxMinutes: number; ingredientIds: string[]; reuse: boolean };
+const plannerHeading = (
+  <PageHeading eyebrow="UN PIC DE ORGANIZARE. MAI MULTĂ LINIȘTE." title="Micul vostru plan">
+    Alege preferințele, primești 5 zile de mese și o listă de cumpărături. Schimbi orice, oricând.
+  </PageHeading>
+);
 
 export function Planner() {
   const { state, ready, dispatch, announce, track, cloud, clinicalGuidance } = usePreview();
@@ -995,7 +1031,7 @@ export function Planner() {
     .sort((a, b) => a.slot.localeCompare(b.slot));
   const { toBuy, atHome } = buildShoppingList(activePlan, activeCatalog, state.pantry);
   const checkedCount = toBuy.filter((r) => state.shoppingChecked.includes(r.key)).length;
-  if (!ready) return <LoadingState />;
+  if (!ready) return <>{plannerHeading}<LoadingState /></>;
   const recipeById = (id: string) => activeCatalog.find((r) => r.id === id);
   const dayLabel = (slot: string) => {
     const i = days.findIndex((d) => d.key === slot);
@@ -1083,9 +1119,7 @@ export function Planner() {
   const blocked = state.stage === 0 || clinicalGuidance;
   return (
     <>
-      <PageHeading eyebrow="UN PIC DE ORGANIZARE. MAI MULTĂ LINIȘTE." title="Micul vostru plan">
-        Alege preferințele, primești 5 zile de mese și o listă de cumpărături. Schimbi orice, oricând.
-      </PageHeading>
+      {plannerHeading}
       <div className="v2-planner-toolbar">
         <div className="v2-tabs" role="group" aria-label="Vizualizare plan">
           <button aria-pressed={tab === "plan"} onClick={() => setTab("plan")}>
