@@ -12,10 +12,11 @@ test('existing catalog is reused with stable IDs and no fabricated clinical revi
   assert.ok(catalog.every(r => r.review.status === 'pending'));
   assert.ok(previewCatalog.every(r => r.automaticReview.status === 'no-automatic-issues'));
 });
-test('live mode fails closed until documented clinical review is present', () => {
-  assert.equal(recommend(catalog, initialFilters, { ...context, mode: 'live' }).length, 0);
-  const reviewed = { ...catalog[0], review: { status: 'reviewed', reviewer: 'SYNTHETIC TEST', credentials: 'TEST ONLY', reviewedAt: '2026-10-27', version: 'fixture', sourceUrls: ['https://example.invalid/fixture'] } };
-  assert.equal(recommend([reviewed], initialFilters, { ...context, mode: 'live' }).length, 1);
+test('recommendations use only published recipes; the specialist queue and blocking flags never appear', () => {
+  const all = recommend(catalog, { ...initialFilters, months: 12, maxMinutes: 999 }, { ...context, mode: 'live' });
+  assert.ok(all.length >= 280);
+  assert.ok(all.every(r => r.published && r.editorialStatus !== 'needs_specialist_review' && !r.safetyFlags.some(f => f.severity === 'blocking')));
+  assert.equal(recommend([{ ...catalog[0], published: false }], { ...initialFilters, months: 12 }, { ...context, mode: 'live' }).length, 0);
 });
 test('stage, ingredient, duration, exclusions and favorites combine without relaxing safety', () => {
   const filters = { ...initialFilters, months: 6, ingredientIds: ['dovlecel'], maxMinutes: 15 };

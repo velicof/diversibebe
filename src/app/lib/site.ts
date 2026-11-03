@@ -12,5 +12,5 @@ export const PUBLIC_ROUTES = ["/", "/termeni"] as const;
 export const PRIVATE_ROUTE_PREFIXES = [
   "/dashboard", "/profil", "/jurnal", "/jurnalizeaza", "/plan", "/alimente", "/retete", "/alergii",
   "/ghid", "/notificari", "/ajutor", "/istoric", "/admin", "/onboarding", "/login", "/register",
-  "/forgot-password", "/verify-email", "/auth", "/api", "/acces-beta", "/v2",
+  "/forgot-password", "/verify-email", "/auth", "/api", "/acces-beta", "/acces-revizie", "/v2",
 ] as const;

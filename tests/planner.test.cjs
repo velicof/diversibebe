@@ -114,13 +114,13 @@ test('plan-many writes only the given days and validated state keeps pantry sepa
 test('editorial workflow cannot reach approval or publication without a documented clinical review', () => {
   const pending = { status: 'pending' };
   const reviewed = { status: 'reviewed', reviewer: 'Dr. Test', credentials: 'medic pediatru', reviewedAt: '2026-11-01T10:00:00Z', sourceUrls: ['https://example.org/ghid'], version: '1' };
-  assert.equal(canTransition('draft', 'review_required', pending), true);
-  assert.equal(canTransition('review_required', 'clinically_approved', pending), false);
-  assert.equal(canTransition('draft', 'published', reviewed), false);
-  assert.equal(canTransition('review_required', 'clinically_approved', reviewed), true);
-  assert.equal(canTransition('clinically_approved', 'published', reviewed), true);
-  assert.equal(isPublishable('published', pending), false);
-  assert.equal(isPublishable('published', reviewed), true);
+  assert.equal(canTransition('imported', 'needs_specialist_review', pending), true);
+  assert.equal(canTransition('needs_specialist_review', 'specialist_approved', pending), false);
+  assert.equal(canTransition('needs_specialist_review', 'specialist_approved', reviewed), true);
+  assert.equal(canTransition('specialist_approved', 'imported', reviewed), false, 'no silent downgrade to an unreviewed state');
+  assert.equal(isPublishable('needs_specialist_review', reviewed, 0), false);
+  assert.equal(isPublishable('specialist_approved', pending, 0), false, 'approval status without a signed review is void');
+  assert.equal(isPublishable('specialist_approved', reviewed, 0), true);
 });
 
 test('new events carry only aggregate counts', () => {
@@ -129,18 +129,17 @@ test('new events carry only aggregate counts', () => {
   assert.deepEqual(plain(makeEvent('recipe_viewed', { recipeId: 'x', age: 8 }, '2026-11-02T10:00:00Z', 'id-2').properties), {});
 });
 
-test('editorial shortlist is 80-100 existing, automatically clean recipes awaiting clinical review', () => {
+test('the specialist priority list (former shortlist) points to existing, published recipes', () => {
   assert.ok(editorialShortlist.length >= 80 && editorialShortlist.length <= 100);
   const ids = editorialShortlist.map((r) => r.id);
   assert.equal(new Set(ids).size, ids.length);
-  for (const { id, status } of editorialShortlist) {
-    const r = catalog.find((x) => x.id === id);
+  const { findAnyRecipe } = load('src/features/v2/catalog.ts');
+  for (const { id } of editorialShortlist) {
+    const r = findAnyRecipe(id);
     assert.ok(r, id);
-    assert.equal(r.automaticReview.status, 'no-automatic-issues');
-    assert.ok(r.minutes !== null && r.minutes <= 30);
-    assert.equal(status, 'review_required');
+    assert.equal(r.published, true, id);
     assert.equal(r.review.status, 'pending');
   }
-  for (const meal of ['mic-dejun', 'pranz', 'cina', 'gustare']) assert.ok(editorialShortlist.some(({ id }) => catalog.find((r) => r.id === id).mealType === meal));
+  for (const meal of ['mic-dejun', 'pranz', 'cina', 'gustare']) assert.ok(editorialShortlist.some(({ id }) => findAnyRecipe(id).mealType === meal));
   assert.ok(previewCatalog.length > 0);
 });

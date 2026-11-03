@@ -1,19 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { INVITE_COOKIE, inviteHashes, v2AccessAllowed } from "@/lib/security/invite";
+import { INVITE_COOKIE, REVIEW_COOKIE, inviteHashes, reviewHashes, v2AccessAllowed } from "@/lib/security/invite";
 
 export async function proxy(request: NextRequest) {
   // V2 keeps its own browser session (separate storage key) on the Supabase project shared with V1;
   // the V1 cookie session is not refreshed here. Disabled in production unless DIVERSIBEBE_V2_PREVIEW=1.
   if (request.nextUrl.pathname === "/v2" || request.nextUrl.pathname.startsWith("/v2/")) {
     if (process.env.NODE_ENV === "production" && process.env.DIVERSIBEBE_V2_PREVIEW !== "1") return new NextResponse(null, { status: 404 });
-    const allowed = await v2AccessAllowed({
-      production: process.env.NODE_ENV === "production",
-      access: process.env.V2_ACCESS,
-      hashes: inviteHashes(),
-      code: request.cookies.get(INVITE_COOKIE)?.value,
-    });
-    if (!allowed) return NextResponse.redirect(new URL("/acces-beta", request.url));
+    const production = process.env.NODE_ENV === "production";
+    const review = request.nextUrl.pathname === "/v2/revizie" || request.nextUrl.pathname.startsWith("/v2/revizie/");
+    // The review console shows unpublished recipes: its own code; V2_ACCESS=public never opens it.
+    // Only the local preview script sets V2_REVIEW_ACCESS=public.
+    const allowed = review
+      ? await v2AccessAllowed({ production, access: process.env.V2_REVIEW_ACCESS, hashes: reviewHashes(), code: request.cookies.get(REVIEW_COOKIE)?.value })
+      : await v2AccessAllowed({ production, access: process.env.V2_ACCESS, hashes: inviteHashes(), code: request.cookies.get(INVITE_COOKIE)?.value });
+    if (!allowed) return NextResponse.redirect(new URL(review ? "/acces-revizie" : "/acces-beta", request.url));
     return NextResponse.next();
   }
   let supabaseResponse = NextResponse.next({ request });

@@ -1,21 +1,41 @@
 import { RECIPES, type RecipeCatalogItem } from "@/app/lib/recipesDatabase";
 import { FOODS_DATABASE } from "@/app/lib/foodsDatabase";
-import { inspectContent, isPublishable, normalize, type ClinicalReview, type EditorialStatus } from "./review";
-import { shortlistIds } from "./content/shortlist";
+import { hasClinicalReview, inspectContent, isPublishable, normalize, type ClinicalReview, type EditorialStatus } from "./review";
 import { editorialRegistry, recipeFingerprint } from "./content/editorial";
 import { recipePhotos, type RecipePhotoAsset } from "./content/photos";
+import { corrections, idAliases, specialistQueue, type Correction } from "./content/corrections";
+import { assessSafety, canonicalAllergens, servingGuidance, substitutions, type Allergen, type SafetyFlag } from "./content/safety";
+import { availability, detectProduce } from "./season";
 
-export type Recipe = RecipeCatalogItem & {
+export type Recipe = Omit<RecipeCatalogItem, "allergens"> & {
+  /** Present when the V1 id is not storable by V2 (V1 favorites keep working with it). */
+  legacyId?: string;
+  /** EU 14 allergens, from the declared list plus the ingredient lines. */
+  allergens: Allergen[];
+  otherSensitivities: string[];
   minutes: number | null;
   minimumMonths: number;
   ingredientIds: string[];
   review: ClinicalReview;
   editorialStatus: EditorialStatus;
+  /** Shown and recommended to families. Never means "medically approved". */
+  published: boolean;
+  safetyFlags: SafetyFlag[];
+  /** Corrections applied to this recipe, with reason and source. */
+  corrections: Correction[];
+  allergenChanges: { added: Allergen[]; renamed: string[] };
+  specialistNote?: string;
+  servingGuidance: string;
+  substitutions: string[];
+  /** Months (1-12) in which at least one produce ingredient is fresh and local in Romania. */
+  seasonMonths: number[];
   automaticReview: ReturnType<typeof inspectContent>;
   image: string;
+  hasPhoto: boolean;
   /** Approved recipe photo (docs/ai-ops/photos/manifest.json); takes precedence over `image`. */
   photo?: RecipePhotoAsset;
 };
+/** Quick-start ingredients (onboarding, pantry). The library filter uses `ingredientFilters`. */
 export const ingredients = [
   { id: "dovlecel", name: "Dovlecel" },
   { id: "morcov", name: "Morcov" },
@@ -41,90 +61,109 @@ export function parseDuration(value: string): number | null {
   if (!numbers.length) return null;
   return Math.max(...numbers);
 }
-export const catalog: Recipe[] = RECIPES.map((recipe) => {
-  // A review only counts for the exact content that was reviewed.
-  const record = editorialRegistry[recipe.id];
-  const reviewed = record && record.contentHash === recipeFingerprint(recipe) ? record : undefined;
-  const raw = normalize(recipe.ingredients.join(" "));
-  const detected = ingredients
-    .filter((ingredient) => new RegExp(`\\b${ingredient.id}\\w*`).test(raw))
-    .map((i) => i.id);
+
+// Ids the V2 database accepts (v2_apply_action).
+export const storableId = (id: string) => /^[a-z0-9-]{1,100}$/.test(id);
+const legacyToV2 = Object.fromEntries(Object.entries(idAliases).map(([v2, legacy]) => [legacy, v2]));
+const STAGES = [6, 7, 8, 10, 12];
+
+function applyCorrections(recipe: RecipeCatalogItem, id: string) {
+  const applied: Correction[] = [];
+  const edit = (field: Correction["field"]) =>
+    recipe[field].flatMap((line) => {
+      const fix = corrections.find((x) => (x.recipeId === id || x.recipeId === recipe.id) && x.field === field && x.before === line);
+      if (!fix) return [line];
+      applied.push(fix);
+      return fix.after ? [fix.after] : [];
+    });
+  return { ingredients: edit("ingredients"), steps: edit("steps"), applied };
+}
+
+const imageFor = (recipe: RecipeCatalogItem) =>
+  recipe.id === "piure-dovlecel" ? "/v2/generated-piure-dovlecel.webp" : recipe.id === "piure-morcov" ? "/v2/generated-piure-morcov-cartof.webp" : recipe.id === "piure-dovleac-linte-6" ? "/v2/food-soup.webp" : /terci.*ovaz/.test(normalize(recipe.name)) ? "/v2/food-oats.webp" : "/v2/icon.svg";
+
+export const catalog: Recipe[] = RECIPES.map((source) => {
+  const id = legacyToV2[source.id] ?? source.id;
+  const fixed = applyCorrections(source, id);
+  const allergenInfo = canonicalAllergens(source.allergens, fixed.ingredients);
+  const corrected = { ...source, ingredients: fixed.ingredients, steps: fixed.steps, allergens: allergenInfo.allergens };
+  const minimumMonths = Number(source.age.match(/\d+/)?.[0] ?? 99);
+  const safetyFlags = assessSafety(corrected, minimumMonths);
+  const blocking = safetyFlags.filter((f) => f.severity === "blocking").length;
+  // A specialist review only counts for the exact corrected content that was reviewed.
+  const record = editorialRegistry[id];
+  const reviewed = record && record.contentHash === recipeFingerprint(corrected) ? record : undefined;
+  const review: ClinicalReview = reviewed?.review ?? { status: "pending" };
+  const specialistNote = specialistQueue[id];
+  const editorialStatus: EditorialStatus =
+    reviewed?.status === "specialist_approved" && hasClinicalReview(review)
+      ? "specialist_approved"
+      : specialistNote || blocking || reviewed?.status === "needs_specialist_review"
+        ? "needs_specialist_review"
+        : fixed.applied.length || allergenInfo.added.length
+          ? "editorially_corrected"
+          : "imported";
+  const raw = normalize(fixed.ingredients.join(" "));
+  const detected = ingredients.filter((i) => new RegExp(`\\b${i.id}\\w*`).test(raw)).map((i) => i.id);
+  const produce = detectProduce(fixed.ingredients);
+  const photo = recipePhotos[id];
+  const image = imageFor(source);
   return {
-    ...recipe,
-    minutes: parseDuration(recipe.time),
-    minimumMonths: Number(recipe.age.match(/\d+/)?.[0] ?? 99),
-    ingredientIds: [
-      ...new Set([...recipe.relatedFoods.map(normalize), ...detected]),
-    ],
-    review: reviewed?.review ?? { status: "pending" },
-    editorialStatus:
-      reviewed?.status ??
-      (record || shortlistIds.has(recipe.id) ? "review_required" : "draft"),
-    automaticReview: inspectContent(
-      [recipe.age, ...recipe.ingredients, ...recipe.steps, recipe.storage].join(
-        ". ",
-      ),
-    ),
-    photo: recipePhotos[recipe.id],
-    image: recipe.id === "piure-dovlecel" ? "/v2/generated-piure-dovlecel.webp" : recipe.id === "piure-morcov" ? "/v2/generated-piure-morcov-cartof.webp" : recipe.id === "piure-dovleac-linte-6" ? "/v2/food-soup.webp" : /terci.*ovaz/.test(normalize(recipe.name)) ? "/v2/food-oats.webp" : "/v2/icon.svg",
+    ...corrected,
+    id,
+    ...(id !== source.id ? { legacyId: source.id } : {}),
+    otherSensitivities: allergenInfo.otherSensitivities,
+    minutes: parseDuration(source.time),
+    minimumMonths,
+    ingredientIds: [...new Set([...source.relatedFoods.map(normalize), ...detected])],
+    review,
+    editorialStatus,
+    published: isPublishable(editorialStatus, review, blocking) && storableId(id) && STAGES.includes(minimumMonths),
+    safetyFlags,
+    corrections: fixed.applied,
+    allergenChanges: { added: allergenInfo.added, renamed: allergenInfo.renamed },
+    ...(specialistNote ? { specialistNote } : {}),
+    servingGuidance: servingGuidance(corrected, minimumMonths),
+    substitutions: substitutions(allergenInfo.allergens),
+    seasonMonths: Array.from({ length: 12 }, (_, i) => i + 1).filter((m) => produce.some((p) => availability(p, m) === "local")),
+    automaticReview: blocking
+      ? { status: "safety-issue", reasons: safetyFlags.filter((f) => f.severity === "blocking").map((f) => f.message) }
+      : editorialStatus === "needs_specialist_review"
+        ? { status: "needs-review", reasons: [specialistNote ?? "Verificare de specialitate."] }
+        : { status: "no-automatic-issues", reasons: [] },
+    photo,
+    image,
+    hasPhoto: Boolean(photo) || !image.endsWith("icon.svg"),
   };
 });
 
-// Ids the V2 database accepts (v2_apply_action). A legacy id outside this pattern ("omletă-legume-8")
-// cannot be planned or confirmed, so it stays out of every V2 list until it gets an ASCII alias.
-export const storableId = (id: string) => /^[a-z0-9-]{1,100}$/.test(id);
-// Small, explicitly unreviewed preview of the EXISTING catalog. No medical approval is inferred.
-const previewIds = [
-  "piure-dovlecel",
-  "piure-morcov",
-  "piure-cartof-dulce",
-  "terci-ovaz-banana",
-];
-const firstPreview = [...catalog]
-  .filter(
-    (r) =>
-      r.automaticReview.status === "no-automatic-issues" && r.minutes !== null && storableId(r.id),
-  )
-  .sort(
-    (a, b) =>
-      Number(previewIds.includes(b.id)) - Number(previewIds.includes(a.id)),
-  )
-  .slice(0, 48);
-// The editorial shortlist (status review_required, still unreviewed) widens the demo so a
-// 5-day plan is possible for every stage and meal type.
-export const previewCatalog = [
-  ...firstPreview,
-  ...catalog.filter(
-    (r) =>
-      shortlistIds.has(r.id) &&
-      storableId(r.id) &&
-      !firstPreview.includes(r) &&
-      r.automaticReview.status === "no-automatic-issues" &&
-      r.minutes !== null,
-  ),
-];
-/**
- * Content gate. Any build that does not explicitly opt into preview content (local QA and the
- * password-protected design preview) shows ONLY recipes that are published with a signed clinical review.
- */
+/** Families see only published recipes: editorial and safety checks passed. Not a medical approval. */
+export const publishedCatalog = catalog.filter((r) => r.published);
+/** Founder and specialist review: every recipe, whatever its status. */
+export const reviewCatalog = catalog;
+/** Kept for existing callers: the eligible list is the published catalog in every environment. */
+export const previewCatalog = publishedCatalog;
+export const activeCatalog = publishedCatalog;
+/** Copy only: "preview" labels local QA builds; content eligibility is identical. */
 export const contentMode: "preview" | "live" =
   process.env.NEXT_PUBLIC_V2_CONTENT_MODE === "preview" ? "preview" : "live";
-export const publishedCatalog = catalog.filter(
-  (r) =>
-    isPublishable(r.editorialStatus, r.review) &&
-    r.automaticReview.status !== "safety-issue" &&
-    r.minutes !== null &&
-    storableId(r.id),
-);
-export const activeCatalog =
-  contentMode === "live" ? publishedCatalog : previewCatalog;
 export function findVisibleRecipe(id: string): Recipe | undefined {
-  return contentMode === "live"
-    ? publishedCatalog.find((r) => r.id === id)
-    : catalog.find(
-        (r) => r.id === id && r.automaticReview.status === "no-automatic-issues",
-      );
+  const v2 = legacyToV2[id] ?? id;
+  return publishedCatalog.find((r) => r.id === v2);
 }
+export function findAnyRecipe(id: string): Recipe | undefined {
+  const v2 = legacyToV2[id] ?? id;
+  return catalog.find((r) => r.id === v2);
+}
+
+const foodNames = new Map(FOODS_DATABASE.map((f) => [normalize(f.id), f.name]));
+/** Library ingredient filter: the most frequent ingredients of the published catalog. */
+export const ingredientFilters = [...publishedCatalog.flatMap((r) => r.ingredientIds).reduce((m, id) => m.set(id, (m.get(id) ?? 0) + 1), new Map<string, number>())]
+  .filter(([id]) => foodNames.has(id))
+  .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+  .slice(0, 28)
+  .map(([id]) => ({ id, name: foodNames.get(id)! }));
+
 export const contentInventory = {
   recipes: catalog.map((r) => ({
     id: r.id,

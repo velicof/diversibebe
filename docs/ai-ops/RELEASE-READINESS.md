@@ -7,7 +7,7 @@ Evaluare: 3 nov. 2026 (actualizare după decizia „un singur proiect Supabase�
 | Treaptă | Decizie |
 |---|---|
 | **Canary (doar contul fondatorului, după invitație)** | **NO-GO** până la etapele 1–5 din `MIGRATION-V1-V2.md` (patch V1, backup, migrații, Auth), toate gratuite și care cer aprobarea ta |
-| **Beta privată (familii invitate)** | **NO-GO**: în plus, revizia clinică (fără ea, build-ul online afișează 0 rețete) și testul pe telefon |
+| **Beta privată (familii invitate)** | **NO-GO** doar până la canary + testul pe telefon. Biblioteca nu mai este un blocaj: 289 de rețete trec verificarea editorială (decizia fondatorului, 3 nov.; vezi `LIBRARY-REPORT.md`) |
 | **Publicare** | **NO-GO** |
 
 Staging online nu mai este un blocaj: decizia ta (un proiect, cost 0) e acoperită de copia locală izolată, cu schemă dovedită identică cu producția, de repetiția pe stack real și de canary-ul din producție.
@@ -21,7 +21,7 @@ Staging online nu mai este un blocaj: decizia ta (un proiect, cost 0) e acoperit
 | G3 | Fluxuri E2E esențiale | ✅ local · ⛔ canary | E2E Playwright 108/108 |
 | G4 | Backend online verificat | ⛔ → canary | înlocuit de repetiția locală pe stack real + canary (`MIGRATION-V1-V2.md` §4 etapa 7) |
 | G5 | Migrații și rollback | ✅ local · ⛔ backup producție | repetiție 27/27 pe PostgreSQL 17 + GoTrue + PostgREST; rollback L1 complet (corectat); `prod-backup.cjs` verificat prin restaurare locală |
-| G6 | Conținut revizuit de specialist | ⛔ | 0 rețete cu revizie semnată; lotul 1 (26) pregătit |
+| G6 | Conținut verificat | ✅ editorial · ⏳ specialist | 291 inventariate; 289 publicabile editorial (reguli NHS/CDC/UE, 32 corectate cu jurnal); 2 în revizie de specialitate, nepublicate; 0 aprobări medicale (niciuna inventată). Consola `/v2/revizie` + export CSV pentru pediatră |
 | G7 | Fără afirmații nejustificate | ✅ V2 · ⚠️ V1 | texte V2 pentru conturi reale fără „test/sintetic”; V1: „aprobate de nutriționiști” (decizie fondator) |
 | G8 | Telefon fizic + desktop | ⚠️ | capturi 390/1440 ✅; telefon ⛔ |
 | G9 | Analytics + confidențialitate | ✅ local · ⛔ politică | mențiunea în politica de confidențialitate lipsește |
@@ -63,5 +63,5 @@ Staging online nu mai este un blocaj: decizia ta (un proiect, cost 0) e acoperit
 
 | # | Acțiune | Cost |
 |---|---|---|
-| 9 | Revizia clinică a lotului 1 (26 rețete), **singurul blocaj care nu poate fi ocolit pentru beta** | ~1.500–3.500 lei |
+| 9 | Revizia de specialitate (recomandată, nu mai blochează beta): întâi cele 2 excepții și lotul prioritar, prin consola `/v2/revizie` | buget 0 acum; ~1.500–3.500 lei când decizi |
 | 10 | Înainte de monetizare: Vercel Pro (20 USD/lună); recomandat Supabase Pro (25 USD/lună, backup zilnic) | recurent |

@@ -1,4 +1,4 @@
-import { hasClinicalReview, normalize } from "./review";
+import { normalize } from "./review";
 import type { Recipe } from "./catalog";
 import { seasonalScore } from "./season";
 
@@ -9,6 +9,10 @@ export type Filters = {
   query: string;
   meal: string;
   favoritesOnly: boolean;
+  /** EU allergen names to leave out of the results. */
+  excludedAllergens: string[];
+  /** Only recipes with produce that is fresh and local this month. */
+  inSeason: boolean;
 };
 export type RecommendationContext = {
   mode: "preview" | "live";
@@ -27,7 +31,11 @@ export const initialFilters: Filters = {
   query: "",
   meal: "all",
   favoritesOnly: false,
+  excludedAllergens: [],
+  inSeason: false,
 };
+/** "Oricât" in the time filter: also includes recipes prepared ahead (overnight). */
+export const ANY_DURATION = 999;
 /** Eligibility runs before scoring and can never be relaxed by a preference. */
 export function recommend(
   recipes: Recipe[],
@@ -38,13 +46,14 @@ export function recommend(
   const query = normalize(filters.query).trim();
   const eligible = recipes.filter((r) => {
     if (
+      r.published === false ||
       r.automaticReview.status !== "no-automatic-issues" ||
-      r.minutes === null ||
       r.minimumMonths > filters.months ||
-      r.minutes > filters.maxMinutes
+      (filters.maxMinutes !== ANY_DURATION && (r.minutes === null || r.minutes > filters.maxMinutes))
     )
       return false;
-    if (context.mode === "live" && !hasClinicalReview(r.review)) return false;
+    if (filters.excludedAllergens.some((a) => r.allergens.includes(a as never))) return false;
+    if (filters.inSeason && context.month && !r.seasonMonths.includes(context.month)) return false;
     if (context.excludedIngredients.some((id) => r.ingredientIds.includes(id)))
       return false;
     if (filters.favoritesOnly && !context.favorites.includes(r.id))

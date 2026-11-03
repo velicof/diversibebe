@@ -1,10 +1,10 @@
 // Editorial decisions recorded from a SIGNED specialist review (docs/ai-ops/REVIEW-PACKAGE.md).
 // Only a human pediatrician or registered dietitian can add an entry here; an AI evaluation never can
-// (hasClinicalReview rejects AI reviewers). An entry is required for any status after review_required.
+// (hasClinicalReview rejects AI reviewers). An entry is the ONLY way to reach specialist_approved.
 import type { ClinicalReview, EditorialStatus } from "../review";
 
 /** contentHash = recipeFingerprint(recipe) at review time; any later edit invalidates the review. */
-export type EditorialRecord = { status: EditorialStatus; review: ClinicalReview; contentHash: string };
+export type EditorialRecord = { status: Extract<EditorialStatus, "specialist_approved" | "needs_specialist_review">; review: ClinicalReview; contentHash: string };
 
 /** FNV-1a over everything a reviewer approves. Synchronous so it works identically in server and browser. */
 export function recipeFingerprint(recipe: { age: string; ingredients: string[]; steps: string[]; storage: string; allergens: string[]; servings: number | string }) {

@@ -40,3 +40,14 @@ Echipa transcrie foaia în `src/features/v2/content/editorial.ts` (revizor, cali
 - Nu există o cină pentru 6+ (la 6 luni majoritatea copiilor au 1–2 mese; propunem să rămână așa — vă rugăm confirmați).
 - 2 rețete au cantități incomplete (`cus-cus-legume-12`, `capsuni-banane-iaurt-10`) — de completat la revizie.
 - `iaurt-unt-arahide` și `iaurt-unt-migdale` sunt marcate 6+ cu unt de nuci/arahide: vă rugăm confirmați forma (unt fin, cantitate) și mesajul despre introducerea alergenilor.
+
+## Actualizare 3 nov. 2026 — consola de revizie pentru întreaga bibliotecă
+
+Lotul de 26 rămâne valabil ca prim lot, dar pediatra poate vedea acum **toate cele 291 de rețete** în `/v2/revizie`. Pagina nu cere cont și nu are acces la date despre familii. Accesul se face cu un cod separat de cel de beta: `node scripts/invite-codes.cjs 1 --review`; hash-ul se pune în `V2_REVIEW_CODE_HASHES`.
+
+- **Filtre:** status, risc (excepții nepublicate / corectate / cu avertismente / fără semnale), moment, vârstă, alergen, căutare.
+- **Pentru fiecare rețetă:** ingrediente, pași, textură și formă de servire, riscuri cu sursa, corecturile aplicate (înainte → după) și observații locale.
+- **Export:** „Exportă lotul (CSV)” cu coloanele de decizie, nume, calificare, dată și semnătură, de completat de specialist.
+- **Aprobarea** se face numai prin foaia semnată, transcrisă în `src/features/v2/content/editorial.ts` și legată de textul exact. Consultarea paginii sau notițele **nu** sunt o aprobare.
+
+Prioritate recomandată: cele 2 excepții (ficat), apoi rețetele corectate (`Risc → Corectate editorial`), apoi lotul 1.

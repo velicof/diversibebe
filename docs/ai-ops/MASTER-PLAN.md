@@ -26,6 +26,8 @@ Punct de intrare pentru orice agent (Claude, Codex, ChatGPT, Gemini) care contin
 | Fișier | Conținut |
 |---|---|
 | `PRD.md` | produsul de lansare, inclus/amânat, etape, stări de eroare, Free/Premium, criterii |
+| `LIBRARY-REPORT.md` + `editorial/CORRECTIONS-LOG.md` | **biblioteca completă (291)**: cifre, excepții, jurnalul fiecărei corecturi; regenerat de `scripts/library-report.cjs` |
+| `photos/PHOTO-REPORT.md` + `photos/catalog-manifest.json` | fotografii pentru toate rețetele: identitate, loturi, prompturi Gemini |
 | `MIGRATION-V1-V2.md` | **un singur proiect Supabase**: ce știm despre producție, repetiția migrării, lansare graduală, canary, rollback |
 | `ARCHITECTURE.md` | producție, compatibilitate V1/V2, migrații, beta, auth, costuri (§4 staging: istoric) |
 | `DESIGN-SYSTEM.md` | tokeni, reguli, ecrane, corecturi din capturi |
@@ -40,7 +42,8 @@ Punct de intrare pentru orice agent (Claude, Codex, ChatGPT, Gemini) care contin
 
 | Mecanism | Unde | Test |
 |---|---|---|
-| Poarta de conținut (live = doar rețete publicate cu revizie semnată) | `src/features/v2/catalog.ts` (`contentMode`, `publishedCatalog`, `findVisibleRecipe`) | `tests/editorial-gate.test.cjs` |
+| Biblioteca: 291 rețete → corecturi → alergeni UE → reguli de siguranță → status → publicare (≠ aviz medical) | `src/features/v2/catalog.ts`, `content/safety.ts`, `content/corrections.ts` | `tests/library.test.cjs`, `tests/editorial-gate.test.cjs`, `tests/e2e/library.spec.cjs` |
+| Consola de revizie (toate statusurile, cod separat, export CSV) | `src/features/v2/review/ReviewConsole.tsx`, `/v2/revizie`, `/acces-revizie` | `tests/e2e/library.spec.cjs` |
 | Revizie umană obligatorie, AI respins, revizie legată de conținut | `review.ts` (`hasClinicalReview`), `content/editorial.ts` (`recipeFingerprint`) | idem |
 | Lista unică a migrațiilor de lansare | `supabase/v2-release.cjs` | toate testele DB |
 | Compatibilitate V1 ↔ V2 | `tests/v1-compat.test.cjs`, migrarea `v2_legacy_history` | idem |

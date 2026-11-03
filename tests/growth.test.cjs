@@ -31,10 +31,12 @@ test('growth: no eligible ingredient never silently relaxes the selected filter'
  assert.equal(personalizedResult(j,emptyState,false,false,withoutBroccoli).kind,'empty');
  assert.equal(personalizedResult(j,emptyState,false,false,withoutBroccoli).recipes.length,0);
 });
-test('growth: clinical stop and live review gate cannot be overridden by preferences or pinned results',()=>{
+test('growth: clinical stop and the specialist queue cannot be overridden by preferences or pinned results',()=>{
  const j={...base(),challenge:'ideas',ageBand:'over24',resultIds:['piure-dovlecel']};
  assert.equal(personalizedResult(j,emptyState,true).kind,'blocked');
- assert.equal(personalizedResult(j,emptyState,false,false,previewCatalog,'live').recipes.length,0);
+ const {catalog}=load('src/features/v2/catalog.ts');
+ const pinned={...j,resultIds:['pate-ficat-pui-pere']};
+ assert.ok(!personalizedResult(pinned,{...emptyState,stage:12},false,false,catalog,'live').recipes.some(r=>r.id==='pate-ficat-pui-pere'),'a recipe in specialist review is never recommended');
  assert.equal(personalizedResult(j,{...emptyState,stage:0},false,true).kind,'guide');
  assert.equal(personalizedResult(j,{...emptyState,onboarded:true,stage:0},false).kind,'guide');
 });

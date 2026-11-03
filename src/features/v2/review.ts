@@ -54,17 +54,30 @@ export function inspectContent(text: string): {
     reasons,
   };
 }
-/** Editorial workflow. Only a documented review by a qualified specialist unlocks the last two states. */
+/**
+ * Editorial workflow (founder decision, 3 Nov. 2026). Publication and medical approval are separate:
+ * - imported: existing recipe, no issue found by the safety rules;
+ * - editorially_corrected: existing recipe with logged corrections (content/corrections.ts);
+ * - needs_specialist_review: a risk the rules cannot resolve safely: never shown or recommended to families;
+ * - specialist_approved: a SIGNED human specialist review bound to the exact content (never an AI).
+ * "Published" is a separate flag (catalog.ts): imported, corrected or approved recipes without blocking flags.
+ */
 export type EditorialStatus =
-  | "draft"
-  | "review_required"
-  | "clinically_approved"
-  | "published";
+  | "imported"
+  | "editorially_corrected"
+  | "needs_specialist_review"
+  | "specialist_approved";
+export const editorialStatusLabels: Record<EditorialStatus, string> = {
+  imported: "Importată, fără probleme identificate",
+  editorially_corrected: "Corectată editorial",
+  needs_specialist_review: "Necesită verificare de specialitate",
+  specialist_approved: "Verificată și aprobată de specialist",
+};
 export const editorialTransitions: Record<EditorialStatus, EditorialStatus[]> = {
-  draft: ["review_required"],
-  review_required: ["draft", "clinically_approved"],
-  clinically_approved: ["published", "review_required"],
-  published: ["review_required"],
+  imported: ["editorially_corrected", "needs_specialist_review", "specialist_approved"],
+  editorially_corrected: ["needs_specialist_review", "specialist_approved"],
+  needs_specialist_review: ["editorially_corrected", "specialist_approved"],
+  specialist_approved: ["needs_specialist_review"],
 };
 export function canTransition(
   from: EditorialStatus,
@@ -72,13 +85,13 @@ export function canTransition(
   review: ClinicalReview,
 ): boolean {
   if (!editorialTransitions[from].includes(to)) return false;
-  if (to === "clinically_approved" || to === "published")
-    return hasClinicalReview(review);
+  if (to === "specialist_approved") return hasClinicalReview(review);
   return true;
 }
-/** A recipe is shown to real families only when published AND clinically reviewed. */
-export function isPublishable(status: EditorialStatus, review: ClinicalReview) {
-  return status === "published" && hasClinicalReview(review);
+/** Publication: editorial and safety checks passed. It never implies medical approval. */
+export function isPublishable(status: EditorialStatus, review: ClinicalReview, blockingFlags: number) {
+  if (status === "needs_specialist_review" || blockingFlags > 0) return false;
+  return status !== "specialist_approved" || hasClinicalReview(review);
 }
 const automatedReviewer = /\b(?:ai|ia|llm|gpt|chatgpt|openai|gemini|claude|anthropic|copilot|bard|bot|automat\w*)\b/i;
 export function hasClinicalReview(review: ClinicalReview): boolean {

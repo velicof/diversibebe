@@ -24,9 +24,13 @@ import {
   ShieldCheck,
   CheckCircle2,
 } from "lucide-react";
-import { activeCatalog, catalog, contentMode, ingredients, type Recipe } from "./catalog";
+import { activeCatalog, catalog, contentMode, ingredientFilters, ingredients, type Recipe } from "./catalog";
+import { editorialStatusLabels } from "./review";
 import { reviewCopy, accountCopy } from "./content/copy";
-import { initialFilters, recommend, type Filters } from "./recommendations";
+import { ANY_DURATION, initialFilters, recommend, type Filters } from "./recommendations";
+const MEAL_LABELS: Record<string, string> = { "mic-dejun": "Mic dejun", pranz: "Prânz", cina: "Cină", gustare: "Gustare" };
+const LIBRARY_ALLERGENS = ["Lapte", "Ou", "Gluten", "Pește", "Arahide", "Fructe cu coajă", "Susan", "Soia", "Țelină"] as const;
+const PAGE = 12;
 import { usePreview } from "./Provider";
 import {
   EmptyState,
@@ -465,15 +469,20 @@ function DiscoverReady() {
       typeof window !== "undefined" &&
       new URLSearchParams(window.location.search).get("salvate") === "1",
   }));
-  const [showMore, setShowMore] = useState(false);
+  const [visible, setVisible] = useState(PAGE);
+  const [allIngredients, setAllIngredients] = useState(false);
+  const [month] = useState(() => monthIn());
   const started = useRef<number | null>(null);
   const firstChoice = useRef(false);
   useEffect(() => {
     started.current = performance.now();
   }, []);
-  const options = useEligible(filters);
-  const set = <K extends keyof Filters>(key: K, value: Filters[K]) =>
+  const options = useEligible(filters, month);
+  const byMeal = useEligible({ ...filters, meal: "all" }, month).reduce<Record<string, number>>((acc, r) => ({ ...acc, [r.mealType]: (acc[r.mealType] ?? 0) + 1, all: (acc.all ?? 0) + 1 }), {});
+  const set = <K extends keyof Filters>(key: K, value: Filters[K]) => {
+    setVisible(PAGE);
     setFilters((old) => ({ ...old, [key]: value }));
+  };
   useEffect(() => {
     if (ready) track("recommendation_results_shown", { count: options.length });
   }, [ready, options.length, track]);
@@ -539,13 +548,13 @@ function DiscoverReady() {
           <fieldset>
             <legend>Cât timp ai?</legend>
             <div className="v2-segmented">
-              {[15, 30, 60].map((n) => (
+              {[15, 30, 60, ANY_DURATION].map((n) => (
                 <button
                   key={n}
                   aria-pressed={filters.maxMinutes === n}
                   onClick={() => set("maxMinutes", n)}
                 >
-                  {n} min
+                  {n === ANY_DURATION ? "Oricât" : `${n} min`}
                 </button>
               ))}
             </div>
@@ -556,7 +565,7 @@ function DiscoverReady() {
               Căutăm cel puțin un ingredient selectat.
             </p>
             <div className="v2-ingredient-cloud">
-              {ingredients.map((ingredient) => (
+              {(allIngredients ? ingredientFilters : ingredientFilters.slice(0, 12)).map((ingredient) => (
                 <button
                   key={ingredient.id}
                   aria-pressed={filters.ingredientIds.includes(ingredient.id)}
@@ -580,7 +589,39 @@ function DiscoverReady() {
                 </button>
               ))}
             </div>
+            <button className="v2-text-button" aria-expanded={allIngredients} onClick={() => setAllIngredients((v) => !v)}>
+              {allIngredients ? "Mai puține ingrediente" : `Toate ingredientele (${ingredientFilters.length})`}
+            </button>
           </fieldset>
+          <fieldset>
+            <legend>Fără alergenii</legend>
+            <p className="v2-field-note">Ascundem rețetele care conțin alergenul ales (lista UE).</p>
+            <div className="v2-ingredient-cloud">
+              {LIBRARY_ALLERGENS.map((allergen) => (
+                <button
+                  key={allergen}
+                  aria-pressed={filters.excludedAllergens.includes(allergen)}
+                  aria-label={`Fără ${allergen}`}
+                  onClick={() =>
+                    set(
+                      "excludedAllergens",
+                      filters.excludedAllergens.includes(allergen)
+                        ? filters.excludedAllergens.filter((a) => a !== allergen)
+                        : [...filters.excludedAllergens, allergen],
+                    )
+                  }
+                >
+                  {filters.excludedAllergens.includes(allergen) ? <X size={14} /> : <Plus size={14} />}
+                  {allergen}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <label className="v2-checkbox-row">
+            <input type="checkbox" checked={filters.inSeason} onChange={(e) => set("inSeason", e.target.checked)} />
+            <Leaf size={16} />
+            Doar rețete de sezon
+          </label>
           <label htmlFor="v2-meal">Momentul mesei</label>
           <select
             id="v2-meal"
@@ -609,7 +650,14 @@ function DiscoverReady() {
         >
           <div className="v2-section-top">
             <h2 aria-live="polite">{options.length} idei de explorat</h2>
-            <span className="v2-small-label">DIN CATALOGUL EXISTENT</span>
+            <span className="v2-small-label">BIBLIOTECA DIVERSIBEBE · {activeCatalog.length} REȚETE</span>
+          </div>
+          <div className="v2-category-tabs" role="group" aria-label="Momentul mesei">
+            {(["all", "mic-dejun", "pranz", "cina", "gustare"] as const).map((meal) => (
+              <button key={meal} aria-pressed={filters.meal === meal} onClick={() => set("meal", meal)}>
+                {meal === "all" ? "Toate" : MEAL_LABELS[meal]} <span>{byMeal[meal] ?? 0}</span>
+              </button>
+            ))}
           </div>
           {clinicalGuidance ? (
             <EmptyState title="Aici e nevoie de îndrumare individuală">
@@ -619,7 +667,7 @@ function DiscoverReady() {
           ) : options.length ? (
             <>
               <div className="v2-recipe-grid">
-                {options.slice(0, showMore ? 48 : 6).map((r) => (
+                {options.slice(0, visible).map((r) => (
                   <RecipeCard
                     key={r.id}
                     recipe={r}
@@ -632,12 +680,12 @@ function DiscoverReady() {
                   />
                 ))}
               </div>
-              {options.length > 6 && !showMore && (
+              {options.length > visible && (
                 <button
                   className="v2-button v2-button-secondary v2-show-more"
-                  onClick={() => setShowMore(true)}
+                  onClick={() => setVisible((v) => v + 24)}
                 >
-                  Mai multe idei <Plus size={16} />
+                  Mai multe idei ({options.length - visible}) <Plus size={16} />
                 </button>
               )}
             </>
@@ -721,13 +769,15 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
           <div className="v2-recipe-facts">
             <span>
               <Clock3 size={18} />
-              {recipe.minutes} min
+              {recipe.minutes === null ? recipe.time : `${recipe.minutes} min`}
             </span>
             <span>
               <Leaf size={18} />
               {recipe.difficulty}
             </span>
-            <span>Etichetă catalog: {recipe.age}</span>
+            <span>Vârstă orientativă: {recipe.age}</span>
+            <span>{MEAL_LABELS[recipe.mealType]} · {recipe.servings} {Number(recipe.servings) === 1 ? "porție" : "porții"}</span>
+            {recipe.seasonMonths.includes(new Date().getMonth() + 1) && <span><Leaf size={18} />De sezon acum</span>}
           </div>
           <div className="v2-action-row">
             <SaveButton recipe={recipe} />
@@ -741,8 +791,9 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
             </button>
           </div>
           <p className="v2-field-note">
-            Explorare locală. Eticheta de vârstă nu confirmă potrivirea sau
-            siguranța.
+            {recipe.editorialStatus === "specialist_approved"
+              ? "Verificată și aprobată de un specialist pentru etapa indicată."
+              : "Verificată editorial după ghiduri publice. Nu este un aviz medical: dacă copilul are o alergie sau o afecțiune, urmează sfatul medicului."}
           </p>
         </div>
       </div>
@@ -751,7 +802,7 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
         <section className="v2-ingredients-panel">
           <h2>Ce îți trebuie</h2>
           <p className="v2-field-note">
-            Cantitățile sunt cele din catalogul existent, în curs de verificare.
+            Cantități orientative pentru {recipe.servings} {Number(recipe.servings) === 1 ? "porție" : "porții"}.
           </p>
           <ul>
             {recipe.ingredients.map((ingredient, i) => (
@@ -774,16 +825,44 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
             ))}
           </ul>
           <div className="v2-allergen-note">
-            <strong>Alergeni declarați în catalog</strong>
+            <strong>Alergeni (lista UE)</strong>
             <p>
               {recipe.allergens.length
                 ? recipe.allergens.join(", ")
-                : "Niciunul declarat. Aceasta nu confirmă absența alergenilor."}
+                : "Niciun alergen major identificat în ingrediente."}
+              {recipe.otherSensitivities.length ? ` Conține și: ${recipe.otherSensitivities.join(", ")}.` : ""}
             </p>
             <small>
               Nu folosi această listă pentru gestionarea unei alergii
               diagnosticate.
             </small>
+          </div>
+          <div className="v2-serving-panel">
+            <strong>Cum servești</strong>
+            <p>{recipe.servingGuidance}</p>
+            {recipe.safetyFlags.filter((f) => f.severity === "warning").length > 0 && (
+              <ul>
+                {recipe.safetyFlags.filter((f) => f.severity === "warning").map((f) => (
+                  <li key={f.id}>{f.message}</li>
+                ))}
+              </ul>
+            )}
+            {recipe.substitutions.length > 0 && (
+              <>
+                <strong>Variante</strong>
+                <ul>
+                  {recipe.substitutions.map((s) => (
+                    <li key={s}>{s}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {recipe.corrections.length > 0 && (
+              <small>
+                Am ajustat această rețetă față de versiunea veche: {[...new Set(recipe.corrections.map((c) => c.reason))].join(" ")}
+              </small>
+            )}
+            <small className="v2-status-note">Status: {editorialStatusLabels[recipe.editorialStatus]}</small>
           </div>
         </section>
         <section className="v2-steps-panel">

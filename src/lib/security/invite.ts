@@ -5,6 +5,12 @@
 export const INVITE_COOKIE = "dbv2_invite";
 export const INVITE_MAX_AGE_SECONDS = 60 * 60 * 24 * 60;
 
+/** Specialist review console (/v2/revizie): a separate code, so beta families never see unpublished recipes. */
+export const REVIEW_COOKIE = "dbv2_review";
+export function reviewHashes(value = process.env.V2_REVIEW_CODE_HASHES): string[] {
+  return inviteHashes(value);
+}
+
 export function inviteHashes(value = process.env.V2_INVITE_CODE_HASHES): string[] {
   return (value ?? "")
     .split(",")

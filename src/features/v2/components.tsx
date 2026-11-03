@@ -110,8 +110,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <div className="v2-preview-note">
             <span>VERSIUNE DE TEST</span>{" "}
             {cloud.connected
-              ? "Rețetele sunt în curs de revizie de specialitate. Datele sunt salvate în mediul de test."
-              : "Rețetele sunt în curs de revizie de specialitate. Datele demo rămân pe acest dispozitiv."}
+              ? "Mediu local izolat. Datele sunt salvate în mediul de test."
+              : "Mediu local izolat. Datele demo rămân pe acest dispozitiv."}
           </div>
         )}
         {(!marketing || cloud.connected) && <SyncStatus />}
@@ -245,8 +245,16 @@ export function RecipePhoto({
         <span className="v2-photo-caption">{photo.aiGenerated ? "Imagine generată, verificată editorial" : "Fotografie"}</span>
       </div>
     );
+  if (recipe.image.endsWith("icon.svg"))
+    return (
+      <div className={`v2-photo v2-photo-fallback v2-fallback-${recipe.mealType} ${className}`}>
+        <span className="v2-fallback-emoji" aria-hidden="true">{recipe.emoji}</span>
+        <span className="v2-ingredient-description">{recipe.relatedFoods.slice(0, 3).map((id) => id.replaceAll("-", " ")).join(" · ") || "O idee din bibliotecă"}</span>
+        <span className="v2-photo-caption">Fotografie în pregătire</span>
+      </div>
+    );
   return (
-    <div className={`v2-photo ${recipe.image.endsWith("icon.svg") ? "v2-ingredient-photo" : ""} ${className}`}>
+    <div className={`v2-photo ${className}`}>
       <Image
         src={recipe.image}
         alt={recipe.image.endsWith("icon.svg") ? "" : recipe.image.includes("/generated-") ? `Ilustrație generată pentru ${recipe.name}, fără rol de ghid de servire.` : "Fotografie de textură, ilustrativă; nu indică ingredientele exacte sau forma de servire pentru copil."}
@@ -323,7 +331,7 @@ export function RecipeCard({
         <SaveButton recipe={recipe} compact />
         <span className="v2-time-badge">
           <Clock3 size={13} />
-          {recipe.minutes} min
+          {recipe.minutes === null ? "Din timp" : `${recipe.minutes} min`}
         </span>
       </div>
       <div className="v2-recipe-copy">
@@ -341,6 +349,9 @@ export function RecipeCard({
             {recipe.name}
           </Link>
         </h3>
+        <p className="v2-card-meta">
+          {recipe.age} · {recipe.allergens.length ? recipe.allergens.join(", ") : "fără alergeni majori identificați"}
+        </p>
         {reason && (
           <p className="v2-reason">
             <Check size={13} />

@@ -1,26 +1,22 @@
-// Trust copy that depends on the content gate: in a live build every visible recipe has a signed
-// specialist review, so "în curs de revizie" would be false; in preview it is the honest label.
+// Trust copy (founder decision, 3 Nov. 2026): families see the existing library after editorial and safety
+// checks. That is NOT a medical approval, and the copy must never claim one. Specialist-approved recipes are
+// labelled individually. "preview" only adds the test-environment label.
 import { contentMode } from "../catalog";
 import { usesRealAccounts } from "../cloud/guard";
 
-const live = contentMode === "live";
+const preview = contentMode === "preview";
 
 export const reviewCopy = {
-  footer: live
-    ? "Rețetele afișate au fost revizuite de un specialist pentru etapa indicată. Nu înlocuiesc sfatul medicului care cunoaște copilul."
-    : "Aceste rețete provin din biblioteca existentă și așteaptă revizia unui specialist. Filtrele sunt demonstrative și nu confirmă siguranța pentru un copil.",
-  homeFinePrint: live
-    ? "Filtrul de timp ordonează ideile; etapa și siguranța sunt verificate înainte."
-    : "Catalog demonstrativ, în curs de revizie clinică. Filtrul de timp nu confirmă că o rețetă este potrivită copilului tău.",
-  homeTrust: live
-    ? "Fiecare rețetă afișată are o revizie de specialitate documentată. Resursele despre pregătire și servire au sursa la vedere și rămân accesibile fără cont. Nu promitem recomandări medicale personalizate."
-    : "Rețetele sunt exemple demonstrative, în curs de revizie. Resursele despre pregătire și servire au sursa la vedere și rămân accesibile fără cont. Nu promitem recomandări medicale personalizate.",
-  serving: live
-    ? "Forma de servire din fiecare rețetă a fost revizuită pentru etapa indicată. Pentru întrebări despre copilul tău, consultă"
-    : "Instrucțiunile din catalog sunt demonstrative, în curs de revizie. Pentru servire sigură, consultă",
+  footer:
+    "Rețetele din bibliotecă sunt verificate editorial după ghiduri publice (NHS, CDC) pentru etapa indicată: sare, zahăr, miere, alergeni, formă de servire. Nu sunt avize medicale și nu înlocuiesc sfatul medicului care cunoaște copilul." +
+    (preview ? " Versiune de test." : ""),
+  homeFinePrint: "Filtrele ordonează ideile; etapa și regulile de siguranță sunt aplicate înainte.",
+  homeTrust:
+    "Fiecare rețetă afișată a trecut verificarea editorială pentru etapa indicată, iar modificările sunt notate în rețetă. Resursele despre pregătire și servire au sursa la vedere și rămân accesibile fără cont. Nu oferim recomandări medicale personalizate.",
+  serving: "Forma de servire din fiecare rețetă urmează ghidurile publice pentru etapa indicată. Pentru întrebări despre copilul tău, consultă",
   planCount: (count: number) =>
-    `${count} idei potrivite${live ? "" : " în catalogul demonstrativ"}. Siguranța și etapa sunt verificate înaintea preferințelor; sezonul doar ordonează ideile.`,
-  recipeBadge: live ? "revizuită" : "în curs de revizie",
+    `${count} idei potrivite din bibliotecă. Siguranța și etapa sunt verificate înaintea preferințelor; sezonul doar ordonează ideile.`,
+  recipeBadge: "verificată editorial",
 };
 
 // Account wording follows the backend, not the content gate: on the shared production project these are
