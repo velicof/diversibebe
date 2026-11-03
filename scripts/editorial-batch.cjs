@@ -7,6 +7,7 @@ const { catalog, storableId } = load('src/features/v2/catalog.ts');
 const { editorialShortlist } = load('src/features/v2/content/shortlist.ts');
 const { normalize, inspectContent } = load('src/features/v2/review.ts');
 const season = load('src/features/v2/season.ts');
+const { recipeFingerprint } = load('src/features/v2/content/editorial.ts');
 
 const repo = path.resolve(__dirname, '..');
 const out = path.join(repo, 'docs/ai-ops');
@@ -61,6 +62,8 @@ const recipes = [...chosen].map(([id, reason]) => {
     automaticFlags: flags.reasons, quantitiesComplete: quantified(r), localSeasonMonths: season.detectProduce(r.ingredients).filter((p) => p.local).map((p) => p.name),
     selectionReason: reason, photoPilot: photoIds.includes(id),
     editorialStatus: 'review_required',
+    // The review is valid only for this exact text (src/features/v2/content/editorial.ts).
+    contentHash: recipeFingerprint(r),
     review: { decision: null, reviewer: null, credentials: null, reviewedAt: null, sourceUrls: [], version: null, corrections: null },
   };
 }).sort((a, b) => Object.keys(QUOTA).indexOf(a.mealType) - Object.keys(QUOTA).indexOf(b.mealType) || a.stageMonths - b.stageMonths);

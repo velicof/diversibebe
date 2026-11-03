@@ -43,6 +43,7 @@
       "selectionReason": "pilot foto",
       "photoPilot": true,
       "editorialStatus": "review_required",
+      "contentHash": "3519e5b5",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -86,6 +87,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "d7cf2709",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -137,6 +139,7 @@
       "selectionReason": "pilot foto",
       "photoPilot": true,
       "editorialStatus": "review_required",
+      "contentHash": "81dc3dd4",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -184,6 +187,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "e0f0df14",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -234,6 +238,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "889e7aaa",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -285,6 +290,7 @@
       "selectionReason": "pilot foto",
       "photoPilot": true,
       "editorialStatus": "review_required",
+      "contentHash": "6085ae0a",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -334,6 +340,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "9e108487",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -380,6 +387,7 @@
       "selectionReason": "pilot foto",
       "photoPilot": true,
       "editorialStatus": "review_required",
+      "contentHash": "6b13dea5",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -426,6 +434,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "c3cf205b",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -472,6 +481,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "7b695b6d",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -523,6 +533,7 @@
       "selectionReason": "pilot foto",
       "photoPilot": true,
       "editorialStatus": "review_required",
+      "contentHash": "6a9dea37",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -568,6 +579,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "62c44077",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -618,6 +630,7 @@
       "selectionReason": "pilot foto",
       "photoPilot": true,
       "editorialStatus": "review_required",
+      "contentHash": "600f0f07",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -668,6 +681,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "bf447349",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -710,6 +724,7 @@
       "selectionReason": "pilot foto",
       "photoPilot": true,
       "editorialStatus": "review_required",
+      "contentHash": "3656901d",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -756,6 +771,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "053e5148",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -803,6 +819,7 @@
       "selectionReason": "pilot foto",
       "photoPilot": true,
       "editorialStatus": "review_required",
+      "contentHash": "4933a12f",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -850,6 +867,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "3657b092",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -902,6 +920,7 @@
       "selectionReason": "pilot foto",
       "photoPilot": true,
       "editorialStatus": "review_required",
+      "contentHash": "f62ba940",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -948,6 +967,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "10da3323",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -999,6 +1019,7 @@
       "selectionReason": "pilot foto",
       "photoPilot": true,
       "editorialStatus": "review_required",
+      "contentHash": "411b6abc",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -1046,6 +1067,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "b01f9622",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -1090,6 +1112,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "7019a0f2",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -1134,6 +1157,7 @@
       "selectionReason": "pilot foto",
       "photoPilot": true,
       "editorialStatus": "review_required",
+      "contentHash": "88084856",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -1178,6 +1202,7 @@
       "selectionReason": "acoperire masă × etapă",
       "photoPilot": false,
       "editorialStatus": "review_required",
+      "contentHash": "e48b93f2",
       "review": {
         "decision": null,
         "reviewer": null,
@@ -1220,6 +1245,7 @@
       "selectionReason": "pilot foto",
       "photoPilot": true,
       "editorialStatus": "review_required",
+      "contentHash": "9bbe7ec0",
       "review": {
         "decision": null,
         "reviewer": null,

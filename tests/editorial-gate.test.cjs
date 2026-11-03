@@ -1,6 +1,6 @@
 // Mission rule: nothing unreviewed reaches real families, and no AI review can approve a recipe.
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {load,loader}=require('./load-ts.cjs');
+const {load,loader,plain}=require('./load-ts.cjs');
 const {canTransition,hasClinicalReview,isPublishable}=load('src/features/v2/review.ts');
 const signed={status:'reviewed',reviewer:'Dr. Ana Pop',credentials:'Medic primar pediatrie, CMR 12345',reviewedAt:'2026-11-20',sourceUrls:['https://www.who.int/'],version:'1'};
 
@@ -39,4 +39,17 @@ test('every recipe V2 can show is storable by the database (plans, confirmations
   const {previewCatalog,storableId}=load('src/features/v2/catalog.ts');
   assert.ok(previewCatalog.every(r=>storableId(r.id)));
   assert.equal(storableId('omletă-legume-8'),false);
+});
+
+test('a signed review is void as soon as the reviewed recipe text changes',()=>{
+  const fresh=loader({NEXT_PUBLIC_V2_CONTENT_MODE:''});
+  const {RECIPES}=fresh('src/app/lib/recipesDatabase.ts');
+  const {editorialRegistry,recipeFingerprint}=fresh('src/features/v2/content/editorial.ts');
+  const recipe=RECIPES.find(r=>r.id==='piure-broccoli-cartof-6');
+  editorialRegistry[recipe.id]={status:'published',review:signed,contentHash:recipeFingerprint(recipe)};
+  editorialRegistry['piure-dovlecel']={status:'published',review:signed,contentHash:'00000000'};
+  const live=fresh('src/features/v2/catalog.ts');
+  assert.deepEqual(plain(live.publishedCatalog.map(r=>r.id)),['piure-broccoli-cartof-6']);
+  assert.equal(live.catalog.find(r=>r.id==='piure-dovlecel').editorialStatus,'review_required');
+  assert.equal(live.findVisibleRecipe('piure-dovlecel'),undefined);
 });

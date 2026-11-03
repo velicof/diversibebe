@@ -2,7 +2,7 @@ import { RECIPES, type RecipeCatalogItem } from "@/app/lib/recipesDatabase";
 import { FOODS_DATABASE } from "@/app/lib/foodsDatabase";
 import { inspectContent, isPublishable, normalize, type ClinicalReview, type EditorialStatus } from "./review";
 import { shortlistIds } from "./content/shortlist";
-import { editorialRegistry } from "./content/editorial";
+import { editorialRegistry, recipeFingerprint } from "./content/editorial";
 import { recipePhotos, type RecipePhotoAsset } from "./content/photos";
 
 export type Recipe = RecipeCatalogItem & {
@@ -42,6 +42,9 @@ export function parseDuration(value: string): number | null {
   return Math.max(...numbers);
 }
 export const catalog: Recipe[] = RECIPES.map((recipe) => {
+  // A review only counts for the exact content that was reviewed.
+  const record = editorialRegistry[recipe.id];
+  const reviewed = record && record.contentHash === recipeFingerprint(recipe) ? record : undefined;
   const raw = normalize(recipe.ingredients.join(" "));
   const detected = ingredients
     .filter((ingredient) => new RegExp(`\\b${ingredient.id}\\w*`).test(raw))
@@ -53,10 +56,10 @@ export const catalog: Recipe[] = RECIPES.map((recipe) => {
     ingredientIds: [
       ...new Set([...recipe.relatedFoods.map(normalize), ...detected]),
     ],
-    review: editorialRegistry[recipe.id]?.review ?? { status: "pending" },
+    review: reviewed?.review ?? { status: "pending" },
     editorialStatus:
-      editorialRegistry[recipe.id]?.status ??
-      (shortlistIds.has(recipe.id) ? "review_required" : "draft"),
+      reviewed?.status ??
+      (record || shortlistIds.has(recipe.id) ? "review_required" : "draft"),
     automaticReview: inspectContent(
       [recipe.age, ...recipe.ingredients, ...recipe.steps, recipe.storage].join(
         ". ",
