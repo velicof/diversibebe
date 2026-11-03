@@ -27,10 +27,14 @@ export function assertAllowedSupabaseUrl(value: string, sharedProjectUrl = proce
   throw new Error("Supabase V2 accepts a local test stack or the DiversiBebe project shared with V1 only.");
 }
 
-/** True when V2 talks to the production project: real parents, real accounts, real wording. */
+/**
+ * Real-parent wording unless V2 talks to a loopback test stack. Local scripts always configure a backend,
+ * so "no backend" means an online build without accounts (Vercel Preview in guest mode): no test labels.
+ */
 export function usesRealAccounts(value = process.env.NEXT_PUBLIC_V2_SUPABASE_URL): boolean {
+  if (!value) return true;
   try {
-    return !!value && !LOOPBACK.includes(new URL(value).hostname);
+    return !LOOPBACK.includes(new URL(value).hostname);
   } catch {
     return false;
   }

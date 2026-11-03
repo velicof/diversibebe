@@ -50,7 +50,7 @@ Staging online nu mai este un blocaj: decizia ta (un proiect, cost 0) e acoperit
 
 | # | Acțiune | Efort | Cine |
 |---|---|---|---|
-| 1 | Push + PR + merge pentru patch-ul V1 (`hotfix/v1-v2-schema-compat`) | 1 h | agent, după aprobare |
+| 1 | Push + PR + merge pentru patch-ul V1 (`hotfix/v1-v2-schema-compat`, 3 commituri; include retragerea releului de email deschis din producție) | 1 h | agent, după aprobare |
 | 2 | Backup producție cu `scripts/prod-backup.cjs` (parola bazei rămâne la tine) | 20 min | tu |
 | 3 | Migrațiile V2 în producție (preflight → 7 fișiere → postflight) | 30 min | agent, după aprobare |
 | 4 | Supabase Auth: Redirect URL `https://www.diversibebe.com/v2/**` + SMTP Resend; „Confirm email” rămâne dezactivat | 30 min | tu, cu ghidaj |
@@ -58,6 +58,8 @@ Staging online nu mai este un blocaj: decizia ta (un proiect, cost 0) e acoperit
 | 6 | Canary 48 h cu contul tău (email + Google), checklist §5 | 1 h în 2 zile | tu |
 | 7 | Test pe telefon (iOS + Android) | 1–2 h | tu |
 | 8 | Mențiunea despre analytics în politica de confidențialitate | 1 h | tu |
+| 8b | **Decizie BebeAsist** după lansare: oprit (varianta V2, recomandată la buget 0) sau activ ca acum în V1 (`MIGRATION-V1-V2.md` §5b, F5) | 1 min | tu |
+| 8c | Preview pentru telefon: push `release/v2-rc` + 3 variabile Preview (`PHONE-PREVIEW.md`) | 15 min | agent, după aprobare |
 
 ### Cu cost
 

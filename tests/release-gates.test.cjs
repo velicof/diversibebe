@@ -31,7 +31,8 @@ test('V2 connects only to a loopback stack or to the exact Supabase project shar
   for(const [url,shared] of [[prod,undefined],[prod,'https://abcdefghijklmnopqrst.supabase.co'],['https://abcdefghijklmnopqrst.supabase.co',prod],['http://smyimgvxlggggjeoajdo.supabase.co',prod],[prod+'/rest',prod],['https://smyimgvxlggggjeoajdo.supabase.co.evil.invalid',prod],['http://localhost@evil.invalid',prod]])
     assert.throws(()=>assertAllowedSupabaseUrl(url,shared),undefined,`${url} with V1=${shared}`);
   assert.equal(usesRealAccounts(prod),true);
-  for(const v of ['http://127.0.0.1:54321',undefined,'not a url'])assert.equal(usesRealAccounts(v),false);
+  for(const v of ['http://127.0.0.1:54321','not a url'])assert.equal(usesRealAccounts(v),false);
+  assert.equal(loader({NEXT_PUBLIC_V2_SUPABASE_URL:''})('src/features/v2/cloud/guard.ts').usesRealAccounts(),true,'online build without a V2 backend (Preview, guest mode) shows no test wording');
 });
 
 test('real accounts never see test or synthetic wording; local stacks keep the honest test labels',()=>{
