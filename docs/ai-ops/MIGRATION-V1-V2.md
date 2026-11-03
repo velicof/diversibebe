@@ -47,6 +47,7 @@ Două niveluri, ambele pe schema producției, cu date **sintetice** de aceeași 
 | Upsert-ul V1 nepatch-uit: merge înainte, eșuează după (`42P10`) | ✅ (`v1-compat`) | ✅ |
 | V1 patch-uit după migrații: jurnal, „am încercat”, „am gătit”, favorite | ✅ | ✅ |
 | Fluxul de înregistrare V1 (signUp → sesiune imediată → copil + alimente) | — | ✅ |
+| Familie cu mai mulți copii: V1 citește primul copil; salvarea profilului schimbă doar copilul afișat (4 nov.) | ✅ (gardă pe cod, `v1-compat`) | ✅ |
 | Cont nou deschis în V2 cu copilul lui | ✅ | ✅ |
 | Planificator + confirmare V2 pe cont migrat | ✅ | ✅ |
 | Email de recuperare a parolei (GoTrue → SMTP) | — | ✅ (Mailpit local) |
@@ -58,7 +59,7 @@ Raport: `outputs/release-2026-11-03/rehearsal/REPORT.md`. Baza `diversibebe_rehe
 
 | Etapa | Ce se întâmplă | Cine | Durată | Cum verificăm | Rollback |
 |---|---|---|---|---|---|
-| **1. Patch V1** | push + PR + merge `hotfix/v1-v2-schema-compat` (3 commituri peste producție: `b12b652` compatibilitate, `ef8b028` cache cont, `360d05d` retragerea releului de email) → deploy automat V1. Build de producție și TypeScript verificate local | agent (cu aprobare) | 1 h | live: jurnal, „am încercat”, „am gătit”, înregistrare; `get_runtime_errors` | Vercel Instant Rollback |
+| **1. Patch V1** | merge PR [#2](https://github.com/velicof/diversibebe/pull/2) `hotfix/v1-v2-schema-compat` (4 commituri peste producție: `b12b652` compatibilitate, `ef8b028` cache cont, `360d05d` retragerea releului de email, `8f7780d` familiile cu mai mulți copii). Branch-ul și PR-ul sunt publicate (4 nov.); rămâne doar merge-ul → deploy automat V1. Build de producție și TypeScript verificate local | agent (cu aprobare) | 1 h | live: jurnal, „am încercat”, „am gătit”, înregistrare; `get_runtime_errors` | Vercel Instant Rollback |
 | **2. Backup** | `node scripts/prod-backup.cjs` în terminalul tău (parola bazei nu ajunge la agent), apoi `--verify … --restore-local` | tu | 20 min | „restore check: 12 tables identical” | — |
 | **3. Preflight** | `supabase/operations/v2-preflight.sql` (read-only); notezi numărul de rânduri | agent | 5 min | 5 × 0 anomalii | — |
 | **4. Migrațiile** | cele 7 fișiere din `supabase/v2-release.cjs`, în ordine, oră cu trafic minim; fiecare fișier e o tranzacție (eșec = nicio schimbare) | agent (cu aprobare) | < 1 min de execuție; 30 min cu verificări | `v2-postflight.sql` 9/9 + același număr de rânduri; advisors fără ERROR; V1 smoke | **L1** `v2-disable.sql` (testat) |
@@ -92,6 +93,7 @@ Vercel Hobby: Instant Rollback revine la deployment-ul de producție anterior; o
 | F4 | **V1 în producție: `/api/send-verification` trimitea emailuri prin contul Resend către orice adresă, fără autentificare** (releu deschis pentru spam/phishing); nu e folosit nicăieri | retras (410) în patch (`360d05d`), identic cu release |
 | F5 | **Decizie de produs:** BebeAsist e activ în producție pentru conturile autentificate și trimite datele copilului către modelul AI; V2 îl ține oprit (503) până la cotă partajată, date per copil și revizie de confidențialitate | merge-ul păstrează varianta V2 (oprit, 0 lei, nicio dată trimisă) și afișează mesajul serverului. **Dacă vrei BebeAsist activ după lansare, spune înainte de merge** |
 | F6 | Testul pe telefon prin Wi-Fi local nu funcționează (fără HTTPS, `crypto.randomUUID` lipsește) | Vercel Preview, `PHONE-PREVIEW.md` |
+| F8 | **V1 în producție: familiile cu mai mulți copii** (15 azi; V2 permite oricui să adauge un copil). 15 citiri ale copilului folosesc `maybeSingle()` doar pe `user_id` → `null` cu doi copii → middleware-ul trimite la `/onboarding`, iar formularul **suprascrie primul copil**; salvarea profilului (`profil/bebelus`) **copia datele peste toți copiii** | `8f7780d` în patch și în release: primul copil (`created_at`, `limit(1)`), update doar pe copilul afișat; gardă în `v1-compat` + 2 verificări noi în repetiție (38/38) |
 | F7 | **V1: „Parolă uitată” nu funcționează** (paginile `/forgot-password/*` nu apelează Supabase) | V2 are fluxul real; setările exacte (Redirect URLs, SMTP Resend, șablon în română): `AUTH-SETUP.md` |
 
 ## 6. Constrângeri care decurg din proiectul comun

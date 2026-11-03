@@ -12,7 +12,7 @@ Efort = ore de lucru efectiv (agent sau om). Cost = cheltuieli externe. „Aprob
 | 4 | Vercel Preview pentru `release/v2-rc` în modul vizitator (fără chei Supabase V2 în Preview): build pe Vercel + flux vizitator | agent | 1 h | 0 | da (push) | G3 |
 | 5 | Supabase Auth producție: SMTP Resend + Redirect URLs `/v2/**` | fondator + agent | 1–2 h | 0 | da | G4 |
 | 6 | Backup logic al producției înainte de migrații | fondator (parola DB) + agent | 1 h | 0 | da | G5 |
-| 7 | Publicarea patch-ului V1 `hotfix/v1-v2-schema-compat` (`b12b652`) → verificare live | agent | 1–2 h | 0 | da (push + merge) | G12 |
+| 7 | Merge PR [#2](https://github.com/velicof/diversibebe/pull/2) `hotfix/v1-v2-schema-compat` (4 commituri, `8f7780d`; **publicat 4 nov.**, fără merge) → verificare live | fondator (merge) + agent | 0,5 h | 0 | da (merge) | G12 |
 | 8 | Migrațiile V2 în producție + advisors + preflight | agent | 2 h | 0 | da | G1, G5 |
 | 9 | Variabile Production + coduri de invitație + merge `release/v2-rc` → canary 48 h cu contul fondatorului (`MIGRATION-V1-V2.md` §5) | agent + fondator | 2 h + 48 h | 0 | da | G3, G4, G13 |
 | 10 | Test pe telefon fizic (iOS + Android) cu checklist G8 | fondator | 1–2 h | 0 | nu | G8 |
@@ -32,6 +32,8 @@ Efort = ore de lucru efectiv (agent sau om). Cost = cheltuieli externe. „Aprob
 | 19 | „Debifarea” în V2 a unui aliment înregistrat în V1 fără copil (familie cu un copil) nu îl ascunde — adopție la salvarea profilului | 2 h | 0 | — |
 | 20 | ~~Pass de copy pentru conturi reale~~ — **făcut** (`accountCopy`) | — | 0 | G7 |
 | 21 | Jurnalul V1 (1.176 intrări, 95 familii) vizibil și în V2 (citire) | 3–4 h | 0 | — |
+| 23 | **TBT < 200 ms** (azi 357–510 ms): părțile statice ca Server Components, supabase-js doar la autentificare (`NIGHT-SHIFT-REPORT.md` §5). LCP rezolvat 4 nov. (0,9–1,4 s) | 1,5–2,5 zile | 0 | G15 |
+| 24 | V1 `HomeClient.tsx:217` „Rețete testate și aprobate de nutriționiști” → „Rețete verificate editorial, după ghiduri publice” (conținut public: aprobarea fondatorului) | 0,2 h | 0 | G7 |
 | 22 | V1: păstrarea copilului la înregistrare chiar dacă „Confirm email” ar fi activat (precondiție pentru activarea confirmării) | 2 h | 0 | — |
 
 ## P2 — după lansare

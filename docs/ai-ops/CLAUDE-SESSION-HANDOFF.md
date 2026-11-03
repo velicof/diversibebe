@@ -1,4 +1,32 @@
-# Handoff — sesiunea Claude Code din 3 nov. 2026
+# Handoff — sesiunea Claude Code din 3 nov. 2026 (actualizat după tura de noapte, 4 nov.)
+
+## Actualizare 4 nov. — citește întâi `NIGHT-SHIFT-REPORT.md`
+
+- **Patch V1 publicat:**
+  - `hotfix/v1-v2-schema-compat` = `8f7780d` (4 commituri);
+  - PR [#2](https://github.com/velicof/diversibebe/pull/2) OPEN, MERGEABLE, Vercel SUCCESS; **fără merge**;
+  - commit nou `8f7780d`, pentru familiile cu mai mulți copii: V1 trimitea familia la `/onboarding` și suprascria primul copil, iar salvarea profilului copia datele peste toți copiii.
+- **`release/v2-rc`** (tot local):
+  - `c24585d`: același fix + teste;
+  - `f7fc186`, `4abee77`: performanță;
+  - `ccefe02`: infrastructură de test;
+  - `4d37ddb`, plus commitul de documentație;
+  - tag `checkpoint/v2-night-shift-20261104`.
+- **Performanță** (același profil):
+  - LCP 3,1–3,4 s → **0,9–1,3 s**;
+  - TBT ~580 → **357–428 ms** pe bibliotecă, plan și rețetă (acasă: 510 ms);
+  - CLS neschimbat;
+  - ținta TBT de 200 ms nu e atinsă; planul este în raport, §5.
+- **Catalogul se generează la build.** După orice schimbare în rețete, corecturi, reguli de siguranță sau revizii:
+  - rulează `node scripts/generate-catalog.cjs`;
+  - comite `src/features/v2/content/catalog.generated.json`.
+
+  Testul `catalog-snapshot`, `build-v2` și `release-check` refuză un fișier vechi.
+- **Teste:** unit 117/117 · E2E 112/112 · repetiție 38/38 · telefon (vizitator) 68/68.
+- **Telefon:** variantă privată Tailscale + build vizitator (`PHONE-PREVIEW.md`), pregătită. Necesită instalarea Tailscale de către fondator.
+- **Portul 3100** este ocupat de un preview străin (pornit la 19:36), neoprit. Pentru un al doilea build: `V2_DIST_DIR`, `V2_PORT`, `V2_GATEWAY_PORT` / `V2_GATEWAY_URL` (§9).
+
+Secțiunile de mai jos descriu starea de la 3 nov. Unde diferă, are prioritate actualizarea de mai sus.
 
 Pentru următoarea conversație. Nu relua auditul: faptele de mai jos sunt verificate, cu dovezi în fișierele indicate.
 
@@ -11,7 +39,7 @@ Pentru următoarea conversație. Nu relua auditul: faptele de mai jos sunt verif
 | Checkpoint restaurabil | tag **`checkpoint/v2-handoff-20261103`**. Restaurare: `git checkout checkpoint/v2-handoff-20261103` sau `git reset --hard checkpoint/v2-handoff-20261103` (pe release/v2-rc) |
 | Commituri | cod: **`45163e1`** (precedat de `396023e`); acest document este în commitul următor, marcat cu tag-ul de mai sus |
 | Producție | `origin/main` = `db14a4c`, neschimbată în această sesiune; `release/v2-rc` o conține deja |
-| Patch V1 | branch **`hotfix/v1-v2-schema-compat`**, worktree `..\seo-hotfix-legacy`, 3 commituri peste `db14a4c`: `b12b652`, `ef8b028`, `360d05d`. Nepublicat |
+| Patch V1 | branch **`hotfix/v1-v2-schema-compat`**, worktree `..\seo-hotfix-legacy`, 4 commituri peste `db14a4c`: `b12b652`, `ef8b028`, `360d05d`, `8f7780d`. **Publicat, PR #2 deschis, fără merge** (4 nov.) |
 | Git status la final | curat pentru fișierele mele. Rămân **intenționat necomise**, fiind gestionate de Antigravity: `content/gemini-import/REPORT.md` (rescris de rularea lor a `check`), `BATCH-1-PREPARATION.md`, `PILOT-3-QUALITY-REPORT.md`, `PILOT-BATCH-0-PROGRESS.md`. Folderul `incoming/` este ignorat de git |
 
 Alte tag-uri utile:
@@ -165,6 +193,12 @@ node scripts/native-command.cjs e2e             # E2E Playwright (~4,5 min; porn
 node scripts/migration-rehearsal.cjs            # repetiția migrării pe stack real (~2 min), raport în ../../outputs/release-2026-11-03/rehearsal
 node scripts/release-check.cjs main             # GO/NO-GO tehnic pentru merge în main
 node scripts/perf-mobile.cjs                    # performanță mobil (preview pornit)
+node scripts/generate-catalog.cjs [--check]     # catalogul pentru browser, după schimbări de conținut
+# Al doilea build lângă preview-ul de pe 3100:
+V2_GATEWAY_PORT=54331 V2_PORT=3102 node scripts/native-gateway.cjs             # gateway doar pentru originea 3102
+V2_GATEWAY_URL=http://127.0.0.1:54331 V2_DIST_DIR=.next-perf-after node scripts/native-command.cjs build
+V2_DIST_DIR=.next-perf-after V2_PORT=3102 node scripts/preview-v2.cjs
+V2_PORT=3102 V2_GATEWAY_URL=http://127.0.0.1:54331 node scripts/native-command.cjs e2e
 node scripts/photo-import.cjs which <fișier>    # la ce rețetă corespunde un fișier (nu scrie nimic)
 ```
 

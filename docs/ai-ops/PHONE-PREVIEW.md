@@ -27,6 +27,37 @@ Ce testezi: onboarding, biblioteca (289 de rețete), filtre, rețete, planul pe 
 
 Simulat local cu aceeași configurație: build PASS, poartă închisă fără cod, `robots: Disallow /`, 20 de capturi fără erori și fără depășiri, nicio formulare „de test” (`outputs/release-2026-11-03/preview-simulation/`).
 
+## Varianta locală privată (fără push, fără Vercel) — pregătită 4 nov.
+
+Pentru testul de pe iPhone fără nicio aprobare de producție: laptopul servește V2, iar telefonul îl deschide printr-o rețea privată **Tailscale** (gratuit, plan Personal). Adresa `https://<laptop>.<tailnet>.ts.net/v2` are HTTPS real (necesar pentru `crypto.randomUUID`) și este vizibilă **doar dispozitivelor tale** conectate la același cont Tailscale. Nimic nu este public; PostgreSQL, GoTrue și PostgREST nu sunt expuse (build-ul vizitator nu le folosește deloc).
+
+Ce acoperă: onboarding, biblioteca, filtre, rețete, planul pe 5 zile, lista de cumpărături, persistența în telefon (închizi și revii), galeria foto și consola de revizie. **Nu** acoperă conturile: autentificarea și sincronizarea vin în etapa 2.
+
+Pașii tăi (o singură dată, ~10 min; autentificarea în Tailscale o faci tu):
+1. Instalezi Tailscale pe laptop (tailscale.com/download) și pe iPhone (App Store), te conectezi cu același cont pe ambele.
+2. În terminalul laptopului, în folderul proiectului:
+
+   ```bash
+   V2_BACKEND=none V2_DIST_DIR=.next-phone node scripts/native-command.cjs build
+   ```
+
+   ```bash
+   V2_DIST_DIR=.next-phone V2_PORT=3103 node scripts/preview-v2.cjs
+   ```
+
+   ```bash
+   tailscale serve --bg 3103
+   ```
+
+3. Pe iPhone, cu Tailscale pornit, deschizi adresa afișată de `tailscale serve`, urmată de `/v2`.
+4. La final: `tailscale serve reset` (oprește accesul) și închizi preview-ul.
+
+În PowerShell, variabilele se scriu înainte de comandă: `$env:V2_BACKEND="none"; $env:V2_DIST_DIR=".next-phone"; node scripts/native-command.cjs build`.
+
+Serverul ascultă doar pe `127.0.0.1`; Tailscale îl publică exclusiv în rețeaua ta privată. Preview-ul local deschide `/v2` și consola de revizie fără cod (`V2_ACCESS=public`), ceea ce e acceptabil doar pentru că adresa este vizibilă numai dispozitivelor tale. Checklist-ul de mai jos se aplică la fel.
+
+Verificat local (4 nov.): build-ul vizitator nu conține nicio adresă de backend V2 și fluxurile vizitator trec (`NIGHT-SHIFT-REPORT.md`). Tailscale nu este instalat pe laptop, deci adresa `ts.net` nu a putut fi testată de agent.
+
 ## Etapa 2 — același Preview, cu contul tău real (după migrații)
 
 Ce se adaugă:
@@ -85,16 +116,21 @@ Avantajul etapei 2: testezi V2 cu date reale **fără merge în `main`**. V1 ră
 
 ## Performanță măsurată (încărcare la rece, 4G lent 1,6 Mbps, procesor de telefon 4× mai lent)
 
-| Pagină | Primul conținut | Conținutul principal (LCP) | Stabilitate (CLS) | Blocare (TBT) | Transfer |
-|---|---|---|---|---|---|
-| Acasă | 0,9 s | 1,4 s | 0,012 | 513 ms | 546 KB |
-| Bibliotecă | 0,8 s | 3,3 s | 0,015 | 612 ms | 474 KB |
-| Rețetă cu fotografie | 0,8 s | 3,4 s | 0,015 | 543 ms | 510 KB (fotografia: 35 KB) |
-| Plan | 0,8 s | 3,1 s | 0,015 | 622 ms | 474 KB |
+4 nov., după optimizări (mediane; înainte → după, `outputs/release-2026-11-04/perf/COMPARISON.json`):
+
+| Pagină | Conținutul principal (LCP) | Stabilitate (CLS) | Blocare (TBT) | JavaScript |
+|---|---|---|---|---|
+| Acasă | 1,4 → 1,4 s | 0,012 | 518 → 510 ms | 313 → 304 KB |
+| Bibliotecă | 3,3 → **0,9 s** | 0,015 | 613–697 → **383 ms** | 313 → 304 KB |
+| Rețetă cu fotografie | 3,4 → **1,3 s** | 0,015 | ~558 → **428 ms** | 313 → 305 KB |
+| Plan | 3,1 → **0,9 s** | 0,015 | ~585 → **357 ms** | 313 → 304 KB |
 
 Concluzie:
-- **Acceptabil pentru testul fondatorului și pentru beta** (sub 4 s în condiții grele).
-- **Sub pragul „bun” pentru lansarea publică** (LCP 2,5 s, TBT 200 ms).
-- **Cauza:** biblioteca și rețetele se afișează abia după hidratarea JavaScript, iar catalogul de 291 de rețete ajunge întreg în browser. Regulile de siguranță costă doar ~14 ms.
-- **Corecția (backlog P1, 1–2 zile):** randare pe server pentru bibliotecă și rețete și numai datele cardurilor trimise în browser.
+- **LCP și CLS** sunt sub pragurile „bune” (2,5 s și 0,1) pe toate paginile.
+- **TBT** rămâne peste 200 ms. Cauza principală este hidratarea componentelor client mari. Planul este în `NIGHT-SHIFT-REPORT.md` §5: Server Components pentru părțile statice, 1–2 zile.
+- **Ce s-a schimbat:**
+  - titlurile și rețeta se randează pe server;
+  - rețetele sunt prerandate;
+  - catalogul se calculează la build;
+  - chatul V1 nu mai ajunge pe paginile V2.
 - Măsurătoarea se reface cu `node scripts/perf-mobile.cjs`.
