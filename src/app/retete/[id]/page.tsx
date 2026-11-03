@@ -122,6 +122,8 @@ export default function RecipeDetailPage({
       .from("babies")
       .select("birthdate")
       .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle()
       .then(({ data }) => {
         if (!active) return;
@@ -148,12 +150,13 @@ export default function RecipeDetailPage({
           .eq("user_id", userId)
           .eq("recipe_id", recipe.id)
           .maybeSingle(),
+        // Production has no `notes` column, and V2 may add one confirmation row per child and day.
         supabaseClient
           .from("cooked_recipes")
-          .select("id, notes")
-          .eq("source", "legacy")
+          .select("id")
           .eq("user_id", userId)
           .eq("recipe_id", recipe.id)
+          .limit(1)
           .maybeSingle(),
       ]);
 
@@ -716,6 +719,7 @@ export default function RecipeDetailPage({
           .eq("source", "legacy")
                             .eq("user_id", userId)
                             .eq("recipe_id", recipe.id)
+                            .limit(1)
                             .maybeSingle();
                           const payload = { notes: note.trim() || null };
                           if (row?.id) {

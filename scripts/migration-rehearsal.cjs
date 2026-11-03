@@ -139,6 +139,13 @@ const fingerprint=()=>psql(['-c',fingerprintSql(production.columns)]);
     const second=await json(await v1post('babies',{user_id:a.id,name:'Al doilea copil',birthdate:'2026-05-01',gender:'boy'},'return=representation'));
     const renamed=await rest(ta,`babies?id=eq.${second[0]?.id}`,{method:'PATCH',body:JSON.stringify({name:'Nume nou',updated_at:new Date().toISOString()})});
     check('V1 second child added and edited; V2 lists both',renamed.status===204&&(await json(await rpc(ta,'v2_load_state',{p_baby_id:a.kids[0]}))).children.length===a.kids.length+1);
+    // supabase-js maybeSingle() turns more than one row into null, which sent multi-child families to /onboarding.
+    const all=await json(await rest(ta,`babies?user_id=eq.${a.id}&select=id,name`));
+    const first=await json(await rest(ta,`babies?user_id=eq.${a.id}&select=id,name&order=created_at.asc&limit=1`));
+    check('V1 child read: several children without limit, exactly the first one with order+limit(1)',all.length>1&&first.length===1&&first[0].id!==second[0]?.id,`${all.length}/${first.length}`);
+    const saved=await rest(ta,`babies?id=eq.${first[0]?.id}&user_id=eq.${a.id}`,{method:'PATCH',body:JSON.stringify({name:'Primul copil'})});
+    const names=new Map((await json(await rest(ta,`babies?user_id=eq.${a.id}&select=id,name`))).map(r=>[r.id,r.name]));
+    check('V1 profile save changes only the child shown',saved.status===204&&names.get(first[0]?.id)==='Primul copil'&&names.get(second[0]?.id)==='Nume nou');
   });
   await step('V1 signup flow after the release (signUp → immediate session → child + foods)',async()=>{
     const email=`rehearsal-new-${Date.now()}@example.test`;

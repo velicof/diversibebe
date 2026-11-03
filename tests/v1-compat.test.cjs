@@ -84,3 +84,21 @@ test('V1 code never depends on V2 RPCs, so the operational rollback (v2-disable.
   const data=fs.readFileSync(path.join(__dirname,'../src/app/lib/supabaseData.ts'),'utf8');
   assert.doesNotMatch(data,/onConflict\s*:/,'PostgREST onConflict cannot target the V2 partial indexes');
 });
+
+test('V1 reads one child per family and never updates every child at once',()=>{
+  const fs=require('node:fs'),path=require('node:path');
+  const root=path.join(__dirname,'..');
+  const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?(e.name==='v2'?[]:walk(path.join(d,e.name))):/\.(ts|tsx)$/.test(e.name)?[path.join(d,e.name)]:[]);
+  const unlimited=[],broadUpdates=[];
+  for(const f of [...walk(path.join(root,'src/app')),path.join(root,'src/proxy.ts')]){
+    const s=fs.readFileSync(f,'utf8'),rel=path.relative(root,f);
+    // Each chain from .from("babies") up to its terminating semicolon (or the next query in a Promise.all).
+    for(const m of s.matchAll(/\.from\("babies"\)([\s\S]*?)(?=;|\.from\(|\n\s*\]\))/g)){
+      const chain=m[1];
+      if(/\.maybeSingle\(\)/.test(chain)&&/\.eq\("user_id"/.test(chain)&&!/\.(insert|update|upsert)\(|\.eq\("id"/.test(chain)&&!/\.limit\(1\)/.test(chain))unlimited.push(rel);
+      if(/\.update\(/.test(chain)&&!/\.eq\("id"/.test(chain))broadUpdates.push(rel);
+    }
+  }
+  assert.deepEqual(unlimited,[],'maybeSingle() returns null once a family has two children');
+  assert.deepEqual(broadUpdates,[],'an update filtered only by user_id overwrites every child');
+});

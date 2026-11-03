@@ -30,6 +30,8 @@ export default function OnboardingPage() {
           .from("babies")
           .select("id, name, birthdate")
           .eq("user_id", userId)
+          .order("created_at", { ascending: true })
+          .limit(1)
           .maybeSingle();
         if (data?.name && data?.birthdate) {
           await new Promise((r) => setTimeout(r, 100));

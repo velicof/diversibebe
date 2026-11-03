@@ -272,6 +272,8 @@ export default function PlanPage() {
           .from("babies")
           .select("birthdate, name, avatar_url")
           .eq("user_id", userId)
+          .order("created_at", { ascending: true })
+          .limit(1)
           .maybeSingle();
         setBabyAvatarUrl(data?.avatar_url ?? null);
         setSupabaseBabyName(data?.name || "");
