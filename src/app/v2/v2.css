@@ -3387,3 +3387,27 @@
 .v2-review-filters input, .v2-review-filters select { width: 100%; min-width: 0; box-sizing: border-box; }
 @media (max-width: 600px) { .v2-review-filters { grid-template-columns: 1fr 1fr; } .v2-review-filters label:first-child { grid-column: 1 / -1; } }
 .v2-review-name, .v2-review-meta, .v2-review-status, .v2-review-body { overflow-wrap: anywhere; }
+/* Photo approval gallery (/v2/revizie/fotografii) */
+.v2-photo-strip { margin-bottom: 24px; }
+.v2-photo-strip h2 { font-size: 15px; margin: 0 0 10px; }
+.v2-photo-strip > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.v2-photo-strip .v2-photo, .v2-photo-compare .v2-photo { border-radius: 10px; }
+.v2-photo-gallery { list-style: none; padding: 0; margin: 0; display: grid; gap: 22px; }
+.v2-photo-item { background: var(--v2-paper); border: 1px solid var(--v2-line); border-radius: 12px; padding: 16px; min-width: 0; }
+.v2-photo-item header h2 { margin: 0; font-size: 20px; }
+.v2-photo-item header p { margin: 4px 0 12px; color: var(--v2-muted); font-size: 12px; overflow-wrap: anywhere; }
+.v2-photo-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.v2-photo-compare figure { margin: 0; min-width: 0; }
+.v2-photo-compare figcaption { font-size: 11px; color: var(--v2-muted); margin-top: 6px; }
+.v2-photo-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px; margin-top: 10px; }
+.v2-photo-columns h3 { font-size: 13px; margin: 8px 0 4px; }
+.v2-photo-columns ul { margin: 0 0 8px; padding-left: 18px; }
+.v2-photo-checklist { border: 1px solid var(--v2-line); border-radius: 10px; padding: 10px 14px; margin: 12px 0; display: grid; gap: 6px; font-size: 13px; }
+.v2-photo-checklist label { display: flex; gap: 8px; align-items: flex-start; }
+.v2-photo-decision { display: flex; flex-wrap: wrap; gap: 8px; }
+.v2-photo-decision button[aria-pressed="true"] { background: var(--v2-accent-soft); color: var(--v2-accent); border-color: #d6a58b; }
+.v2-photo-export { display: grid; gap: 10px; margin-top: 24px; max-width: 640px; }
+.v2-photo-export label { display: grid; gap: 4px; font-size: 13px; }
+.v2-photo-export input { padding: 10px; border-radius: 8px; border: 1px solid var(--v2-line); font: inherit; }
+.v2-photo-export code, .v2-photo-item code { overflow-wrap: anywhere; }
+@media (max-width: 700px) { .v2-photo-compare, .v2-photo-columns { grid-template-columns: 1fr; } }

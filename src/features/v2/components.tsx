@@ -220,10 +220,13 @@ export function RecipePhoto({
   recipe,
   priority = false,
   className = "",
+  sizes = "(max-width: 600px) 90vw, 45vw",
 }: {
   recipe: Recipe;
   priority?: boolean;
   className?: string;
+  /** Rendered width hint for the responsive variants; cards pass their own (smaller) slot. */
+  sizes?: string;
 }) {
   const photo = recipe.photo;
   if (photo)
@@ -234,7 +237,7 @@ export function RecipePhoto({
         <img
           src={`${photo.base}-800.webp`}
           srcSet={photo.widths.map((w) => `${photo.base}-${w}.webp ${w}w`).join(", ")}
-          sizes="(max-width: 600px) 90vw, 45vw"
+          sizes={sizes}
           width={photo.width}
           height={photo.height}
           alt={photo.alt}
@@ -242,7 +245,7 @@ export function RecipePhoto({
           fetchPriority={priority ? "high" : "auto"}
           decoding="async"
         />
-        <span className="v2-photo-caption">{photo.aiGenerated ? "Imagine generată, verificată editorial" : "Fotografie"}</span>
+        <span className="v2-photo-caption">{!photo.approved ? "Imagine generată · candidat, neaprobat" : photo.aiGenerated ? "Imagine generată, verificată editorial" : "Fotografie"}</span>
       </div>
     );
   if (recipe.image.endsWith("icon.svg"))
@@ -326,7 +329,7 @@ export function RecipeCard({
           onClick={onSelect}
           aria-label={`Vezi ${recipe.name}`}
         >
-          <RecipePhoto recipe={recipe} priority={featured} />
+          <RecipePhoto recipe={recipe} priority={featured} sizes={featured ? undefined : "(max-width: 600px) 90vw, (max-width: 1100px) 45vw, 420px"} />
         </Link>
         <SaveButton recipe={recipe} compact />
         <span className="v2-time-badge">

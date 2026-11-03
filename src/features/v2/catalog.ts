@@ -66,6 +66,8 @@ export function parseDuration(value: string): number | null {
 export const storableId = (id: string) => /^[a-z0-9-]{1,100}$/.test(id);
 const legacyToV2 = Object.fromEntries(Object.entries(idAliases).map(([v2, legacy]) => [legacy, v2]));
 const STAGES = [6, 7, 8, 10, 12];
+// Photo candidates (approved: false) are visible only in local/preview builds and in the review console.
+const showPhotoCandidates = process.env.NEXT_PUBLIC_V2_CONTENT_MODE === "preview";
 
 function applyCorrections(recipe: RecipeCatalogItem, id: string) {
   const applied: Correction[] = [];
@@ -106,7 +108,8 @@ export const catalog: Recipe[] = RECIPES.map((source) => {
   const raw = normalize(fixed.ingredients.join(" "));
   const detected = ingredients.filter((i) => new RegExp(`\\b${i.id}\\w*`).test(raw)).map((i) => i.id);
   const produce = detectProduce(fixed.ingredients);
-  const photo = recipePhotos[id];
+  const asset = recipePhotos[id];
+  const photo = asset && (asset.approved || showPhotoCandidates) ? asset : undefined;
   const image = imageFor(source);
   return {
     ...corrected,

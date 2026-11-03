@@ -62,7 +62,7 @@ Raport: `outputs/release-2026-11-03/rehearsal/REPORT.md`. Baza `diversibebe_rehe
 | **2. Backup** | `node scripts/prod-backup.cjs` în terminalul tău (parola bazei nu ajunge la agent), apoi `--verify … --restore-local` | tu | 20 min | „restore check: 12 tables identical” | — |
 | **3. Preflight** | `supabase/operations/v2-preflight.sql` (read-only); notezi numărul de rânduri | agent | 5 min | 5 × 0 anomalii | — |
 | **4. Migrațiile** | cele 7 fișiere din `supabase/v2-release.cjs`, în ordine, oră cu trafic minim; fiecare fișier e o tranzacție (eșec = nicio schimbare) | agent (cu aprobare) | < 1 min de execuție; 30 min cu verificări | `v2-postflight.sql` 9/9 + același număr de rânduri; advisors fără ERROR; V1 smoke | **L1** `v2-disable.sql` (testat) |
-| **5. Auth** | Supabase → Auth → URL Configuration: `https://www.diversibebe.com/v2/**`; SMTP propriu (Resend) pentru emailurile de recuperare. **Nu activa „Confirm email”** (vezi §6) | tu (cu ghidaj) | 30 min | email de recuperare primit | revii la setarea anterioară |
+| **5. Auth** | exact ca în `AUTH-SETUP.md`: 3 Redirect URLs, SMTP Resend, șablonul de resetare în română. **Nu activa „Confirm email”** (vezi §6) | tu (cu ghidaj) | 30 min | email de recuperare primit | revii la setarea anterioară |
 | **6. Vercel Preview** | push `release/v2-rc` → Preview (protejat de Vercel Authentication) + 3 variabile Preview limitate la branch; **fără** `NEXT_PUBLIC_V2_SUPABASE_*` (V2 în modul vizitator, nicio scriere în producție). Pașii și checklist-ul pentru telefon: `PHONE-PREVIEW.md`; configurația a fost simulată local | agent (cu aprobare) | 1 h | build reușit pe Vercel (`distDir` custom), fluxul vizitator, telefonul tău | ștergi deployment-ul |
 | **7. Canary** | variabile Production + merge în `main`: `/v2` ascuns după invitație, **numai contul tău** (email și unul Google) timp de 48 h | agent + tu | 48 h | checklist §5; erori runtime 0; V1 neafectat | env → redeploy sau Instant Rollback; L1 |
 | **8. Beta privată** | 10–20 familii invitate (coduri `scripts/invite-codes.cjs`) — **numai după revizia clinică** (fără ea V2 afișează 0 rețete) | tu | 1–2 săpt. | metrici `product_events`, zero incidente | coduri revocate (scoți hash-ul) |
@@ -92,6 +92,7 @@ Vercel Hobby: Instant Rollback revine la deployment-ul de producție anterior; o
 | F4 | **V1 în producție: `/api/send-verification` trimitea emailuri prin contul Resend către orice adresă, fără autentificare** (releu deschis pentru spam/phishing); nu e folosit nicăieri | retras (410) în patch (`360d05d`), identic cu release |
 | F5 | **Decizie de produs:** BebeAsist e activ în producție pentru conturile autentificate și trimite datele copilului către modelul AI; V2 îl ține oprit (503) până la cotă partajată, date per copil și revizie de confidențialitate | merge-ul păstrează varianta V2 (oprit, 0 lei, nicio dată trimisă) și afișează mesajul serverului. **Dacă vrei BebeAsist activ după lansare, spune înainte de merge** |
 | F6 | Testul pe telefon prin Wi-Fi local nu funcționează (fără HTTPS, `crypto.randomUUID` lipsește) | Vercel Preview, `PHONE-PREVIEW.md` |
+| F7 | **V1: „Parolă uitată” nu funcționează** (paginile `/forgot-password/*` nu apelează Supabase) | V2 are fluxul real; setările exacte (Redirect URLs, SMTP Resend, șablon în română): `AUTH-SETUP.md` |
 
 ## 6. Constrângeri care decurg din proiectul comun
 

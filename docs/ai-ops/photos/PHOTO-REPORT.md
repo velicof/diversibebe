@@ -6,8 +6,9 @@ Generat de `scripts/photo-catalog.cjs`. Total rețete: **291**.
 |---|---|
 | Fotografie aprobată și publicată (`photos.ts`) | 0 |
 | Ilustrație existentă (imagini V2 vechi, generice) | 8 |
+| Candidat WebP generat, așteaptă aprobarea ta (/v2/revizie/fotografii) | 3 |
 | Importată, așteaptă verificarea umană | 0 |
-| Pilot cerut (manifest 12) | 12 |
+| Pilot cerut (manifest 12) | 9 |
 | Lipsă (prompt pregătit) | 271 |
 
 Până la fotografie, cardul afișează o imagine de rezervă (culoarea momentului mesei, emoji-ul rețetei, ingredientele principale, „Fotografie în pregătire”).

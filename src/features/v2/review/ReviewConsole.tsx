@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { reviewCatalog, type Recipe } from "../catalog";
 import { editorialStatusLabels, type EditorialStatus } from "../review";
 import { EU_ALLERGENS } from "../content/safety";
+import Link from "next/link";
 import { PageHeading } from "../components";
 
 const NOTES_KEY = "diversibebe:v2:review-notes";
@@ -85,6 +86,7 @@ export function ReviewConsole() {
         Toate cele {reviewCatalog.length} rețete, indiferent de status. Consultarea și notițele de aici nu reprezintă o
         aprobare: aprobarea se înregistrează numai prin foaia exportată, completată și semnată de specialist.
       </PageHeading>
+      <Link className="v2-text-link" href="/v2/revizie/fotografii">Fotografii candidate: galeria de aprobare →</Link>
       <section className="v2-review-summary" aria-label="Rezumat">
         <span><strong>{reviewCatalog.length}</strong> rețete</span>
         <span><strong>{counts.published}</strong> publicabile editorial</span>

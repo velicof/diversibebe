@@ -41,14 +41,20 @@ for (const width of widths)
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
-      const broken = await page
-        .locator("img")
-        .evaluateAll((images) =>
-          images
-            .filter((i) => !i.complete || !i.naturalWidth)
-            .map((i) => i.src),
-        );
+      // Broken = finished loading without pixels, or an eager image that never loaded. Lazy images below the
+      // fold have not been requested yet: their URL must still answer 200 with an image.
+      const { broken, lazy } = await page.locator("img").evaluateAll((images) => ({
+        broken: images
+          .filter((i) => (i.complete && !i.naturalWidth) || (!i.complete && i.loading !== "lazy"))
+          .map((i) => i.src),
+        lazy: images.filter((i) => !i.complete && i.loading === "lazy").map((i) => i.currentSrc || i.src),
+      }));
       expect(broken).toEqual([]);
+      for (const src of lazy) {
+        const response = await page.request.get(src);
+        expect(response.status(), src).toBe(200);
+        expect(response.headers()["content-type"], src).toMatch(/^image\//);
+      }
       expect(errors).toEqual([]);
       fs.mkdirSync(captures, { recursive: true });
       await page.screenshot({

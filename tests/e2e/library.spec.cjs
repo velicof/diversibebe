@@ -58,3 +58,21 @@ test("the review console lists all 291 recipes, filters the exceptions and expor
   expect(text.trim().split(/\r?\n/)).toHaveLength(3);
   expect(await axe(page)).toEqual([]);
 });
+
+test("the photo gallery shows the candidates locally and approval needs the full checklist", async ({ page }) => {
+  await page.goto("/v2/revizie/fotografii", { waitUntil: "networkidle" });
+  const items = page.locator(".v2-photo-item");
+  await expect(items).toHaveCount(3);
+  const first = items.first();
+  await expect(first.locator('img[src*="/v2/recipes/"]')).toBeVisible();
+  const approve = first.getByRole("button", { name: "Aprob", exact: true });
+  await expect(approve).toBeDisabled();
+  for (const box of await first.locator(".v2-photo-checklist input").all()) await box.check();
+  await expect(approve).toBeEnabled();
+  await approve.click();
+  await expect(approve).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: /Exportă deciziile/ })).toBeDisabled();
+  await page.getByLabel("Numele tău (persoana care aprobă)").fill("Fondator test");
+  await expect(page.getByRole("button", { name: /Exportă deciziile \(1\)/ })).toBeEnabled();
+  expect(await axe(page)).toEqual([]);
+});

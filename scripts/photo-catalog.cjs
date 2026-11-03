@@ -6,6 +6,7 @@
 const fs = require('node:fs'), path = require('node:path');
 const { load, plain } = require('../tests/load-ts.cjs');
 const { catalog } = load('src/features/v2/catalog.ts');
+const { recipePhotos } = load('src/features/v2/content/photos.ts');
 
 const repo = path.resolve(__dirname, '..'), out = path.join(repo, 'docs/ai-ops/photos');
 const pilot = JSON.parse(fs.readFileSync(path.join(out, 'manifest.json'), 'utf8')).photos;
@@ -23,12 +24,13 @@ const main = (r) => r.ingredients
   .filter((l) => l && !/^(apă|apa|ulei|sare|piper|condimente|optional)/i.test(l))
   .slice(0, 6);
 
-const published = catalog.filter((r) => r.published && !r.hasPhoto && !pilotIds.has(r.id))
+const published = catalog.filter((r) => r.published && !r.hasPhoto && !recipePhotos[r.id] && !pilotIds.has(r.id))
   .sort((a, b) => MEAL_ORDER[a.mealType] - MEAL_ORDER[b.mealType] || a.minimumMonths - b.minimumMonths || a.id.localeCompare(b.id));
 const batchOf = new Map(published.map((r, i) => [r.id, 1 + Math.floor(i / 20)]));
 
 const photos = catalog.map((r) => {
-  const state = r.photo ? 'approved' : imported.has(r.id) ? 'imported-pending-review' : r.hasPhoto ? 'existing-illustration' : pilotIds.has(r.id) ? 'pilot-requested' : 'missing';
+  const asset = recipePhotos[r.id];
+  const state = asset?.approved ? 'approved' : asset ? 'candidate-staged' : imported.has(r.id) ? 'imported-pending-review' : r.hasPhoto ? 'existing-illustration' : pilotIds.has(r.id) ? 'pilot-requested' : 'missing';
   const look = `${r.name.toLowerCase()}, ${r.servingGuidance.replace(/\.$/, '').toLowerCase()}`;
   return {
     recipeId: r.id,
@@ -61,6 +63,7 @@ const md = [
   '|---|---|',
   `| Fotografie aprobată și publicată (\`photos.ts\`) | ${count('approved')} |`,
   `| Ilustrație existentă (imagini V2 vechi, generice) | ${count('existing-illustration')} |`,
+  `| Candidat WebP generat, așteaptă aprobarea ta (/v2/revizie/fotografii) | ${count('candidate-staged')} |`,
   `| Importată, așteaptă verificarea umană | ${count('imported-pending-review')} |`,
   `| Pilot cerut (manifest 12) | ${count('pilot-requested')} |`,
   `| Lipsă (prompt pregătit) | ${count('missing')} |`,
@@ -160,4 +163,4 @@ const kit = [
   }),
 ].join('\n');
 fs.writeFileSync(path.join(out, 'PILOT-BATCH-0.md'), kit);
-console.log(`photos: ${photos.length} · approved ${count('approved')} · illustration ${count('existing-illustration')} · imported ${count('imported-pending-review')} · pilot ${count('pilot-requested')} · missing ${count('missing')} · batches ${batches.length}`);
+console.log(`photos: ${photos.length} · approved ${count('approved')} · candidates ${count('candidate-staged')} · illustration ${count('existing-illustration')} · imported ${count('imported-pending-review')} · pilot ${count('pilot-requested')} · missing ${count('missing')} · batches ${batches.length}`);

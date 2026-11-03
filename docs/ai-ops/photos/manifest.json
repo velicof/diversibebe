@@ -37,7 +37,7 @@
       "fileName": "piure-broccoli-cartof-6.png",
       "publishedBase": "/v2/recipes/piure-broccoli-cartof-6",
       "alt": "Piure de broccoli cu cartof: piure verde-pal, omogen, fără bucăți, în bol mic, linguriță de silicon.",
-      "imageStatus": "requested",
+      "imageStatus": "candidate",
       "editorialStatus": "imported",
       "provenance": {
         "generator": null,
@@ -49,7 +49,9 @@
         "aiGeneratedLabel": true,
         "reviewedBy": null,
         "decision": null,
-        "rejectionReason": null
+        "rejectionReason": null,
+        "sourceSha256": "eef7d97c023f8e0a38928b126c7607ff3d3e4c5ac25d57d08e2daaae636f121f",
+        "stagedAt": "2026-11-03T11:56:12.498Z"
       }
     },
     {
@@ -85,7 +87,7 @@
       "fileName": "iaurt-unt-migdale.png",
       "publishedBase": "/v2/recipes/iaurt-unt-migdale",
       "alt": "Iaurt cu unt de migdale: iaurt alb cu un fir subțire de unt de migdale fin amestecat, eventual măr ras fin.",
-      "imageStatus": "requested",
+      "imageStatus": "candidate",
       "editorialStatus": "imported",
       "provenance": {
         "generator": null,
@@ -97,7 +99,9 @@
         "aiGeneratedLabel": true,
         "reviewedBy": null,
         "decision": null,
-        "rejectionReason": null
+        "rejectionReason": null,
+        "sourceSha256": "598f76932ce56c9406dc1a0959132857065f5a124c5d09786e0ee599833e46be",
+        "stagedAt": "2026-11-03T11:56:12.155Z"
       }
     },
     {
@@ -134,7 +138,7 @@
       "fileName": "clatite-ovaz-mar-8.png",
       "publishedBase": "/v2/recipes/clatite-ovaz-mar-8",
       "alt": "Clătite de ovăz cu măr ras: clătite mici, moi, tăiate în fâșii de mărimea unui deget, măr ras vizibil.",
-      "imageStatus": "requested",
+      "imageStatus": "candidate",
       "editorialStatus": "imported",
       "provenance": {
         "generator": null,
@@ -146,7 +150,9 @@
         "aiGeneratedLabel": true,
         "reviewedBy": null,
         "decision": null,
-        "rejectionReason": null
+        "rejectionReason": null,
+        "sourceSha256": "b8ea8f27ce3e3d135cd5506f5eda9ad9ad918f5d56166e8dd67ce9bbc63202ee",
+        "stagedAt": "2026-11-03T11:56:11.789Z"
       }
     },
     {
