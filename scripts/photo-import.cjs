@@ -1,7 +1,9 @@
 // Recipe photos from Gemini Images → checked → (human approval) → responsive WebP in public/v2/recipes.
 //   node scripts/photo-import.cjs which <file>   dry run: which recipe a file name belongs to (writes nothing)
+//   node scripts/photo-import.cjs versions         dry run: every recipe with its available versions (writes nothing)
 //   node scripts/photo-import.cjs check            validate every file in content/gemini-import/incoming, write review previews + REPORT.md
-//   node scripts/photo-import.cjs stage [id ...]   WebP candidates (approved: false) for local review; originals untouched
+//   node scripts/photo-import.cjs stage [id ...]   WebP candidates (approved: false) for local review; originals untouched.
+//                                                  Newest version by default; `stage <id>-v1` picks an older one (`-v1` = the file without a suffix).
 //   node scripts/photo-import.cjs decide <file>    record the human decisions exported from /v2/revizie/fotografii
 //   node scripts/photo-import.cjs publish <id>     only for a manifest entry a human set to imageStatus "approved"
 // Nothing is published automatically. Gemini cannot write to this disk: the founder downloads the files into incoming/.
@@ -30,8 +32,18 @@ const ledgerEntry = (plan) => ({
   imageStatus: 'requested', editorialStatus: plan.editorialStatus,
   provenance: { generator: null, model: null, generatedAt: null, promptVersion: 1, commercialUseTermsChecked: false, termsUrl: null, aiGeneratedLabel: true, reviewedBy: null, decision: null, rejectionReason: null },
 });
+// A regenerated image is a new version of the same recipe: name-v2.png, name-v3.png. The file without a suffix is v1.
+const parseVersion = (file) => {
+  const name = path.parse(file).name, match = name.match(/^(.+)-v(\d+)$/);
+  return match ? { base: match[1], version: Number(match[2]) } : { base: name, version: 1 };
+};
+/** The file to stage for one recipe: an explicitly requested version, otherwise the newest. */
+function pickVersion(baseName, files, requested) {
+  const available = files.map((file) => ({ file, ...parseVersion(file) })).filter((f) => f.base === baseName).sort((a, b) => b.version - a.version);
+  return requested === undefined ? available[0] : available.find((f) => f.version === requested);
+}
 const entryFor = (file) => {
-  const name = path.parse(file).name;
+  const name = parseVersion(file).base;
   const known = manifest.photos.find((p) => path.parse(p.fileName).name === name);
   if (known) return known;
   const plan = catalogPlan.find((p) => path.parse(p.fileName).name === name && p.published);
@@ -63,7 +75,7 @@ async function check() {
     if (result.meta) await sharp(path.join(incoming, name)).rotate().resize({ width: 800, height: 600, fit: 'cover' }).webp({ quality: 80 }).toFile(path.join(review, `${path.parse(name).name}.webp`));
     rows.push({ name, entry, ...result });
   }
-  const missing = manifest.photos.filter((p) => !files.some((f) => path.parse(f).name === path.parse(p.fileName).name));
+  const missing = manifest.photos.filter((p) => !files.some((f) => parseVersion(f).base === path.parse(p.fileName).name));
   const report = [`# Import imagini — verificare tehnică (${new Date().toISOString().slice(0, 10)})`, '',
     'Verificarea tehnică NU aprobă imaginea. Aprobarea vizuală (ingrediente, textură, formă sigură de servire) se face de om, cu checklist-ul din `docs/ai-ops/GEMINI-HANDOFF.md`, apoi se setează în manifest `imageStatus: "approved"` și `provenance`.', '',
     '| Fișier | Rețetă | Dimensiuni | Probleme tehnice | SHA-256 |', '|---|---|---|---|---|',
@@ -99,10 +111,14 @@ function writePhotos(recipeId, entry, sizes, approved, sourceSha256) {
 async function stage(ids) {
   const incoming = path.join(importDir, 'incoming');
   const files = fs.readdirSync(incoming).filter((f) => /\.(png|jpe?g|webp)$/i.test(f));
-  const targets = files.map((f) => entryFor(f)).filter((e) => e && (!ids.length || ids.includes(e.recipeId)));
+  // An id may name a version: "clatite-ovaz-mar-8-v1". Without one, the newest file of the recipe is staged.
+  const requested = new Map(ids.map((id) => { const { base, version } = parseVersion(`${id}.png`); return /-v\d+$/.test(id) ? [base, version] : [id, undefined]; }));
+  const targets = [...new Set(files.map((f) => entryFor(f)).filter((e) => e && (!ids.length || requested.has(e.recipeId))))];
   if (!targets.length) throw new Error('Nicio imagine din incoming/ nu corespunde manifestului.');
   for (const entry of targets) {
-    const source = path.join(incoming, files.find((f) => path.parse(f).name === path.parse(entry.fileName).name));
+    const chosen = pickVersion(path.parse(entry.fileName).name, files, requested.get(entry.recipeId));
+    if (!chosen) { console.log(`${entry.recipeId}: NU — versiunea cerută nu există în incoming/`); continue; }
+    const source = path.join(incoming, chosen.file);
     const result = await inspect(source);
     const blocking = result.problems.filter((p) => !/metadate/.test(p));
     if (blocking.length) { console.log(`${entry.recipeId}: NU — ${blocking.join('; ')}`); continue; }
@@ -111,6 +127,10 @@ async function stage(ids) {
     if (['requested', 'candidate'].includes(entry.imageStatus)) entry.imageStatus = 'candidate';
     entry.provenance.sourceSha256 = result.sha256;
     entry.provenance.stagedAt = new Date().toISOString();
+    // Which version was looked at; earlier ones stay in the history and on disk.
+    entry.provenance.sourceFile = chosen.file;
+    entry.provenance.promptVersion = chosen.version;
+    entry.provenance.versionHistory = [...(entry.provenance.versionHistory || []).filter((v) => v.sha256 !== result.sha256), { file: chosen.file, version: chosen.version, sha256: result.sha256, stagedAt: entry.provenance.stagedAt }];
     console.log(`${entry.recipeId}: candidat · ${WIDTHS.map((w) => `${w}w ${Math.round(sizes[w] / 1024)} KB`).join(', ')} · original ${Math.round(result.bytes / 1024)} KB păstrat`);
   }
   fs.writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + '\n');
@@ -145,7 +165,8 @@ async function publish(recipeId) {
   if (!entry.provenance.commercialUseTermsChecked || !entry.provenance.termsUrl) blockers.push('condițiile de utilizare comercială nu sunt verificate (provenance.commercialUseTermsChecked + termsUrl)');
   if (!entry.provenance.reviewedBy || !entry.provenance.generator) blockers.push('lipsește provenance.reviewedBy sau provenance.generator');
   if (!entry.alt || entry.alt.length < 20) blockers.push('lipsește textul alternativ (alt, minim 20 de caractere)');
-  const source = path.join(importDir, 'incoming', entry.fileName);
+  // The version that was staged and looked at, not whatever file carries the plain name.
+  const source = path.join(importDir, 'incoming', entry.provenance.sourceFile || entry.fileName);
   if (!fs.existsSync(source)) blockers.push(`lipsește ${path.relative(repo, source)}`);
   if (blockers.length) throw new Error(`Nu public ${recipeId}:\n- ${blockers.join('\n- ')}`);
 
@@ -168,7 +189,24 @@ function which(file) {
   console.log(`${file} → ${entry.recipeId} · ${entry.title} · ${entry.batch === null || entry.batch === undefined ? (manifest.photos.length > before ? 'fără lot' : 'pilot') : `lot ${entry.batch}`} · ${manifest.photos.length > before ? 'intrare nouă la import' : `în registru (${entry.imageStatus})`}`);
 }
 
+// Dry run: what is available per recipe, and which version is staged. Writes nothing.
+function versions() {
+  const incoming = path.join(importDir, 'incoming');
+  const files = fs.readdirSync(incoming).filter((f) => /\.(png|jpe?g|webp)$/i.test(f));
+  const groups = new Map();
+  for (const file of files) { const { base, version } = parseVersion(file); groups.set(base, [...(groups.get(base) || []), { file, version }]); }
+  for (const [base, list] of [...groups].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const entry = entryFor(`${base}.png`);
+    const staged = entry?.provenance?.sourceFile;
+    const label = list.sort((a, b) => a.version - b.version).map((v) => `v${v.version}${staged === v.file ? ' (pregătită)' : ''}`).join(', ');
+    console.log(`${base} → ${entry ? entry.recipeId : 'NECUNOSCUT'} · ${label} · status ${entry ? entry.imageStatus : '—'}`);
+  }
+}
+
+if (require.main === module) {
 const [command, arg] = process.argv.slice(2);
 const ids = process.argv.slice(3);
-(command === 'which' && arg ? Promise.resolve(which(arg)) : command === 'check' ? check() : command === 'stage' ? stage(ids) : command === 'decide' && arg ? Promise.resolve(decide(arg)) : command === 'publish' && arg ? publish(arg) : Promise.reject(new Error('Folosire: check | stage [recipeId ...] | decide <fișier.json> | publish <recipeId>')))
+(command === 'versions' ? Promise.resolve(versions()) : command === 'which' && arg ? Promise.resolve(which(arg)) : command === 'check' ? check() : command === 'stage' ? stage(ids) : command === 'decide' && arg ? Promise.resolve(decide(arg)) : command === 'publish' && arg ? publish(arg) : Promise.reject(new Error('Folosire: check | stage [recipeId ...] | decide <fișier.json> | publish <recipeId>')))
   .catch((e) => { console.error(e.message); process.exit(1); });
+}
+module.exports = { parseVersion, pickVersion };

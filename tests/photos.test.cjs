@@ -63,3 +63,25 @@ test('candidates are reachable only through the review-gated route, never as sta
   for(const file of fs.existsSync(path.join(repo,'public/v2/recipes'))?fs.readdirSync(path.join(repo,'public/v2/recipes')):[])
     assert.ok(Object.entries(recipePhotos).some(([k,x])=>x.approved&&file.startsWith(k+'-')),`${file} in public/ is not an approved photo`);
 });
+
+test('a regenerated photo is a new version of the same recipe, never a new recipe',()=>{
+  const {spawnSync}=require('node:child_process'),path=require('node:path');
+  const {parseVersion,pickVersion}=require('../scripts/photo-import.cjs');
+  assert.deepEqual({...parseVersion('clatite-ovaz-mar-8-v2.png')},{base:'clatite-ovaz-mar-8',version:2});
+  assert.deepEqual({...parseVersion('clatite-ovaz-mar-8.png')},{base:'clatite-ovaz-mar-8',version:1},'the 8 is part of the id, not a version');
+  const files=['a-8.png','a-8-v2.png','a-8-v10.png','b.png'];
+  assert.equal(pickVersion('a-8',files).file,'a-8-v10.png','newest by number, not alphabetically');
+  assert.equal(pickVersion('a-8',files,1).file,'a-8.png');
+  assert.equal(pickVersion('a-8',files,2).file,'a-8-v2.png');
+  assert.equal(pickVersion('a-8',files,3),undefined);
+  const repo=path.join(__dirname,'..');
+  const which=spawnSync(process.execPath,['scripts/photo-import.cjs','which','clatite-ovaz-mar-8-v2.png'],{cwd:repo,encoding:'utf8'});
+  assert.equal(which.status,0,which.stdout+which.stderr);
+  assert.match(which.stdout,/clatite-ovaz-mar-8/);
+});
+
+test('stage never approves a version: it stays a candidate until a person decides',()=>{
+  const src=require('node:fs').readFileSync(require('node:path').join(__dirname,'../scripts/photo-import.cjs'),'utf8');
+  assert.match(src,/writePhotos\(entry\.recipeId, entry, sizes, false, result\.sha256\)/);
+  assert.doesNotMatch(src.slice(src.indexOf('async function stage'),src.indexOf('function decide')),/imageStatus = 'approved'|commercialUseTermsChecked = true/);
+});
