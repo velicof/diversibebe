@@ -36,3 +36,5 @@ export function findAnyRecipe(id: string): Recipe | undefined {
 
 /** Library ingredient filter: the most frequent ingredients of the published catalog. */
 export const ingredientFilters = generated.ingredientFilters;
+/** Keys a stored shopping list may contain. */
+export const shoppingKeys: ReadonlySet<string> = new Set(generated.shoppingKeys);

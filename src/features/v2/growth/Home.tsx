@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowRight, ArrowUpRight, Check, Clock3, Leaf, Bookmark, CalendarDays } from "lucide-react";
 import { Landing as ClassicLanding } from "../screens";
 import { RecipeCard } from "../components";
@@ -19,11 +19,11 @@ export function GrowthHome(){
   const scope=journeyScope(cloud.userId,cloud.selectedBabyId);
   const draft=useJourney(scope);
   const [minutes,setMinutes]=useState(30);
-  const demo=recommend(activeCatalog,{...initialFilters,months:state.stage,maxMinutes:minutes},{mode:contentMode,favorites:state.favorites,introduced:state.introduced,used:[],excludedIngredients:[],requiresClinicalGuidance:clinicalGuidance}).filter(r=>["piure-dovlecel","piure-morcov"].includes(r.id));
-  if(experiment.flow==="classic")return <ClassicLanding/>;
+  const demo=useMemo(()=>recommend(activeCatalog,{...initialFilters,months:state.stage,maxMinutes:minutes},{mode:contentMode,favorites:state.favorites,introduced:state.introduced,used:[],excludedIngredients:[],requiresClinicalGuidance:clinicalGuidance}).filter(r=>["piure-dovlecel","piure-morcov"].includes(r.id)),[state.stage,minutes,state.favorites,state.introduced,clinicalGuidance]);
   const headline=headlines[experiment.message];
   const resume=draft.ready && Boolean(draft.data.challenge) && !draft.data.completed;
-  return <div className="gw-home">
+  // Same element while nothing in it changed: store updates at start do not re-render the whole page.
+  const page=useMemo(()=><div className="gw-home">
     <section className="gw-hero" aria-labelledby="gw-title">
       <div className="gw-hero-copy">
         <span className="gw-eyebrow"><span/> PENTRU MESE MICI ȘI ZILE PLINE</span>
@@ -53,5 +53,7 @@ export function GrowthHome(){
     </section>
     <section className="gw-continuity"><div><p className="gw-eyebrow">ȘI MÂINE POATE FI MAI SIMPLU</p><h2>Nu începi de la zero.<br/><em>Păstrezi ce vă ajută.</em></h2><p>Salvezi o idee, o așezi în plan și revii când ai nevoie. Fără liste de bifat în fiecare zi.</p><Link href="/v2/onboarding" className="v2-text-link">Găsește punctul vostru de pornire <ArrowRight size={17}/></Link></div><div className="gw-continuity-cards"><div><Bookmark size={22}/><p><strong>Idei păstrate aproape</strong>Salvatele tale, fără căutarea de la capăt.</p></div><div><CalendarDays size={22}/><p><strong>Doar următoarele zile</strong>Un plan pe care îl poți schimba oricând.</p></div><div><Leaf size={22}/><p><strong>În ritmul familiei voastre</strong>Fără serii zilnice și fără zile „pierdute”.</p></div></div></section>
     <section className="gw-trust"><span className="gw-note-icon"><Leaf size={24}/></span><div><h2>Încrederea se construiește cu lucruri clare.</h2><p>{reviewCopy.homeTrust}</p><Link href="/v2/pregatire" className="v2-text-link">Vezi resursele de început <ArrowUpRight size={16}/></Link></div></section>
-  </div>;
+  </div>,[headline,resume,minutes,demo,scope]);
+  if(experiment.flow==="classic")return <ClassicLanding/>;
+  return page;
 }

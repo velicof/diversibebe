@@ -1,12 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { catalog, ingredients } from "../catalog";
+import { catalog, ingredients, shoppingKeys as knownShoppingKeys } from "../catalog";
 import {
   readState,
   type Action,
   type AppState,
   type LocalEvent,
 } from "../model";
-import { shoppingKeyUniverse } from "../planning";
 import { readJourney, newJourney, type Journey } from "../growth/journey";
 
 export type CloudState = {
@@ -22,7 +21,7 @@ const ingredientIds = new Set<string>(ingredients.map((i) => i.id));
 let keys: { shopping: ReadonlySet<string>; pantry: Set<string> } | null = null;
 function knownKeys() {
   if (!keys) {
-    const shopping = shoppingKeyUniverse(catalog);
+    const shopping = knownShoppingKeys;
     // Pantry stores legacy ingredient ids and shopping keys marked "am acasă".
     keys = { shopping, pantry: new Set<string>([...ingredientIds, ...shopping]) };
   }

@@ -35,6 +35,7 @@ export function Brand() {
     <Link
       className="v2-brand"
       href="/v2"
+      prefetch={false}
       aria-label="DiversiBebe, pagina de început"
     >
       <span className="v2-brand-mark">
@@ -103,7 +104,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="v2-status-dot" />
             Un pic de inspirație pentru fiecare zi
           </span>
-          <Link href="/v2/premium" className="v2-plus-link">
+          <Link href="/v2/premium" className="v2-plus-link" prefetch={false}>
             <Sparkles size={16} /> DiversiBebe Plus
           </Link>
         </header>
@@ -128,7 +129,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </main>
         <footer className="v2-footer">
           <span>DiversiBebe · Cu grijă pentru mesele voastre</span>
-          <Link href="/v2/profil#date">Datele acestei versiuni</Link>
+          <Link href="/v2/profil#date" prefetch={false}>Datele acestei versiuni</Link>
           <a
             href="https://www.nhs.uk/baby/weaning-and-feeding/babys-first-solid-foods/"
             target="_blank"
@@ -349,7 +350,8 @@ export function RecipeCard({
                 : "GUSTARE"}
         </span>
         <h3>
-          <Link href={`/v2/retete/${recipe.id}`} onClick={onSelect}>
+          {/* Twelve cards would prefetch twelve pages on a phone connection. */}
+          <Link href={`/v2/retete/${recipe.id}`} onClick={onSelect} prefetch={false}>
             {recipe.name}
           </Link>
         </h3>

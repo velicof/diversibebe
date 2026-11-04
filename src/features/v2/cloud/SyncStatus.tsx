@@ -37,10 +37,10 @@ export function SyncStatus() {
             <RefreshCw size={14} />
             Sincronizează
           </button>
-          <Link href="/v2/cont">{accountCopy.accountLink}</Link>
+          <Link prefetch={false} href="/v2/cont">{accountCopy.accountLink}</Link>
         </>
       ) : (
-        <Link href="/v2/cont">
+        <Link prefetch={false} href="/v2/cont">
           {accountCopy.connectLink} <ArrowRight size={14} />
         </Link>
       )}

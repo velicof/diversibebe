@@ -77,7 +77,7 @@ export function recommend(
     Number(context.used.includes(r.id)) * 3 +
     // Priority 6 of 7: capped so it never outweighs safety, stage, ingredients, time or preferences.
     (context.month
-      ? Math.max(-1, Math.min(1.5, seasonalScore(r.ingredients, context.month)))
+      ? Math.max(-1, Math.min(1.5, r.seasonScores?.[context.month - 1] ?? seasonalScore(r.ingredients, context.month)))
       : 0);
   const scores = new Map(eligible.map((r) => [r.id, score(r)]));
   return eligible.sort(

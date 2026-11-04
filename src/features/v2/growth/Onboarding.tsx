@@ -8,7 +8,7 @@ import { LoadingState, RecipeCard } from "../components";
 import { ingredients } from "../catalog";
 import { reviewCopy, accountCopy } from "../content/copy";
 import { emptyState } from "../model";
-import { nativeAuth } from "../cloud/client";
+import { nativeAuth } from "../cloud/config";
 import { cloudStore } from "../cloud/store";
 import { ageBands, challenges, contextQuestion, education, journeyStage, personalizedResult, resultReason, type Journey } from "./journey";
 import { emitGrowth, journeyScope, journeyStore, useExperiment, useJourney } from "./browser";

@@ -28,6 +28,8 @@ export type Recipe = Omit<RecipeCatalogItem, "allergens"> & {
   substitutions: string[];
   /** Months (1-12) in which at least one produce ingredient is fresh and local in Romania. */
   seasonMonths: number[];
+  /** seasonalScore for months 1-12, so ordering the library does not re-read every ingredient line. */
+  seasonScores: number[];
   automaticReview: ReturnType<typeof inspectContent>;
   image: string;
   hasPhoto: boolean;
@@ -36,7 +38,12 @@ export type Recipe = Omit<RecipeCatalogItem, "allergens"> & {
 };
 /** A recipe as computed at build time: the photo depends on the build's content mode and is attached at runtime. */
 export type StoredRecipe = Omit<Recipe, "photo" | "hasPhoto">;
-export type CatalogData = { recipes: StoredRecipe[]; ingredientFilters: { id: string; name: string }[] };
+export type CatalogData = {
+  recipes: StoredRecipe[];
+  ingredientFilters: { id: string; name: string }[];
+  /** Every key a shopping list may hold (planning.shoppingKeyUniverse): state validation at every start. */
+  shoppingKeys: string[];
+};
 
 /** Quick-start ingredients (onboarding, pantry). The library filter uses `ingredientFilters`. */
 export const ingredients = [

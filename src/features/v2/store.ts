@@ -6,8 +6,7 @@ import {
   type Action,
   type AppState,
 } from "./model";
-import { catalog, ingredients } from "./catalog";
-import { shoppingKeyUniverse } from "./planning";
+import { catalog, ingredients, shoppingKeys } from "./catalog";
 
 const KEY = "diversibebe:v2:isolated-preview:1";
 type Snapshot = { state: AppState; ready: boolean; storageError: boolean };
@@ -33,7 +32,6 @@ export const previewStore = {
   hydrate() {
     if (snapshot.ready) return;
     try {
-      const shoppingKeys = shoppingKeyUniverse(catalog);
       const state = readState(
         window.localStorage.getItem(KEY),
         new Set(catalog.map((r) => r.id)),

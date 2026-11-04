@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LogOut, ShieldCheck } from "lucide-react";
-import { nativeAuth } from "./client";
+import { nativeAuth } from "./config";
 import { emptyState } from "../model";
 import { journeyScope } from "../growth/browser";
 import { cloudStore } from "./store";

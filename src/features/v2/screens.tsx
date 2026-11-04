@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   ArrowRight,
   ArrowLeft,
@@ -62,18 +62,22 @@ import { emitGrowth, journeyScope, journeyStore } from "./growth/browser";
 
 function useEligible(filters?: Filters, month?: number) {
   const { state, clinicalGuidance } = usePreview();
-  return recommend(
-    activeCatalog,
-    filters ?? { ...initialFilters, months: state.stage },
-    {
-      mode: contentMode,
-      favorites: state.favorites,
-      introduced: state.introduced,
-      used: state.uses.map((u) => u.recipeId),
-      excludedIngredients: [],
-      requiresClinicalGuidance: clinicalGuidance,
-      month,
-    },
+  const chosen = filters ?? { ...initialFilters, months: state.stage };
+  const key = JSON.stringify(chosen);
+  return useMemo(
+    () =>
+      recommend(activeCatalog, chosen, {
+        mode: contentMode,
+        favorites: state.favorites,
+        introduced: state.introduced,
+        used: state.uses.map((u) => u.recipeId),
+        excludedIngredients: [],
+        requiresClinicalGuidance: clinicalGuidance,
+        month,
+      }),
+    // `chosen` is compared through its serialized form: callers pass a new object on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [key, month, state.favorites, state.introduced, state.uses, clinicalGuidance],
   );
 }
 // False in the server HTML and during hydration: controls rendered on the server stay disabled until they work.
@@ -360,6 +364,11 @@ function SeasonStrip({ month }: { month: number }) {
 }
 
 export function Dashboard() {
+  const { ready } = usePreview();
+  const show = useDeferredValue(ready);
+  return show ? <DashboardReady /> : <LoadingState />;
+}
+function DashboardReady() {
   const { state, ready, clinicalGuidance } = usePreview();
   const matches = useDashboardMatches();
   const days = useDays();
@@ -519,10 +528,13 @@ const discoverHeading = (
 );
 export function Discover() {
   const { ready } = usePreview();
+  // The state arrives through a synchronous store: rendering the results at that moment would be one long
+  // task. The deferred value renders them in an interruptible pass, so the page stays responsive.
+  const show = useDeferredValue(ready);
   return (
     <>
       {discoverHeading}
-      {ready ? <DiscoverReady /> : <LoadingState />}
+      {show ? <DiscoverReady /> : <LoadingState />}
     </>
   );
 }
@@ -544,8 +556,14 @@ function DiscoverReady() {
   useEffect(() => {
     started.current = performance.now();
   }, []);
-  const options = useEligible(filters, month);
-  const byMeal = useEligible({ ...filters, meal: "all" }, month).reduce<Record<string, number>>((acc, r) => ({ ...acc, [r.mealType]: (acc[r.mealType] ?? 0) + 1, all: (acc.all ?? 0) + 1 }), {});
+  // One pass over the catalog: the moment of the meal does not change the order.
+  const anyMeal = useEligible({ ...filters, meal: "all" }, month);
+  const options = useMemo(() => (filters.meal === "all" ? anyMeal : anyMeal.filter((r) => r.mealType === filters.meal)), [anyMeal, filters.meal]);
+  const byMeal = useMemo(() => {
+    const counts: Record<string, number> = { all: anyMeal.length };
+    for (const r of anyMeal) counts[r.mealType] = (counts[r.mealType] ?? 0) + 1;
+    return counts;
+  }, [anyMeal]);
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) => {
     setVisible(PAGE);
     setFilters((old) => ({ ...old, [key]: value }));
@@ -796,102 +814,8 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
     if (ready) track("recipe_viewed");
   }, [ready, recipe.id, track]);
   // The recipe itself renders on the server; actions stay disabled until the family's state is loaded.
-  const alreadyConfirmed = state.uses.some(
-    (u) => u.recipeId === recipe.id && u.day === days[0].key,
-  );
-  function addToPlan() {
-    const slot = nextAvailableSlot(state.plan, days);
-    if (!slot) {
-      announce(
-        "Planul pentru următoarele 7 zile este complet. Poți înlocui o masă din Plan.",
-      );
-      return;
-    }
-    dispatch({ type: "plan", slot, recipeId: recipe.id });
-    track("plan_slot_saved", { recipeId: recipe.id });
-    announce("Ideea a fost adăugată în planul tău.");
-  }
-  function confirm() {
-    if (alreadyConfirmed) return;
-    const reused = state.uses.some((u) => u.recipeId === recipe.id);
-    dispatch({
-      type: "confirm",
-      use: {
-        id: `${days[0].key}:${recipe.id}`,
-        recipeId: recipe.id,
-        day: days[0].key,
-        confirmedAt: new Date().toISOString(),
-      },
-    });
-    track("meal_confirmed", { recipeId: recipe.id });
-    if (reused) track("meal_reused", { recipeId: recipe.id });
-    announce("Ai păstrat ce a funcționat. Mulțumim!");
-  }
-  return (
-    <>
-      <Link className="v2-back-link" href="/v2/idei">
-        <ArrowLeft size={17} /> Înapoi la idei
-      </Link>
-      <div className="v2-detail-hero">
-        <RecipePhoto recipe={recipe} priority />
-        <div className="v2-detail-heading">
-          <p className="v2-eyebrow">DIN BIBLIOTECA DIVERSIBEBE</p>
-          <h1>{recipe.name}</h1>
-          <p className="v2-intro">
-            O idee de păstrat aproape pentru zilele în care ai nevoie de
-            inspirație.
-          </p>
-          <div className="v2-recipe-facts">
-            <span>
-              <Clock3 size={18} />
-              {recipe.minutes === null ? recipe.time : `${recipe.minutes} min`}
-            </span>
-            <span>
-              <Leaf size={18} />
-              {recipe.difficulty}
-            </span>
-            <span>Vârstă orientativă: {recipe.age}</span>
-            <span>{MEAL_LABELS[recipe.mealType]} · {recipe.servings} {Number(recipe.servings) === 1 ? "porție" : "porții"}</span>
-            {ready && recipe.seasonMonths.includes(new Date().getMonth() + 1) && <span><Leaf size={18} />De sezon acum</span>}
-          </div>
-          {ready ? (
-            <div className="v2-action-row">
-              <SaveButton recipe={recipe} />
-              <button
-                className="v2-button v2-button-primary"
-                onClick={addToPlan}
-                disabled={state.stage === 0 || clinicalGuidance || cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
-              >
-                <CalendarDays size={18} />
-                Adaugă în plan
-              </button>
-              {state.plan.some((p) => p.recipeId === recipe.id) && (
-                <Link className="v2-text-link v2-plan-link" href="/v2/plan">
-                  <Check size={16} /> Este în planul tău. Vezi planul
-                </Link>
-              )}
-            </div>
-          ) : (
-            // Same footprint as the buttons (no layout shift); the saved state is unknown until the family's data loads.
-            <div className="v2-action-row" role="status" aria-label="Se încarcă">
-              <span className="v2-button v2-button-secondary v2-button-pending" aria-hidden="true">
-                <Bookmark size={19} />
-                Salvează
-              </span>
-              <span className="v2-button v2-button-primary v2-button-pending" aria-hidden="true">
-                <CalendarDays size={18} />
-                Adaugă în plan
-              </span>
-            </div>
-          )}
-          <p className="v2-field-note">
-            {recipe.editorialStatus === "specialist_approved"
-              ? "Verificată și aprobată de un specialist pentru etapa indicată."
-              : "Trecută prin verificări automate, cu reguli scrise după ghiduri publice. Nu are o revizie medicală: dacă copilul are o alergie sau o afecțiune, urmează sfatul medicului."}
-          </p>
-        </div>
-      </div>
-      <ReviewNote />
+  // Same element while nothing in it changed: a state update from the store does not re-render the whole recipe.
+  const detailBody = useMemo(() => (
       <div className="v2-detail-content">
         <section className="v2-ingredients-panel">
           <h2>Ce îți trebuie</h2>
@@ -1036,6 +960,104 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
           </details>
         </section>
       </div>
+  ), [recipe, checked, hydrated, cookMode, step]);
+  const alreadyConfirmed = state.uses.some(
+    (u) => u.recipeId === recipe.id && u.day === days[0].key,
+  );
+  function addToPlan() {
+    const slot = nextAvailableSlot(state.plan, days);
+    if (!slot) {
+      announce(
+        "Planul pentru următoarele 7 zile este complet. Poți înlocui o masă din Plan.",
+      );
+      return;
+    }
+    dispatch({ type: "plan", slot, recipeId: recipe.id });
+    track("plan_slot_saved", { recipeId: recipe.id });
+    announce("Ideea a fost adăugată în planul tău.");
+  }
+  function confirm() {
+    if (alreadyConfirmed) return;
+    const reused = state.uses.some((u) => u.recipeId === recipe.id);
+    dispatch({
+      type: "confirm",
+      use: {
+        id: `${days[0].key}:${recipe.id}`,
+        recipeId: recipe.id,
+        day: days[0].key,
+        confirmedAt: new Date().toISOString(),
+      },
+    });
+    track("meal_confirmed", { recipeId: recipe.id });
+    if (reused) track("meal_reused", { recipeId: recipe.id });
+    announce("Ai păstrat ce a funcționat. Mulțumim!");
+  }
+  return (
+    <>
+      <Link className="v2-back-link" href="/v2/idei">
+        <ArrowLeft size={17} /> Înapoi la idei
+      </Link>
+      <div className="v2-detail-hero">
+        <RecipePhoto recipe={recipe} priority />
+        <div className="v2-detail-heading">
+          <p className="v2-eyebrow">DIN BIBLIOTECA DIVERSIBEBE</p>
+          <h1>{recipe.name}</h1>
+          <p className="v2-intro">
+            O idee de păstrat aproape pentru zilele în care ai nevoie de
+            inspirație.
+          </p>
+          <div className="v2-recipe-facts">
+            <span>
+              <Clock3 size={18} />
+              {recipe.minutes === null ? recipe.time : `${recipe.minutes} min`}
+            </span>
+            <span>
+              <Leaf size={18} />
+              {recipe.difficulty}
+            </span>
+            <span>Vârstă orientativă: {recipe.age}</span>
+            <span>{MEAL_LABELS[recipe.mealType]} · {recipe.servings} {Number(recipe.servings) === 1 ? "porție" : "porții"}</span>
+            {ready && recipe.seasonMonths.includes(new Date().getMonth() + 1) && <span><Leaf size={18} />De sezon acum</span>}
+          </div>
+          {ready ? (
+            <div className="v2-action-row">
+              <SaveButton recipe={recipe} />
+              <button
+                className="v2-button v2-button-primary"
+                onClick={addToPlan}
+                disabled={state.stage === 0 || clinicalGuidance || cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
+              >
+                <CalendarDays size={18} />
+                Adaugă în plan
+              </button>
+              {state.plan.some((p) => p.recipeId === recipe.id) && (
+                <Link className="v2-text-link v2-plan-link" href="/v2/plan">
+                  <Check size={16} /> Este în planul tău. Vezi planul
+                </Link>
+              )}
+            </div>
+          ) : (
+            // Same footprint as the buttons (no layout shift); the saved state is unknown until the family's data loads.
+            <div className="v2-action-row" role="status" aria-label="Se încarcă">
+              <span className="v2-button v2-button-secondary v2-button-pending" aria-hidden="true">
+                <Bookmark size={19} />
+                Salvează
+              </span>
+              <span className="v2-button v2-button-primary v2-button-pending" aria-hidden="true">
+                <CalendarDays size={18} />
+                Adaugă în plan
+              </span>
+            </div>
+          )}
+          <p className="v2-field-note">
+            {recipe.editorialStatus === "specialist_approved"
+              ? "Verificată și aprobată de un specialist pentru etapa indicată."
+              : "Trecută prin verificări automate, cu reguli scrise după ghiduri publice. Nu are o revizie medicală: dacă copilul are o alergie sau o afecțiune, urmează sfatul medicului."}
+          </p>
+        </div>
+      </div>
+      <ReviewNote />
+      {detailBody}
       <section className="v2-confirm-panel">
         <span className="v2-round-icon">
           <Heart size={26} />
@@ -1076,6 +1098,11 @@ const plannerHeading = (
 );
 
 export function Planner() {
+  const { ready } = usePreview();
+  const show = useDeferredValue(ready);
+  return show ? <PlannerReady /> : <>{plannerHeading}<LoadingState /></>;
+}
+function PlannerReady() {
   const { state, ready, dispatch, announce, track, cloud, clinicalGuidance } = usePreview();
   const eligible = useEligible();
   const days = useDays();

@@ -6,7 +6,7 @@ import {
   type LocalEvent,
 } from "../model";
 import { journeyStage, type Journey } from "../growth/journey";
-import { AUTH_SIGNED_OUT_KEY, AUTH_STORAGE_KEY, getV2Repository } from "./client";
+import { AUTH_SIGNED_OUT_KEY, AUTH_STORAGE_KEY, backendUrl, hasStoredSession } from "./config";
 import type { CloudState, V2Repository } from "./repository";
 import { accountCopy } from "../content/copy";
 
@@ -82,6 +82,28 @@ function update(value: Partial<Snapshot>) {
   snapshot = { ...snapshot, ...value };
   listeners.forEach((l) => l());
 }
+// supabase-js is about a fifth of the JavaScript of a page: loaded once, when an account is actually involved.
+let activation: Promise<void> | null = null;
+function activate(): Promise<void> {
+  activation ??= import("./client").then(({ getV2Repository }) => {
+    repository = getV2Repository();
+    repository?.client.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        locallySignedOut = true;
+        generation++;
+        failed = null;
+        update({ ...initial, available: true, loading: signingOut });
+      } else if (!authenticating && ["SIGNED_IN", "TOKEN_REFRESHED"].includes(event))
+        window.setTimeout(() => {
+          void connect();
+        }, 0);
+    });
+  }).catch((error) => {
+    activation = null;
+    throw error;
+  });
+  return activation;
+}
 async function connect() {
   if (!repository || signingOut || locallySignedOut) return;
   const run = ++generation;
@@ -136,31 +158,23 @@ export const cloudStore = {
   init() {
     if (initialized) return;
     initialized = true;
+    let configured = false;
     try {
-      repository = getV2Repository();
+      configured = Boolean(backendUrl());
     } catch {
       update({
         error: accountCopy.configError,
       });
       return;
     }
-    if (!repository) return;
+    if (!configured) return;
     update({ available: true });
-    repository.client.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") {
-        locallySignedOut = true;
-        generation++;
-        failed = null;
-        update({ ...initial, available: true, loading: signingOut });
-      } else if (!authenticating && ["SIGNED_IN", "TOKEN_REFRESHED"].includes(event))
-        window.setTimeout(() => {
-          void connect();
-        }, 0);
-    });
     window.addEventListener("focus", () => {
       if (snapshot.connected && !snapshot.saving) void connect();
     });
     window.addEventListener("storage", (event) => {
+      // Signed in from another tab: this one needs the client now.
+      if (event.key === AUTH_STORAGE_KEY && event.newValue && !repository) void activate().then(connect, () => {});
       if ((event.key === AUTH_STORAGE_KEY && event.newValue === null) || (event.key === AUTH_SIGNED_OUT_KEY && event.newValue === "1")) {
         generation++;
         locallySignedOut = true;
@@ -168,9 +182,15 @@ export const cloudStore = {
         update({ ...initial, available: true });
       }
     });
-    void connect();
+    if (hasStoredSession()) {
+      update({ loading: true });
+      void activate().then(connect, () =>
+        update({ loading: false, error: "Nu am putut sincroniza datele. Verifică legătura și reîncearcă." }),
+      );
+    }
   },
   async login(email: string, password: string) {
+    await activate();
     if (!repository)
       throw new Error("Mediul Supabase local nu este configurat.");
     authenticating=true;
@@ -188,6 +208,7 @@ export const cloudStore = {
     } finally { authenticating=false; }
   },
   async signup(email: string, password: string, pending: Journey | null, stage: number = 0) {
+    await activate();
     if (!repository) throw new Error("Mediul local nu este configurat.");
     authenticating=true;
     try {
@@ -201,12 +222,14 @@ export const cloudStore = {
     } finally { authenticating=false; }
   },
   async loginWithGoogle() {
+    await activate();
     if(!repository)throw new Error(accountCopy.unavailable);
     // PKCE: the code verifier stays in this browser; /v2/cont completes the sign-in on return.
     const {error}=await repository.client.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin+"/v2/cont"}});
     if(error)throw new Error(accountCopy.googleFailed);
   },
   async completeOAuth(code: string, pending: Journey | null) {
+    await activate();
     if(!repository)throw new Error(accountCopy.unavailable);
     authenticating=true;
     try {
@@ -221,6 +244,7 @@ export const cloudStore = {
     } finally { authenticating=false; }
   },
   async recover(email: string) {
+    await activate();
     if(!repository)throw new Error("Mediul local nu este configurat.");
     const {error}=await repository.client.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+"/v2/recuperare"});
     if(error)throw new Error("Cererea nu a fost trimisă. Verifică legătura și reîncearcă.");
@@ -246,7 +270,7 @@ export const cloudStore = {
     generation++;
     failed = null;
     // Clear private views immediately even if the network is unavailable.
-    update({ ...initial, available: Boolean(repository), loading: true });
+    update({ ...initial, available: true, loading: true });
     let serverConfirmed = false;
     try {
       const result = await repository?.client.auth.signOut({ scope: "local" });
@@ -261,7 +285,7 @@ export const cloudStore = {
       } catch { /* Unsupported browser storage uses a memory-only SDK session. */ }
       generation++;
       signingOut = false;
-      update({ ...initial, available: Boolean(repository) });
+      update({ ...initial, available: true });
     }
     return serverConfirmed;
   },

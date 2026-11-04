@@ -10,7 +10,7 @@ function render() {
   const data = loader({ NEXT_PUBLIC_V2_CONTENT_MODE: '' })('src/features/v2/catalog-build.ts').buildCatalogData();
   const plain = JSON.parse(JSON.stringify(data));
   // One recipe per line keeps review diffs readable.
-  return `{"recipes":[\n${plain.recipes.map((r) => JSON.stringify(r)).join(',\n')}\n],\n"ingredientFilters":${JSON.stringify(plain.ingredientFilters)}}\n`;
+  return `{"recipes":[\n${plain.recipes.map((r) => JSON.stringify(r)).join(',\n')}\n],\n"ingredientFilters":${JSON.stringify(plain.ingredientFilters)},\n"shoppingKeys":${JSON.stringify(plain.shoppingKeys)}}\n`;
 }
 
 if (require.main === module) {

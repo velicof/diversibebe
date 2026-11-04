@@ -92,6 +92,9 @@ export function availability(item: SeasonalProduce, month: number): Availability
 }
 
 export function monthIn(timeZone = "Europe/Bucharest", now = new Date()) {
+  // Creating an Intl formatter is the slowest step of opening the library on a phone. A device already on
+  // Romanian time (UTC+2 or UTC+3) has the same month.
+  if (timeZone === "Europe/Bucharest" && [-120, -180].includes(now.getTimezoneOffset())) return now.getMonth() + 1;
   return Number(new Intl.DateTimeFormat("en-GB", { timeZone, month: "numeric" }).format(now));
 }
 

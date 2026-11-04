@@ -8,7 +8,8 @@ import { hasClinicalReview, isPublishable, normalize, type ClinicalReview, type 
 import { editorialRegistry, recipeFingerprint } from "./content/editorial";
 import { corrections, idAliases, specialistQueue, type Correction } from "./content/corrections";
 import { assessSafety, canonicalAllergens, servingGuidance, substitutions } from "./content/safety";
-import { availability, detectProduce } from "./season";
+import { availability, detectProduce, seasonalScore } from "./season";
+import { shoppingKeyUniverse } from "./planning";
 import { ingredients, parseDuration, storableId, type CatalogData, type StoredRecipe } from "./catalog-shared";
 
 const legacyToV2 = Object.fromEntries(Object.entries(idAliases).map(([v2, legacy]) => [legacy, v2]));
@@ -72,6 +73,7 @@ export function buildRecipes(): StoredRecipe[] {
       servingGuidance: servingGuidance(corrected, minimumMonths),
       substitutions: substitutions(allergenInfo.allergens),
       seasonMonths: Array.from({ length: 12 }, (_, i) => i + 1).filter((m) => produce.some((p) => availability(p, m) === "local")),
+      seasonScores: Array.from({ length: 12 }, (_, i) => seasonalScore(fixed.ingredients, i + 1)),
       automaticReview: blocking
         ? { status: "safety-issue", reasons: safetyFlags.filter((f) => f.severity === "blocking").map((f) => f.message) }
         : editorialStatus === "needs_specialist_review"
@@ -94,5 +96,7 @@ function buildIngredientFilters(recipes: StoredRecipe[]) {
 
 export function buildCatalogData(): CatalogData {
   const recipes = buildRecipes();
-  return { recipes, ingredientFilters: buildIngredientFilters(recipes) };
+  // The universe reads only the ingredient lines.
+  const shoppingKeys = [...shoppingKeyUniverse(recipes as Parameters<typeof shoppingKeyUniverse>[0])].sort();
+  return { recipes, ingredientFilters: buildIngredientFilters(recipes), shoppingKeys };
 }

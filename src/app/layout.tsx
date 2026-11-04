@@ -6,7 +6,8 @@ import Providers from "./components/Providers";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "./lib/site";
 
 const geistSans = localFont({
-  src: "../../public/v2/dm-sans.ttf",
+  // Latin + Romanian subset of dm-sans.ttf (240 KB), one optical size: it downloads alongside the JavaScript.
+  src: "../../public/v2/dm-sans.woff2",
   variable: "--font-geist-sans",
   display: "swap",
 });

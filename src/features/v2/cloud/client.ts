@@ -1,22 +1,15 @@
 "use client";
 import { createClient } from "@supabase/supabase-js";
-import { assertAllowedSupabaseUrl, resolveBackendUrl } from "./guard";
+import { AUTH_STORAGE_KEY, backendUrl, clearSignedOutSession, nativeAuth } from "./config";
 import { V2Repository } from "./repository";
-export const nativeAuth = process.env.NEXT_PUBLIC_V2_BACKEND_KIND === "supabase-native";
+export { nativeAuth };
 let repository: V2Repository | null = null;
-export const AUTH_STORAGE_KEY = "diversibebe:v2:test-auth";
-export const AUTH_SIGNED_OUT_KEY = "diversibebe:v2:signed-out";
 export function getV2Repository(): V2Repository | null {
-  const configured = process.env.NEXT_PUBLIC_V2_SUPABASE_URL;
+  const url = backendUrl();
   const key = process.env.NEXT_PUBLIC_V2_SUPABASE_ANON_KEY;
-  if (!configured || !key) return null;
-  const url = resolveBackendUrl(configured, typeof window === "undefined" ? undefined : window.location.origin);
-  assertAllowedSupabaseUrl(url, undefined, typeof window === "undefined" ? undefined : window.location.origin);
+  if (!url || !key) return null;
   if (!repository) {
-    // A navigation may abort network logout. The local intent must survive it.
-    if(typeof window!=="undefined")try{if(localStorage.getItem(AUTH_SIGNED_OUT_KEY)==="1"){
-      for(const key of [AUTH_STORAGE_KEY,AUTH_STORAGE_KEY+"-code-verifier",AUTH_STORAGE_KEY+"-user"])localStorage.removeItem(key);
-    }}catch{/* A memory-only session cannot survive a reload. */}
+    clearSignedOutSession();
     repository = new V2Repository(
       createClient(url, key, {
         auth: {
