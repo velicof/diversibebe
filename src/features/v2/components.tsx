@@ -246,7 +246,7 @@ export function RecipePhoto({
           fetchPriority={priority ? "high" : "auto"}
           decoding="async"
         />
-        <span className="v2-photo-caption">{!photo.approved ? "Imagine generată · candidat, neaprobat" : photo.aiGenerated ? "Imagine generată, verificată editorial" : "Fotografie"}</span>
+        <span className="v2-photo-caption">{!photo.approved ? "Imagine generată · candidat, neaprobat" : photo.aiGenerated ? "Imagine generată, cu rol ilustrativ" : "Fotografie"}</span>
       </div>
     );
   if (recipe.image.endsWith("icon.svg"))

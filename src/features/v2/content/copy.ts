@@ -1,5 +1,5 @@
-// Trust copy (founder decision, 3 Nov. 2026): families see the existing library after editorial and safety
-// checks. That is NOT a medical approval, and the copy must never claim one. Specialist-approved recipes are
+// Trust copy (founder decision, 3 Nov. 2026): families see the existing library after automatic safety checks
+// and logged corrections. That is NOT a human or medical review, and the copy must never suggest one. Specialist-approved recipes are
 // labelled individually. "preview" only adds the test-environment label.
 import { contentMode } from "../catalog";
 import { usesRealAccounts } from "../cloud/guard";
@@ -8,15 +8,15 @@ const preview = contentMode === "preview";
 
 export const reviewCopy = {
   footer:
-    "Rețetele din bibliotecă sunt verificate editorial după ghiduri publice (NHS, CDC) pentru etapa indicată: sare, zahăr, miere, alergeni, formă de servire. Nu sunt avize medicale și nu înlocuiesc sfatul medicului care cunoaște copilul." +
+    "Rețetele din bibliotecă trec prin verificări automate, cu reguli scrise după ghiduri publice (NHS, CDC), pentru etapa indicată: sare, zahăr, miere, alergeni, formă de servire. Nu au o revizie medicală și nu înlocuiesc sfatul medicului care cunoaște copilul." +
     (preview ? " Versiune de test." : ""),
   homeFinePrint: "Filtrele ordonează ideile; etapa și regulile de siguranță sunt aplicate înainte.",
   homeTrust:
-    "Fiecare rețetă afișată a trecut verificarea editorială pentru etapa indicată, iar modificările sunt notate în rețetă. Resursele despre pregătire și servire au sursa la vedere și rămân accesibile fără cont. Nu oferim recomandări medicale personalizate.",
-  serving: "Forma de servire din fiecare rețetă urmează ghidurile publice pentru etapa indicată. Pentru întrebări despre copilul tău, consultă",
+    "Fiecare rețetă afișată a trecut verificările automate pentru etapa indicată, iar corecturile sunt notate în rețetă. Resursele despre pregătire și servire au sursa la vedere și rămân accesibile fără cont. Nu oferim recomandări medicale personalizate.",
+  serving: "Regulile pentru forma de servire sunt scrise după ghiduri publice, pentru etapa indicată. Pentru întrebări despre copilul tău, consultă",
   planCount: (count: number) =>
     `${count} idei potrivite din bibliotecă. Siguranța și etapa sunt verificate înaintea preferințelor; sezonul doar ordonează ideile.`,
-  recipeBadge: "verificată editorial",
+  recipeBadge: "verificări automate",
 };
 
 // Account wording follows the backend, not the content gate: on the shared production project these are

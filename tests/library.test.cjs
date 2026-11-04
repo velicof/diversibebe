@@ -97,8 +97,9 @@ test('no page claims a specialist approval that no recipe has',()=>{
   if(catalog.some(r=>r.editorialStatus==='specialist_approved'))return;
   const fs=require('node:fs'),path=require('node:path'),root=path.join(__dirname,'../src');
   const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):/\.(ts|tsx)$/.test(e.name)?[path.join(d,e.name)]:[]);
-  const claim=/(aprobat|validat|testat)[ăeai]* (de|și aprobat[ăeai]* de) (nutri[tț]ioni[sș]t|medic|pediatr|speciali[sș]t|dietetician)|validat[ăe]? medical/i;
+  const claim=/(aprobat|validat|testat)[ăeai]* (de|și aprobat[ăeai]* de) (nutri[tț]ioni[sș]t|medic|pediatr|speciali[sș]t|dietetician)|validat[ăe]? medical|verificat[ăe]* editorial|ghiduri pediatrice|Societatea Român[ăa] de Pediatrie|Mamă a |Andreea M/i;
   // Labels tied to the specialist_approved status are shown only for recipes that really have it.
-  const offenders=walk(root).filter(f=>fs.readFileSync(f,'utf8').split(/\r?\n/).some(line=>claim.test(line)&&!line.includes('specialist_approved'))).map(f=>path.relative(root,f));
+  // The BebeAsist system prompt is not public copy (disabled in V2; its wording is on the BebeAsist decision).
+  const offenders=walk(root).filter(f=>!/api[\\/]chat/.test(f)).filter(f=>fs.readFileSync(f,'utf8').split(/\r?\n/).some(line=>claim.test(line)&&!line.includes('specialist_approved'))).map(f=>path.relative(root,f));
   assert.deepEqual(offenders,[]);
 });

@@ -68,7 +68,7 @@ export type EditorialStatus =
   | "needs_specialist_review"
   | "specialist_approved";
 export const editorialStatusLabels: Record<EditorialStatus, string> = {
-  imported: "Importată, fără probleme identificate",
+  imported: "Fără probleme la verificările automate",
   editorially_corrected: "Corectată editorial",
   needs_specialist_review: "Necesită verificare de specialitate",
   specialist_approved: "Verificată și aprobată de specialist",

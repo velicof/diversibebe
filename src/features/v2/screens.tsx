@@ -822,7 +822,7 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
           <p className="v2-field-note">
             {recipe.editorialStatus === "specialist_approved"
               ? "Verificată și aprobată de un specialist pentru etapa indicată."
-              : "Verificată editorial după ghiduri publice. Nu este un aviz medical: dacă copilul are o alergie sau o afecțiune, urmează sfatul medicului."}
+              : "Trecută prin verificări automate, cu reguli scrise după ghiduri publice. Nu are o revizie medicală: dacă copilul are o alergie sau o afecțiune, urmează sfatul medicului."}
           </p>
         </div>
       </div>
