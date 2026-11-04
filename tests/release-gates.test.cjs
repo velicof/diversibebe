@@ -35,6 +35,22 @@ test('V2 connects only to a loopback stack or to the exact Supabase project shar
   assert.equal(loader({NEXT_PUBLIC_V2_SUPABASE_URL:''})('src/features/v2/cloud/guard.ts').usesRealAccounts(),true,'online build without a V2 backend (Preview, guest mode) shows no test wording');
 });
 
+test('the phone preview backend works only on loopback or a private Tailscale name, and never counts as real accounts',()=>{
+  const {resolveBackendUrl,assertAllowedSupabaseUrl,usesRealAccounts,SAME_ORIGIN_BACKEND}=loader({NEXT_PUBLIC_V2_SUPABASE_URL:'same-origin'})('src/features/v2/cloud/guard.ts');
+  const tailnet='https://laptop.tail1234.ts.net';
+  assert.equal(resolveBackendUrl(SAME_ORIGIN_BACKEND,tailnet),tailnet);
+  assert.equal(assertAllowedSupabaseUrl(tailnet,undefined,tailnet).origin,tailnet);
+  assert.equal(resolveBackendUrl(SAME_ORIGIN_BACKEND,'http://127.0.0.1:3105'),'http://127.0.0.1:3105');
+  for(const page of ['https://www.diversibebe.com','https://diversibebe-git-release-v2-rc-velicofs-projects.vercel.app','http://laptop.tail1234.ts.net','https://ts.net','https://evil.example/laptop.tail1234.ts.net','https://laptop.tail1234.ts.net.evil.example'])
+    assert.throws(()=>resolveBackendUrl(SAME_ORIGIN_BACKEND,page),undefined,page);
+  assert.throws(()=>resolveBackendUrl(SAME_ORIGIN_BACKEND,undefined));
+  assert.equal(usesRealAccounts(SAME_ORIGIN_BACKEND),false,'test wording, synthetic emails');
+  // A normal build (no same-origin value) keeps refusing any Tailscale address.
+  const normal=loader({NEXT_PUBLIC_V2_SUPABASE_URL:'http://127.0.0.1:54321'})('src/features/v2/cloud/guard.ts');
+  assert.throws(()=>normal.assertAllowedSupabaseUrl(tailnet,undefined,tailnet));
+  assert.equal(normal.resolveBackendUrl('https://smyimgvxlggggjeoajdo.supabase.co',tailnet),'https://smyimgvxlggggjeoajdo.supabase.co','a configured project is used as is');
+});
+
 test('real accounts never see test or synthetic wording; local stacks keep the honest test labels',()=>{
   const words=/\b(test|sintetic\w*|demonstrativ\w*|local\w*)\b/i;
   const real=plain(loader({NEXT_PUBLIC_V2_SUPABASE_URL:'https://smyimgvxlggggjeoajdo.supabase.co'})('src/features/v2/content/copy.ts').accountCopy);

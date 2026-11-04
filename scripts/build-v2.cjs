@@ -28,6 +28,8 @@ const result = spawnSync(
       NEXT_TELEMETRY_DISABLED: "1",
       NODE_OPTIONS: process.env.NODE_OPTIONS || "--max-old-space-size=4096",
       RAYON_NUM_THREADS: "1",
+      // V2_BACKEND=phone: the browser reaches the local stack through its own address (scripts/phone-preview.cjs).
+      ...(process.env.V2_BACKEND === "phone" ? { NEXT_PUBLIC_V2_SUPABASE_URL: "same-origin", NEXT_PUBLIC_V2_BACKEND_KIND: "supabase-native" } : {}),
       // V2_BACKEND=none: visitor-only build (no V2 account backend in the browser), as the Vercel Preview
       // stage 1 and the private phone preview (docs/ai-ops/PHONE-PREVIEW.md). Choices stay on the device.
       ...(process.env.V2_BACKEND === "none" ? { NEXT_PUBLIC_V2_SUPABASE_URL: "", NEXT_PUBLIC_V2_SUPABASE_ANON_KEY: "", NEXT_PUBLIC_V2_BACKEND_KIND: "" } : {}),
