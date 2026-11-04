@@ -361,8 +361,7 @@ export default function GhidPage() {
         </div>
 
         <p className="mt-4 text-[13px] text-[#8B7A8E] leading-relaxed">
-          📖 Bazat pe recomandările OMS, Societatea Română de Pediatrie și ghidurile europene de
-          diversificare.
+          📖 Informații generale, care nu înlocuiesc sfatul medicului pediatru.
         </p>
       </main>
 

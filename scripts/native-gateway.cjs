@@ -9,7 +9,7 @@ const server=http.createServer(async(req,res)=>{
  const origin=req.headers.origin;
  if(origin&&!allowedOrigins.has(origin)){res.writeHead(403).end();return;}
  res.setHeader('Access-Control-Allow-Origin',origin||`http://127.0.0.1:${appPort}`);
- res.setHeader('Access-Control-Allow-Headers','authorization,apikey,content-type,x-client-info,x-supabase-api-version,prefer,range,range-unit');
+ res.setHeader('Access-Control-Allow-Headers','authorization,apikey,accept,accept-profile,content-profile,content-type,x-client-info,x-supabase-api-version,prefer,range,range-unit');
  res.setHeader('Access-Control-Allow-Methods','GET,HEAD,POST,PATCH,PUT,DELETE,OPTIONS');
  res.setHeader('Access-Control-Expose-Headers','content-range');res.setHeader('Cache-Control','no-store');
  if(req.method==='OPTIONS'){res.writeHead(204).end();return;}

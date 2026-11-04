@@ -30,14 +30,17 @@ function toIsoDate(input: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Read the identity from the session on every call: a cached id outlives a sign-out in another tab or an
+// expired session, and the next account would read or write with the previous family's id. getSession
+// reads the auth cookies (no request per call); authorization stays with RLS on the server.
 export async function getCurrentUserId(): Promise<string | null> {
-
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.id) { clearSupabaseDataCache(); return null; }
-  if(cachedUserId!==user.id)cachedBaby=null;
-  cachedUserId = user.id;
+    data: { session },
+  } = await supabase.auth.getSession();
+  const id = session?.user?.id;
+  if (!id) { clearSupabaseDataCache(); return null; }
+  if (cachedUserId !== id) cachedBaby = null;
+  cachedUserId = id;
   return cachedUserId;
 }
 

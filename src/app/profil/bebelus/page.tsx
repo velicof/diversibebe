@@ -91,8 +91,8 @@ export default function ProfilBebelusPage() {
   const handleSave = async () => {
     if (!userId || !babyId) return;
     const supabase = createClient();
-    // Update only the child shown on this page: filtering by user_id alone would copy these
-    // details onto every child of the family.
+    // Update only the child shown on this page. `babies` has no allergies column: they stay in the
+    // local profile below (sending the field rejected the whole save).
     const { error } = await supabase
       .from("babies")
       .update({
@@ -102,7 +102,6 @@ export default function ProfilBebelusPage() {
           ? parseFloat(weight.replace(",", ".")) / 1000
           : null,
         gender,
-        allergies: allergies.length ? allergies : [],
       })
       .eq("id", babyId)
       .eq("user_id", userId);
