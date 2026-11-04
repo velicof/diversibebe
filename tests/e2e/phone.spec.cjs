@@ -7,7 +7,8 @@ const url = process.env.V2_PHONE_URL;
 test.skip(!url, 'Needs a phone build behind scripts/phone-gateway.cjs');
 const { defaultBrowserType, ...iphone } = devices['iPhone 13'];
 const host = url ? new URL(url).hostname : '';
-test.use({ ...iphone, actionTimeout: 30000, baseURL: url, ignoreHTTPSErrors: true, launchOptions: { args: host.endsWith('.ts.net') ? [`--host-resolver-rules=MAP ${host} 127.0.0.1`] : [] } });
+test.use({ ...iphone, actionTimeout: 30000, baseURL: url, ignoreHTTPSErrors: true, // A *.ts.net address with a port is the local HTTPS simulation; without one it is the real Tailscale name.
+  launchOptions: { args: host.endsWith('.ts.net') && new URL(url).port ? [`--host-resolver-rules=MAP ${host} 127.0.0.1`] : [] } });
 test.setTimeout(240000);
 const planned = (page) => page.locator('.v2-plan-days .v2-plan-recipe h2').allTextContents();
 

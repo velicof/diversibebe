@@ -42,6 +42,8 @@ Dacă Tailscale cere activarea HTTPS pentru rețeaua ta, deschide linkul afișat
 
 **5. Contul:** atingi **Conectează contul de test** (sau deschizi `/v2/cont`) → **Creează un cont de test** → orice adresă `ceva@example.test`, o parolă de minimum 8 caractere și etapa copilului. Nu folosi datele unui cont real.
 
+Serve rămâne activ și după repornire, dar adresa funcționează doar cât rulează scriptul de la pasul 2 (fără el apare o eroare). Când revii, pornește din nou scriptul, fără `--build` dacă nu s-a schimbat codul.
+
 **La final:** `Ctrl+C` în primul terminal, apoi:
 
 ```bash
@@ -64,11 +66,10 @@ tailscale serve reset
 
 ### Ce am verificat și ce nu
 
-**Verificat:** `tests/e2e/phone.spec.cjs` parcurge tot fluxul de mai sus cu profil de iPhone (touch, 390×844), printr-o adresă `*.ts.net` simulată cu HTTPS local, fără nicio cerere în afara adresei private.
+**Verificat (4 nov.):** `tests/e2e/phone.spec.cjs` parcurge tot fluxul de mai sus cu profil de iPhone (touch, 390×844), de pe laptop, prin adresa **reală** Tailscale (`tailnet only`, certificat HTTPS valid), fără nicio cerere în afara adresei private. Pe aceeași adresă: originile străine primesc 403, `/auth/v1/admin` 404, iar porturile interne nu răspund pe IP-ul Tailscale.
 
 **Nu am putut verifica eu:**
 - **Safari real:** testul rulează în Chromium; motorul WebKit nu e instalat aici. Din acest motiv, testul tău de pe iPhone contează;
-- **Tailscale real:** nu e instalat pe laptop;
 - **recuperarea parolei de pe telefon:** linkul din email duce la serviciul local, deci funcționează doar de pe laptop (`http://127.0.0.1:54324`). Pe telefon testezi asta în etapa cu contul real;
 - **Google:** nu există pe stack-ul local. Se testează în canary.
 
