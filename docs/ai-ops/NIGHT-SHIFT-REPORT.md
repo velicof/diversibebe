@@ -1,5 +1,7 @@
 # Raport tura de noapte — 3–4 nov. 2026
 
+> **Actualizare:** starea curentă este în `RELEASE-READINESS.md`. Două afirmații de aici sunt depășite: salvarea profilului V1 nu „copia datele peste toți copiii” în producție (update-ul era respins mereu, coloana `allergies` nu există), iar textul „Rețete verificate editorial” a fost înlocuit, fiindcă sugera o verificare neefectuată.
+
 Branch `release/v2-rc` (local, nepublicat) · patch V1 `hotfix/v1-v2-schema-compat` (publicat, PR #2 deschis) · jurnale în `outputs/release-2026-11-04/`.
 
 Producția nu a fost atinsă:

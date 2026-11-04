@@ -1,4 +1,15 @@
-# Handoff — sesiunea Claude Code din 3 nov. 2026 (actualizat după tura de noapte, 4 nov.)
+# Handoff — sesiunea Claude Code din 3 nov. 2026 (actualizat 4 nov., după tura de noapte și sprintul „private beta”)
+
+## Sprint 4 nov. — stare curentă (are prioritate față de tot ce urmează)
+
+Starea, blocajele și ordinea de lansare: **`RELEASE-READINESS.md`**. Telefon: **`PHONE-PREVIEW.md`**. Fotografii: **`photos/VISUAL-REVIEW-20261104.md`**.
+
+- PR #2: 9 commituri, head `6150077`, CLEAN, Vercel SUCCESS, **fără merge**. `scripts/v1-browser-check.cjs` rulează paginile V1 reale pe schema V2.
+- Telefon cu conturi: `node scripts/phone-preview.cjs --build` + `tailscale serve --bg 3105`; `tests/e2e/phone.spec.cjs` rulează doar cu `V2_PHONE_URL`.
+- Local, după o schimbare în `scripts/native-gateway.cjs`, repornește gateway-ul de pe 54321: `native-runtime` nu îl repornește dacă portul e ocupat, iar `context.route` din E2E ascunde refuzurile CORS.
+- 8 migrații (`20261104100000_v2_shopping_event` e nouă). `supabase-js` se încarcă lazy: `cloud/config.ts` nu îl importă; nu adăuga importuri din `cloud/client.ts` în afara lui `store.ts` (dinamic) și `Recovery.tsx`.
+- `public/v2/dm-sans.woff2` e subset din `dm-sans.ttf` (subset-font, opsz 14, wght 300–800, latin + română).
+
 
 ## Actualizare 4 nov. — citește întâi `NIGHT-SHIFT-REPORT.md`
 

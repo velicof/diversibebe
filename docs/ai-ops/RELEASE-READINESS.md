@@ -1,44 +1,107 @@
 # Release readiness — DiversiBebe 2.0
 
-Evaluare: 3 nov. 2026 · branch `release/v2-rc` · verificări automate: `node scripts/release-check.cjs` · jurnale: `outputs/release-2026-11-03/tests/`.
+Evaluare: 4 nov. 2026 · branch `release/v2-rc` · verificări automate: `node scripts/release-check.cjs` · jurnale: `outputs/release-2026-11-04/`.
+
+Rețetele nu sunt validate medical: trec prin verificări automate și corecturi notate, fără revizie de specialitate.
 
 ## Decizie pe etape
 
-| Etapă | Decizie | Ce lipsește (doar blocaje reale) | Durată după aprobare |
-|---|---|---|---|
-| **1. Preview privat, date sintetice (mod vizitator)** | **GO tehnic**, așteaptă un pas al tău | fie Tailscale pe laptop + iPhone (varianta locală privată, fără aprobări de producție), fie A. push `release/v2-rc` · B. 3 variabile Preview (`PHONE-PREVIEW.md`) | ~10–30 min |
-| **2. Testare cu contul fondatorului** (același Preview, proiectul comun) | **NO-GO** până la 4 acțiuni ale tale sau aprobate de tine | 1. patch V1 în producție · 2. backup verificat · 3. migrații V2 + postflight · 4. Auth (`AUTH-SETUP.md`: Redirect URLs, SMTP Resend, șablon); apoi 3 variabile Preview în plus | ~½ zi de lucru + 48 h de test |
-| **3. Beta restrânsă** (familii invitate, `www.diversibebe.com/v2`, cod de invitație) | **NO-GO** | etapa 2 trecută · decizia ta despre fotografii (candidații nu se publică până nu decizi) · mențiunea din politica de confidențialitate · decizia BebeAsist · merge `release/v2-rc` → `main` (`release-check.cjs main` trebuie să treacă) | ~1 zi + 1–2 săpt. de beta |
-| **4. Lansare publică** | **NO-GO** | beta fără incidente · performanță mobil la prag (LCP < 2,5 s ✅ 0,9–1,4 s; TBT < 200 ms ❌ 357–510 ms) · afirmația V1 „aprobate de nutriționiști” corectată în PR #2 (live după merge) · fotografii pentru rețetele principale · revizia de specialitate pentru cele 2 rețete cu ficat (sau rămân nepublicate) · afirmațiile V1 („aprobate de nutriționiști”) · Vercel Pro (20 USD/lună) **doar dacă** apar plăți/monetizare | 2–4 săpt. |
+| Etapă | Decizie | Ce lipsește (doar blocaje reale) |
+|---|---|---|
+| **1. Test privat pe telefon, mediu local izolat, cu cont de test** | **GO** după un pas al tău | Tailscale pe laptop și iPhone (`PHONE-PREVIEW.md`). Safari real nu a putut fi testat de agent |
+| **2. Testare cu contul fondatorului** (Preview, proiectul comun) | **NO-GO** | merge PR #2 · backup verificat · migrații + postflight · Auth (Redirect URLs, SMTP, șablon) · push `release/v2-rc` + variabile Preview |
+| **3. Beta restrânsă** (familii invitate, cod de invitație) | **NO-GO** | etapa 2 trecută · deciziile despre fotografii și BebeAsist · mențiunea din politica de confidențialitate · merge `release/v2-rc` → `main` |
+| **4. Lansare publică** | **NO-GO** | beta fără incidente · decizia despre revizia de specialitate · fotografii pentru rețetele principale · confirmarea performanței pe conturi reale |
 
-**Cât mai avem până la prima versiune V2 publicabilă (beta pe `www`):**
-- **Tehnic:** aproximativ 1,5 zile de lucru, toate gratuite.
-- **Calendaristic:** depinde de aprobările tale și de cele 48 h de test cu contul tău, realist **4–7 zile**.
+## Ordinea exactă de lansare
+
+Fiecare pas cere aprobarea ta și se oprește dacă verificarea lui pică.
+
+| # | Pas | Cine | Verificare | Înapoi |
+|---|---|---|---|---|
+| 0 | Test privat pe iPhone (`PHONE-PREVIEW.md`) | tu | checklist-ul din document | — |
+| 1 | **Merge PR [#2](https://github.com/velicof/diversibebe/pull/2)** → deploy V1 | tu | checklist „După merge” din PR (10 min) | Vercel Instant Rollback la `db14a4c` |
+| 2 | **Backup** (`node scripts/prod-backup.cjs`, apoi `--verify … --restore-local`) | tu; parola nu ajunge la agent | „restore check: 12 tables identical” | — |
+| 3 | Preflight (`v2-preflight.sql`, read-only) | agent, cu aprobare | 5 × 0 anomalii; numărul de rânduri notat | — |
+| 4 | **Cele 8 migrații** (`supabase/v2-release.cjs`), în ordine, la oră cu trafic minim | agent, cu aprobare | postflight 9/9, același număr de rânduri, advisors fără ERROR, V1 smoke | L1 `v2-disable.sql` (testat); L3 backup |
+| 5 | **Auth** (`AUTH-SETUP.md`): Redirect URLs, SMTP Resend, șablon | tu, cu ghidaj. Nu activa „Confirm email” | email de recuperare primit | revii la setarea anterioară |
+| 6 | Push `release/v2-rc` + variabile Preview (etapele 1 și 2 din `PHONE-PREVIEW.md`) | agent, cu aprobare | build Vercel; cont real pe telefon: email, Google, recuperare, izolare între 2 conturi | ștergi deployment-ul |
+| 7 | Deciziile tale: fotografii, BebeAsist, text confidențialitate | tu | `photos/VISUAL-REVIEW-20261104.md`; `PRIVACY-AND-MONITORING.md` | — |
+| 8 | `node scripts/release-check.cjs main` → merge `release/v2-rc` → `main`; `/v2` rămâne ascuns după cod | agent, cu aprobare | canary 48 h cu contul tău (`MIGRATION-V1-V2.md` §5); erori runtime 0; V1 neafectat | Instant Rollback; L1 |
+| 9 | Beta: 10–20 familii, coduri `scripts/invite-codes.cjs` | tu | `v2-product-metrics.sql`; zero incidente, 1–2 săpt. | scoți hash-urile |
+| 10 | Deschidere: `V2_ACCESS=public` | decizie separată | criteriile din etapa 4 | scoți variabila → redeploy |
+
+**Costuri:** 0 lei până la pasul 9. Supabase Pro (backup zilnic) și Vercel Pro (obligatoriu la monetizare) rămân decizii separate.
+
+## Blocaje reale
+
+**P0 (înaintea oricărei migrații):** PR #2 nemerge-uit · fără backup · migrații neaplicate · fără SMTP (65 de conturi numai cu Google nu au alternativă la buton, iar recuperarea nu e de încredere).
+
+**P1 (înainte de beta):**
+- testul pe iPhone real (Safari neverificat automat);
+- deciziile despre fotografii (3 de regenerat, 5 versiuni de ales);
+- mențiunea din politica de confidențialitate;
+- BebeAsist: rămâne oprit în V2? Promptul din V1 încă îi cere să se bazeze pe „OMS și Societatea Română de Pediatrie”: dacă rămâne activ, promptul trebuie reformulat;
+- Google OAuth și recuperarea parolei pe telefon: testabile doar pe proiectul real.
+
+**P2 (înainte de public):**
+- încărcarea rece cu cont: bibliotecă ~4,5 s pe GoTrue local (lent, ~570 ms per cerere). De remăsurat pe proiectul real;
+- revizia de specialitate pentru cele 2 rețete cu ficat (altfel rămân nepublicate) și decizia despre revizia generală;
+- „Parolă uitată” din V1;
+- widgetul de chat V1 acoperă mijlocul butonului de salvare a profilului pe telefon (partea stângă rămâne activă);
+- secretele Vercel marcate Sensitive; lint-ul moștenit din V1 (46 de erori).
+
+## Performanță (laborator: cache rece, 4G 1,6 Mbps / 150 ms, CPU 4×, 390×844)
+
+Ținte: LCP < 2,5 s, TBT < 200 ms, CLS < 0,1. Mediane din 3 rulări (`outputs/release-2026-11-04/perf/`), vizitator.
+
+| Pagină | LCP inițial → acum | TBT inițial → acum | CLS | JS |
+|---|---|---|---|---|
+| Acasă | 1,4 → **1,4 s** | 518 → **161 ms** | 0,012 | 313 → 257 KB |
+| Bibliotecă | 3,3 → **2,4 s** | 697 → **122 ms** | 0 | 313 → 251 KB |
+| Rețetă cu fotografie | 3,4 → **1,3 s** | 561 → **189 ms** | 0 | 313 → 251 KB |
+| Plan | 3,1 → **0,9 s** | 586 → **129 ms** | 0 | 313 → 250 KB |
+
+Transfer total pe bibliotecă: 474 → 327 KB. Navigare în aplicație: bibliotecă → rețetă 150–380 ms, schimbare de tab ~110 ms.
+
+**Cu cont** (GoTrue local): revenire, cu JS în cache: bibliotecă ~2,1 s, plan ~0,3 s. Încărcare rece: bibliotecă ~4,5 s, plan ~0,7 s. TBT ≤ 139 ms, CLS 0,007. Pe proiectul real trebuie remăsurat.
+
+Ce a schimbat cifrele (dovezi: profil CPU atribuit prin source maps, `V2_SOURCE_MAPS=1`):
+1. conținutul personalizat se randează cu `useDeferredValue`: starea vine printr-un store sincron, care făcea din toată pagina o singură sarcină lungă;
+2. supabase-js (57 KB gzip) se încarcă doar cu o sesiune stocată sau la autentificare;
+3. fontul: TTF 240 KB → WOFF2 30 KB (latin + română);
+4. cardurile și linkurile secundare nu mai fac prefetch pe conexiunea de telefon;
+5. catalogul, cheile de cumpărături și scorurile de sezon se calculează la build; randările repetate sunt evitate.
+
+**Nu a fost nevoie de refactorul la Server Components.** Fotografiile responsive erau deja în regulă (`srcset`, 800w sub 45 KB).
+
+## Pregătire pentru monetizare (fără plăți)
+
+- **Free/Plus** declarate în `src/features/v2/plans.ts`; informațiile de siguranță sunt mereu gratuite (test). Nimic nu este blocat; nu există cod de plată (test).
+- **Măsurători:** întrebare de preț la 19, 24, 29 lei sau „Nu aș plăti” (`premium_interest.price`) · `shopping_item_checked` (lista folosită, nu doar deschisă) · `shopping_list_generated` · `meal_added_to_plan` · `return_session`.
+- **Citire:** `supabase/operations/v2-product-metrics.sql` (read-only, doar agregate, conturile de test excluse, grupurile sub 5 persoane ascunse).
+- **Date sensibile:** evenimentele păstrează doar numere (`count`, `elapsedMs`, `price`); numele, alergiile și textul liber sunt eliminate în aplicație și refuzate de baza de date (test).
 
 ## Gate-uri (dovezi)
 
 | # | Condiție | Stare | Dovadă |
 |---|---|---|---|
-| G1 | Fără vulnerabilități critice | ✅ local · ⚠️ producție | advisors 0 ERROR; **releul de email deschis din V1 e retras în patch** (PR #2 deschis, fără merge, 4 nov.); `/api/chat` cere autentificare + limită per utilizator; codurile V2 au 60 de biți |
-| G2 | Izolare între familii | ✅ | RLS: PGlite + PostgREST real (401 pentru anonim, 409 pentru o referință străină) |
-| G3 | Fluxuri E2E | ✅ local · ⏳ telefon | E2E 112/112 |
-| G4 | Backend online | ⏳ etapa 2 | Preview + proiectul comun după migrații |
-| G5 | Migrații și rollback | ✅ local | repetiție pe stack real **36/36** (toate căile de scriere V1, înainte, după migrații și după rollback) |
-| G6 | Conținut | ✅ editorial | 289 publicabile, 2 în coada de specialitate, 0 aprobări medicale inventate |
-| G7 | Afirmații | ✅ V2 · ⚠️ V1 | — |
-| G8 | Telefon | ⏳ | checklist în `PHONE-PREVIEW.md` |
-| G9 | Analytics și confidențialitate | ✅ cod · ⏳ text public | `PRIVACY-AND-MONITORING.md` (text propus) |
+| G1 | Fără vulnerabilități critice | ✅ local · ⏳ producție | `npm audit` 0; ruta de email și redirectul din callback corectate în PR #2 (nepublicat) |
+| G2 | Izolare între familii | ✅ | RLS: PGlite + PostgREST real; în browser, al doilea cont nu vede date din primul |
+| G3 | Fluxuri E2E | ✅ local · ⏳ iPhone real | E2E 112/112; `phone.spec` pe profil de iPhone |
+| G4 | Backend online | ⏳ pasul 6 | — |
+| G5 | Migrații și rollback | ✅ local | repetiție pe stack real 38/38, 8 migrații |
+| G6 | Conținut | ✅ automat · ⏳ specialitate | 289 publicabile, 2 în coada de specialitate, 0 aprobări medicale |
+| G7 | Afirmații | ✅ cod · ⏳ PR #2 | testimonialul și afirmațiile fără dovezi eliminate; gardă în `library.test`; V2 descrie verificările ca automate |
+| G8 | Telefon | ⏳ pasul 0 | `PHONE-PREVIEW.md` |
+| G9 | Analytics și confidențialitate | ✅ cod · ⏳ text public | `monetization.test`; `PRIVACY-AND-MONITORING.md` |
 | G10 | Monitorizare | ✅ plan cost 0 | idem, §3 |
 | G11 | Costuri | ✅ 0 lei | — |
-| G12 | V1 după migrații | ✅ local · ⏳ producție | patch `8f7780d` (4 commituri, include familiile cu mai mulți copii): build de producție + TypeScript PASS, repetiție 38/38, `v1-compat` 7/7 |
-| G13 | Acces controlat | ✅ | fail-closed; Vercel Authentication pe Preview; cod separat pentru revizie |
-| G14 | Fotografii | ✅ pipeline · ⏳ decizia ta | 3 candidați integrați local; 9 fișiere noi de la Antigravity, neintegrate până la confirmarea ta |
-| G15 | Performanță mobil | ⚠️ | 4 nov.: LCP **0,9–1,4 s** ✅, CLS < 0,02 ✅; TBT **357–510 ms** ❌ (ținta 200 ms; plan în `NIGHT-SHIFT-REPORT.md` §5) |
+| G12 | V1 după migrații | ✅ local · ⏳ producție | `v1-browser-check` 40/40 pe PR #2; codul din producție pică același test |
+| G13 | Acces controlat | ✅ | poartă fail-closed; `check-v2-boundary` (404 fără flag) |
+| G14 | Fotografii | ✅ pipeline · ⏳ decizia ta | versiuni `-vN`; `photos/VISUAL-REVIEW-20261104.md`; 0 aprobate automat |
+| G15 | Performanță mobil | ✅ vizitator · ⏳ cont real | tabelul de mai sus |
 
-## Conturile (read-only, `v2-accounts-check.sql`)
+## Conturile (read-only, 3 nov., `v2-accounts-check.sql`)
 
-- **435 de conturi:** 0 șterse sau blocate, toate cu profil, 0 emailuri duplicate.
-- **370** cu parolă.
-- **65** numai cu Google: pentru ele există butonul Google în V2, iar recuperarea parolei cere SMTP.
-
-Toate conturile pot intra în V2 după etapa 2.
+435 de conturi, 0 șterse sau blocate, toate cu profil, 0 emailuri duplicate; 370 cu parolă, 65 numai cu Google. La prima intrare în V2, etapa copilului se calculează din data nașterii (verificat pe un cont cu copil creat ca în V1).

@@ -12,7 +12,7 @@ Efort = ore de lucru efectiv (agent sau om). Cost = cheltuieli externe. „Aprob
 | 4 | Vercel Preview pentru `release/v2-rc` în modul vizitator (fără chei Supabase V2 în Preview): build pe Vercel + flux vizitator | agent | 1 h | 0 | da (push) | G3 |
 | 5 | Supabase Auth producție: SMTP Resend + Redirect URLs `/v2/**` | fondator + agent | 1–2 h | 0 | da | G4 |
 | 6 | Backup logic al producției înainte de migrații | fondator (parola DB) + agent | 1 h | 0 | da | G5 |
-| 7 | Merge PR [#2](https://github.com/velicof/diversibebe/pull/2) `hotfix/v1-v2-schema-compat` (4 commituri, `8f7780d`; **publicat 4 nov.**, fără merge) → verificare live | fondator (merge) + agent | 0,5 h | 0 | da (merge) | G12 |
+| 7 | Merge PR [#2](https://github.com/velicof/diversibebe/pull/2) `hotfix/v1-v2-schema-compat` (9 commituri; **pregătit, CLEAN, Vercel SUCCESS**, fără merge) → verificare live | fondator (merge) + agent | 0,5 h | 0 | da (merge) | G12 |
 | 8 | Migrațiile V2 în producție + advisors + preflight | agent | 2 h | 0 | da | G1, G5 |
 | 9 | Variabile Production + coduri de invitație + merge `release/v2-rc` → canary 48 h cu contul fondatorului (`MIGRATION-V1-V2.md` §5) | agent + fondator | 2 h + 48 h | 0 | da | G3, G4, G13 |
 | 10 | Test pe telefon fizic (iOS + Android) cu checklist G8 | fondator | 1–2 h | 0 | nu | G8 |
@@ -22,7 +22,7 @@ Efort = ore de lucru efectiv (agent sau om). Cost = cheltuieli externe. „Aprob
 
 | # | Acțiune | Efort | Cost | Gate |
 |---|---|---|---|---|
-| 12 | Afirmațiile V1: „aprobate de nutriționiști” **corectat** (`6896710`, PR #2); rămâne testimonialul — dovezi sau eliminare | 0,5 h | 0 | G7 |
+| 12 | ~~Afirmațiile și testimonialul V1~~: **eliminate** în PR #2 (`01fc589`) | — | 0 | G7 |
 | 13 | 12 fotografii: Gemini Images → verificare → `photo-import publish` | 4–6 h fondator + 2 h agent | 0–50 lei | G6 |
 | 14 | Lotul editorial 2 (încă 20–30 rețete, inclusiv cină 6+ dacă specialistul o cere) | 2 h agent + specialist | ~1.500–3.000 lei | G6 |
 | 15 | Vercel Pro înainte de orice monetizare | — | 20 USD/lună | G11 |
@@ -32,8 +32,11 @@ Efort = ore de lucru efectiv (agent sau om). Cost = cheltuieli externe. „Aprob
 | 19 | „Debifarea” în V2 a unui aliment înregistrat în V1 fără copil (familie cu un copil) nu îl ascunde — adopție la salvarea profilului | 2 h | 0 | — |
 | 20 | ~~Pass de copy pentru conturi reale~~ — **făcut** (`accountCopy`) | — | 0 | G7 |
 | 21 | Jurnalul V1 (1.176 intrări, 95 familii) vizibil și în V2 (citire) | 3–4 h | 0 | — |
-| 23 | **TBT < 200 ms** (azi 357–510 ms): părțile statice ca Server Components, supabase-js doar la autentificare (`NIGHT-SHIFT-REPORT.md` §5). LCP rezolvat 4 nov. (0,9–1,4 s) | 1,5–2,5 zile | 0 | G15 |
-| 24 | ~~V1 `HomeClient.tsx:217` „aprobate de nutriționiști”~~ → „Rețete verificate editorial, după ghiduri publice”: **făcut** 4 nov. (`6896710`, aprobat de fondator), live după merge-ul PR #2 | — | 0 | G7 |
+| 23 | ~~TBT < 200 ms~~: **atins** 4 nov. (122–189 ms, vizitator). Rămâne de remăsurat încărcarea rece cu cont pe proiectul real | 1 h | 0 | G15 |
+| 24 | ~~Text V1 „aprobate de nutriționiști”~~: eliminat; și varianta intermediară „verificate editorial” a fost înlocuită, fiindcă rețetele V1 nu au trecut prin corecturile V2 | — | 0 | G7 |
+| 25 | Prompt BebeAsist: nu mai cere „bazat pe OMS și Societatea Română de Pediatrie”, dacă rămâne activ (decizia BebeAsist) | 0,5 h | 0 | G7 |
+| 26 | V1: widgetul de chat acoperă mijlocul butonului de salvare a profilului pe telefon | 0,5 h | 0 | — |
+| 27 | Fotografii: 3 de regenerat (crutoane în supa de broccoli, morcov care pare crud, biluțe), `photos/VISUAL-REVIEW-20261104.md` | Antigravity | 0 | G14 |
 | 22 | V1: păstrarea copilului la înregistrare chiar dacă „Confirm email” ar fi activat (precondiție pentru activarea confirmării) | 2 h | 0 | — |
 
 ## P2 — după lansare
