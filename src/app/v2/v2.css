@@ -3417,3 +3417,24 @@
 .v2-photo-export input { padding: 10px; border-radius: 8px; border: 1px solid var(--v2-line); font: inherit; }
 .v2-photo-export code, .v2-photo-item code { overflow-wrap: anywhere; }
 @media (max-width: 700px) { .v2-photo-compare, .v2-photo-columns { grid-template-columns: 1fr; } }
+
+/* Core flow on phones (Nov. 2026): results on the first screen, filters on demand, plan progress on Azi. */
+.v2-filter-toggle { display: none; }
+@media (max-width: 760px) {
+  .v2-filter-toggle { display: inline-flex; width: 100%; margin-top: 12px; }
+  .v2-filter-more[data-open="false"] { display: none; }
+}
+.v2-stage-prompt, .v2-plan-progress {
+  background: var(--v2-paper);
+  border: 1px solid var(--v2-line);
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.v2-stage-prompt h2, .v2-plan-progress h2 { font-size: 18px; margin: 0 0 6px; }
+.v2-stage-prompt p, .v2-plan-progress p { margin: 0 0 12px; }
+.v2-plan-progress { display: flex; gap: 14px; align-items: flex-start; }
+.v2-plan-progress .v2-round-icon { flex: none; }
+.v2-plan-link { flex-basis: 100%; }
+.v2-price-question { margin-top: 16px; text-align: left; }
+.v2-price-question p { margin: 0 0 10px; font-size: 14px; }

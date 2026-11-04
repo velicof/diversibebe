@@ -30,7 +30,8 @@ export type EventName =
   | "meal_used_confirmed"
   | "return_session"
   | "recipe_viewed"
-  | "shopping_list_generated";
+  | "shopping_list_generated"
+  | "shopping_item_checked";
 export type AppState = {
   version: 1;
   onboarded: boolean;

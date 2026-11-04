@@ -19,6 +19,7 @@ export function Account() {
   const [mode,setMode]=useState<"login"|"signup"|"recover">("login");
   const [notice,setNotice]=useState("");
   const [stage,setStage]=useState(0);
+  const [signupStage,setSignupStage]=useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -206,7 +207,7 @@ export function Account() {
             }
             emitGrowth(mode==="signup"?"signup_started":"login_started");
             const pending=journeyStore.peekHandoff();
-            if(mode==="signup")await cloudStore.signup(email,password,pending);else await cloudStore.login(email,password);
+            if(mode==="signup")await cloudStore.signup(email,password,pending,Number(signupStage)||0);else await cloudStore.login(email,password);
             await transferPending();
             emitGrowth(mode==="signup"?"signup_completed":"login_completed");
             setPassword("");
@@ -241,6 +242,17 @@ export function Account() {
           minLength={mode==="signup"?8:6}
           maxLength={200}
         />
+        </>}
+        {mode==="signup"&&!journeyStore.peekHandoff()&&<><label htmlFor="v2-signup-stage">În ce etapă este copilul?</label>
+        <select id="v2-signup-stage" required value={signupStage} onChange={(e)=>setSignupStage(e.target.value)}>
+          <option value="" disabled>Alege etapa</option>
+          <option value="0">Încă ne pregătim (sub 6 luni)</option>
+          <option value="6">6–7 luni</option>
+          <option value="8">8–9 luni</option>
+          <option value="10">10–11 luni</option>
+          <option value="12">12+ luni</option>
+        </select>
+        <p className="v2-field-note">Arătăm doar rețete potrivite etapei. O poți schimba oricând.</p>
         </>}
         {notice&&<p role="status">{notice}{!realAccounts&&<> <a href="http://127.0.0.1:54324" target="_blank" rel="noreferrer">Deschide emailurile locale</a></>}</p>}
         {error && (

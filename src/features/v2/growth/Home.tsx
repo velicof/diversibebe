@@ -28,7 +28,7 @@ export function GrowthHome(){
       <div className="gw-hero-copy">
         <span className="gw-eyebrow"><span/> PENTRU MESE MICI ȘI ZILE PLINE</span>
         <h1 id="gw-title">{headline.title}<br/><em>{headline.accent}</em></h1>
-        <p>Nu trebuie să ai mereu o idee nouă. Spune-ne ce te-ar ajuta, iar noi facem loc pentru următoarea masă.</p>
+        <p>Idei de mese potrivite vârstei, un plan pe 5 zile și lista de cumpărături gata făcută. Tu alegi, noi ținem minte.</p>
         <Link href="/v2/onboarding" className="v2-button v2-button-primary gw-main-cta">{resume?"Continuă de unde ai rămas":headline.cta}<ArrowRight size={19}/></Link>
         <div className="gw-reassurance"><span><Check size={14}/> Câteva răspunsuri</span><span><Check size={14}/> Fără cont</span><span><Check size={14}/> În ritmul tău</span></div>
         <a className="gw-demo-link" href="#incearca">Sau încearcă mai întâi o idee <ArrowRight size={16}/></a>

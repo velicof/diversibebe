@@ -32,7 +32,8 @@ test('preparation stage has no suggestions or meal actions; Premium only measure
  await page.goto('/v2/retete/piure-dovlecel');
  await expect(page.getByRole('button',{name:'Adaugă în plan',exact:true})).toBeDisabled();
  await expect(page.getByRole('button',{name:'Am folosit ideea',exact:true})).toBeDisabled();
- await page.goto('/v2/idei');await expect(page.getByRole('heading',{name:'Nu am găsit o combinație deocamdată'})).toBeVisible();
+ // Stage 0 shows no meals, and now says why and offers the choice instead of an empty result.
+ await page.goto('/v2/idei');await expect(page.getByRole('heading',{name:'În ce etapă este copilul?'})).toBeVisible();await expect(page.locator('.v2-recipe-card')).toHaveCount(0);
  await page.goto('/v2/premium');
  await page.getByRole('button',{name:'Mi-ar fi util',exact:true}).click();
  await expect(page.getByRole('button',{name:'Interes notat în sesiune'})).toBeDisabled();

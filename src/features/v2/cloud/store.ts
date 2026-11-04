@@ -38,6 +38,42 @@ let snapshot = initial,
   generation = 0;
 let repository: V2Repository | null = null;
 let currentWrite: Promise<void> = Promise.resolve();
+// The shopping list is used standing in a shop, on a slow connection: a tick shows at once and the latest
+// list is saved in the background. Ticks made during a save are covered by the next one, never dropped.
+let shoppingDirty = false, shoppingFlushing = false, confirmedChecked: string[] = [], lastShopping: Action | null = null;
+async function flushShopping() {
+  const repo = repository!, run = generation;
+  shoppingFlushing = true;
+  update({ saving: true, error: null });
+  try {
+    while (shoppingDirty && run === generation) {
+      shoppingDirty = false;
+      const value = await repo.saveShopping(snapshot.selectedBabyId, snapshot.state.pantry, snapshot.state.shoppingChecked);
+      if (run !== generation) return;
+      confirmedChecked = value.state.shoppingChecked;
+      failed = null;
+      update({
+        ...value,
+        state: { ...value.state, shoppingChecked: shoppingDirty ? snapshot.state.shoppingChecked : value.state.shoppingChecked },
+        saving: shoppingDirty,
+        error: null,
+      });
+    }
+  } catch {
+    shoppingDirty = false;
+    if (run === generation) {
+      failed = { owner: snapshot.userId!, child: snapshot.selectedBabyId, action: lastShopping! };
+      update({
+        state: { ...snapshot.state, shoppingChecked: confirmedChecked },
+        saving: false,
+        error: "Salvarea nu a reușit. Datele din cont nu au fost înlocuite cu o copie locală.",
+      });
+    }
+    throw new Error("save failed");
+  } finally {
+    shoppingFlushing = false;
+  }
+}
 let signingOut = false, locallySignedOut = false, authenticating = false;
 let failed: { owner: string; child: string | null; action: Action } | null =
   null;
@@ -151,7 +187,7 @@ export const cloudStore = {
     await connect();
     } finally { authenticating=false; }
   },
-  async signup(email: string, password: string, pending: Journey | null) {
+  async signup(email: string, password: string, pending: Journey | null, stage: number = 0) {
     if (!repository) throw new Error("Mediul local nu este configurat.");
     authenticating=true;
     try {
@@ -161,7 +197,7 @@ export const cloudStore = {
     locallySignedOut=false;
     await connect();
     if(!snapshot.connected)throw new Error("Contul a fost creat, dar datele nu s-au încărcat. Reîncearcă autentificarea.");
-    if(!snapshot.children.length)await this.createChild("Profilul meu",pending ? journeyStage(pending) : 0);
+    if(!snapshot.children.length)await this.createChild("Profilul meu",pending ? journeyStage(pending) : stage);
     } finally { authenticating=false; }
   },
   async loginWithGoogle() {
@@ -231,6 +267,22 @@ export const cloudStore = {
   },
   refresh: connect,
   dispatch(action: Action) {
+    if (action.type === "shopping") {
+      if (!repository || !snapshot.connected) return;
+      const checked = snapshot.state.shoppingChecked;
+      if (!shoppingFlushing) confirmedChecked = checked;
+      lastShopping = action;
+      shoppingDirty = true;
+      update({
+        error: null,
+        state: { ...snapshot.state, shoppingChecked: checked.includes(action.key) ? checked.filter((k) => k !== action.key) : [...checked, action.key] },
+      });
+      if (!shoppingFlushing) {
+        currentWrite = flushShopping();
+        void currentWrite.catch(() => {});
+      }
+      return;
+    }
     if (!repository || !snapshot.connected || snapshot.saving) return;
     const repo = repository,
       run = generation,

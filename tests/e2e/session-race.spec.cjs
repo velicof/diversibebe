@@ -34,6 +34,7 @@ test('late import response from account A cannot enter the newly signed-in accou
  await enter(page,accounts[1]);release();await done;
  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
  await page.locator('.v2-bottom-nav').getByRole('link',{name:'Descoperă',exact:true}).click();
+ await page.getByRole('button',{name:'Filtre',exact:true}).click();
  await page.getByLabel('Doar ideile salvate').check();
  await expect(page.getByRole('heading',{name:'Nu am găsit o combinație deocamdată'})).toBeVisible();
 });

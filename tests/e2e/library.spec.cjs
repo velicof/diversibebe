@@ -8,6 +8,8 @@ const shown = async (page) => Number((await page.getByRole("heading", { name: /i
 
 test("the library shows the whole published catalog with categories, allergen exclusions and season", async ({ page }) => {
   await page.goto("/v2/idei", { waitUntil: "networkidle" });
+  // On phones the filters open on demand; search and recipes come first.
+  await page.getByRole("button", { name: "Filtre", exact: true }).click();
   await page.locator("#v2-stage").selectOption("12");
   await page.getByRole("button", { name: "Oricât", exact: true }).click();
   const total = await shown(page);
@@ -32,7 +34,7 @@ test("a corrected recipe explains its changes; a recipe in specialist review is 
   await page.goto("/v2/retete/paste-pesto-pui", { waitUntil: "networkidle" });
   await expect(page.getByText("1 lingură nuci sau migdale, măcinate fin în pesto")).toBeVisible();
   await expect(page.getByText(/Am ajustat această rețetă/)).toBeVisible();
-  await expect(page.getByText(/Nu este un aviz medical/)).toBeVisible();
+  await expect(page.getByText(/Nu are o revizie medicală/)).toBeVisible();
   await expect(page.getByText("Status: Corectată editorial")).toBeVisible();
   await page.goto("/v2/retete/omlet%C4%83-legume-8", { waitUntil: "networkidle" });
   await expect(page.getByRole("heading", { level: 1 })).toContainText(/omlet/i);

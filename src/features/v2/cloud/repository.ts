@@ -66,6 +66,10 @@ export class V2Repository {
     if (error) throw error;
     return parse(data);
   }
+  /** The server stores the whole list, so sending the latest one covers every tick made since the last save. */
+  saveShopping(babyId: string | null, pantry: string[], shoppingChecked: string[]): Promise<CloudState> {
+    return this.call(babyId, "preferences", { pantry, shoppingChecked });
+  }
   async apply(
     babyId: string | null,
     action: Action,

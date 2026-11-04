@@ -27,6 +27,7 @@ import {
 import { activeCatalog, catalog, contentMode, ingredientFilters, ingredients, type Recipe } from "./catalog";
 import { editorialStatusLabels } from "./review";
 import { reviewCopy, accountCopy } from "./content/copy";
+import { FREE_FEATURES, PLUS_FEATURES, PRICE_OPTIONS } from "./plans";
 import { ANY_DURATION, initialFilters, recommend, type Filters } from "./recommendations";
 const MEAL_LABELS: Record<string, string> = { "mic-dejun": "Mic dejun", pranz: "Prânz", cina: "Cină", gustare: "Gustare" };
 const LIBRARY_ALLERGENS = ["Lapte", "Ou", "Gluten", "Pește", "Arahide", "Fructe cu coajă", "Susan", "Soia", "Țelină"] as const;
@@ -119,6 +120,25 @@ function StageSelect({
         </button>
       ))}
     </div>
+  );
+}
+
+/** Stage 0 shows no meals by design: explain why and offer the choice right here, instead of an empty page. */
+function StagePrompt() {
+  const { state, dispatch, announce, cloud } = usePreview();
+  return (
+    <section className="v2-stage-prompt" aria-labelledby="v2-stage-prompt-title">
+      <h2 id="v2-stage-prompt-title">În ce etapă este copilul?</h2>
+      <p>Arătăm rețete doar pentru etapa aleasă. Sub 6 luni nu propunem mese, ci resurse de pregătire.</p>
+      <StageSelect
+        value={state.stage}
+        disabled={cloud.saving}
+        onChange={(stage) => {
+          dispatch({ type: "onboard", stage, introduced: state.introduced });
+          announce("Etapa a fost actualizată.");
+        }}
+      />
+    </section>
   );
 }
 
@@ -340,7 +360,7 @@ function SeasonStrip({ month }: { month: number }) {
 }
 
 export function Dashboard() {
-  const { state, ready } = usePreview();
+  const { state, ready, clinicalGuidance } = usePreview();
   const matches = useDashboardMatches();
   const days = useDays();
   const [month] = useState(() => monthIn());
@@ -349,6 +369,10 @@ export function Dashboard() {
   const planned = matches.find((r) => r.id === today?.recipeId);
   const featured = planned ?? matches[0];
   const saved = activeCatalog.filter((r) => state.favorites.includes(r.id));
+  const upcoming = state.plan.filter((p) => days.some((d) => d.key === p.slot));
+  const { toBuy } = buildShoppingList(upcoming, activeCatalog, state.pantry);
+  const leftToBuy = toBuy.filter((r) => !state.shoppingChecked.includes(r.key)).length;
+  const blocked = state.stage === 0 || clinicalGuidance;
   return (
     <>
       <PageHeading
@@ -367,6 +391,28 @@ export function Dashboard() {
         O idee simplă pentru masă. Un pic mai mult timp pentru voi.
       </PageHeading>
       <DashboardFocus />
+      {state.stage === 0 && !clinicalGuidance && <StagePrompt />}
+      {!blocked && (
+        <section className="v2-plan-progress" aria-label="Planul tău">
+          <span className="v2-round-icon"><CalendarDays size={22} /></span>
+          {upcoming.length ? (
+            <div>
+              <h2>{upcoming.length === 1 ? "O masă planificată" : `${upcoming.length} mese planificate`}</h2>
+              <p>{leftToBuy ? `${leftToBuy} ${leftToBuy === 1 ? "produs" : "produse"} de cumpărat` : "Lista de cumpărături este gata."}</p>
+              <div className="v2-action-row">
+                <Link className="v2-text-link" href="/v2/plan">Vezi planul <ArrowRight size={16} /></Link>
+                <Link className="v2-text-link" href="/v2/plan?lista=1">Lista de cumpărături <ArrowRight size={16} /></Link>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <h2>Planifică următoarele 5 zile</h2>
+              <p>Alegi câteva preferințe și primești mesele, plus lista de cumpărături.</p>
+              <Link className="v2-button v2-button-primary" href="/v2/plan">Fă planul <ArrowRight size={16} /></Link>
+            </div>
+          )}
+        </section>
+      )}
       <SeasonStrip month={month} />
       <div className="v2-dashboard-primary">
         <div className="v2-featured-area">
@@ -376,7 +422,7 @@ export function Dashboard() {
                 ? "În micul vostru plan"
                 : "O idee din biblioteca voastră"}
             </h2>
-            <span className="v2-small-label">EXPLORARE DEMO</span>
+            {contentMode === "preview" && <span className="v2-small-label">EXPLORARE DEMO</span>}
           </div>
           {featured ? (
             <RecipeCard
@@ -490,6 +536,7 @@ function DiscoverReady() {
       new URLSearchParams(window.location.search).get("salvate") === "1",
   }));
   const [visible, setVisible] = useState(PAGE);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [allIngredients, setAllIngredients] = useState(false);
   const [month] = useState(() => monthIn());
   const started = useRef<number | null>(null);
@@ -547,6 +594,16 @@ function DiscoverReady() {
               autoComplete="off"
             />
           </div>
+          <button
+            type="button"
+            className="v2-button v2-button-secondary v2-filter-toggle"
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <SlidersHorizontal size={16} />
+            {filtersOpen ? "Ascunde filtrele" : "Filtre"}
+          </button>
+          <div className="v2-filter-more" data-open={filtersOpen}>
           <label htmlFor="v2-stage">Etapa din catalog</label>
           <select
             id="v2-stage"
@@ -657,6 +714,7 @@ function DiscoverReady() {
             <Bookmark size={16} />
             Doar ideile salvate
           </label>
+          </div>
         </aside>
         <section
           className="v2-discover-results"
@@ -673,7 +731,9 @@ function DiscoverReady() {
               </button>
             ))}
           </div>
-          {clinicalGuidance ? (
+          {state.stage === 0 && !clinicalGuidance && filters.months === 0 ? (
+            <StagePrompt />
+          ) : clinicalGuidance ? (
             <EmptyState title="Aici e nevoie de îndrumare individuală">
               Această versiune nu personalizează mese pentru alergii sau alte
               nevoi medicale. Discută cu specialistul care cunoaște copilul.
@@ -805,6 +865,11 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
                 <CalendarDays size={18} />
                 Adaugă în plan
               </button>
+              {state.plan.some((p) => p.recipeId === recipe.id) && (
+                <Link className="v2-text-link v2-plan-link" href="/v2/plan">
+                  <Check size={16} /> Este în planul tău. Vezi planul
+                </Link>
+              )}
             </div>
           ) : (
             // Same footprint as the buttons (no layout shift); the saved state is unknown until the family's data loads.
@@ -1015,12 +1080,16 @@ export function Planner() {
   const eligible = useEligible();
   const days = useDays();
   const [month] = useState(() => monthIn());
-  const [tab, setTab] = useState<"plan" | "shopping">("plan");
+  // Read once on the client: nothing depends on the tab until the state is ready.
+  const [tab, setTab] = useState<"plan" | "shopping">(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("lista") === "1" ? "shopping" : "plan",
+  );
   const [prefs, setPrefs] = useState<PlanPrefs>({ meal: "all", maxMinutes: 30, ingredientIds: [], reuse: true });
   const [proposal, setProposal] = useState<ProposedDay[] | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [saved, setSaved] = useState<{ count: number; seconds: number } | null>(null);
   const [interested, setInterested] = useState(false);
+  const listUsed = useRef(false);
   const planEligible = useEligible(
     { ...initialFilters, months: state.stage, maxMinutes: prefs.maxMinutes, meal: prefs.meal, ingredientIds: prefs.ingredientIds },
     month,
@@ -1379,8 +1448,13 @@ export function Planner() {
                       <input
                         type="checkbox"
                         checked={state.shoppingChecked.includes(item.key)}
-                        disabled={cloud.saving}
-                        onChange={() => dispatch({ type: "shopping", key: item.key })}
+                        onChange={() => {
+                          dispatch({ type: "shopping", key: item.key });
+                          if (!listUsed.current) {
+                            listUsed.current = true;
+                            track("shopping_item_checked");
+                          }
+                        }}
                       />
                       <span>
                         <strong>
@@ -1687,6 +1761,7 @@ export function Premium() {
   const { track, announce, cloud } = usePreview();
   const [interested, setInterested] = useState(false);
   const [packInterested, setPackInterested] = useState(false);
+  const [priceChoice, setPriceChoice] = useState<number | null>(null);
   return (
     <div className="v2-premium">
       <span className="v2-premium-symbol">
@@ -1719,7 +1794,7 @@ export function Premium() {
           <p>Mai puține căutări, mai multe dintre ideile voastre preferate.</p>
         </div>
       </div>
-      <table className="gw-comparison"><caption>Ce poți folosi astăzi. Ce pregătim pentru Plus.</caption><thead><tr><th scope="col">Gratuit în această versiune</th><th scope="col">Plus · propuneri în dezvoltare</th></tr></thead><tbody><tr><td>Idei din catalogul demonstrativ, salvare și planificare<small>Funcționale, fără limitare comercială în demo</small></td><td>Planuri reutilizabile pentru mai multe săptămâni<small>Încă neimplementate</small></td></tr><tr><td>Listă de cumpărături și preferințe de explorare<small>Disponibile acum</small></td><td>Exporturi și organizare extinsă<small>Încă neimplementate</small></td></tr><tr><td>Resurse esențiale despre pregătire și siguranță<small>Fără cont și fără paywall</small></td><td>Mai mult timp economisit prin planificare<small>Ipoteză de beneficiu, de validat</small></td></tr></tbody></table>
+      <table className="gw-comparison"><caption>Ce poți folosi astăzi. Ce pregătim pentru Plus.</caption><thead><tr><th scope="col">Gratuit</th><th scope="col">Plus · propuneri în dezvoltare</th></tr></thead><tbody>{Array.from({ length: Math.max(FREE_FEATURES.length, PLUS_FEATURES.length) }, (_, i) => (<tr key={i}><td>{FREE_FEATURES[i] && <>{FREE_FEATURES[i].label}<small>{FREE_FEATURES[i].note}</small></>}</td><td>{PLUS_FEATURES[i] && <>{PLUS_FEATURES[i].label}<small>{PLUS_FEATURES[i].note}</small></>}</td></tr>))}</tbody></table>
       <div className="v2-premium-offer">
         <span>IPOTEZĂ DE PREȚ · NEVALIDATĂ</span>
         <p>
@@ -1752,6 +1827,27 @@ export function Premium() {
             </>
           )}
         </button>
+        {interested && (
+          <div className="v2-price-question" role="group" aria-label="Cât ai plăti pe lună">
+            <p>Dacă Plus ar exista, cât ai plăti pe lună? Nu este o comandă.</p>
+            <div className="v2-ingredient-cloud">
+              {PRICE_OPTIONS.map((price) => (
+                <button
+                  key={price}
+                  aria-pressed={priceChoice === price}
+                  disabled={priceChoice !== null}
+                  onClick={() => {
+                    setPriceChoice(price);
+                    track("premium_interest", { price });
+                    announce("Mulțumim. Nu ai făcut nicio plată.");
+                  }}
+                >
+                  {price ? `${price} lei` : "Nu aș plăti"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <section className="v2-premium-offer">
         <span>PACHET DIGITAL PROPUS · ÎN PREGĂTIRE</span>

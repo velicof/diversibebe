@@ -73,6 +73,7 @@ test("three core flows persist across reload with optional confirmation", async 
   await expect(page).toHaveURL(/\/v2\/azi/);
   await page.goto("/v2/idei");
   await expect(page.getByLabel("Etapa din catalog")).toHaveValue("6");
+  await page.getByRole("button", { name: "Filtre", exact: true }).click();
   await page.getByRole("button", { name: "15 min", exact: true }).click();
   await page.getByRole("button", { name: "Dovlecel", exact: true }).click();
   await page.getByLabel("Cauți ceva anume?").fill("Piure de dovlecel");
@@ -130,6 +131,7 @@ test("empty results, favorite filter, cooking steps and keyboard navigation", as
   await page
     .getByRole("button", { name: "Resetează filtrele", exact: true })
     .click();
+  await page.getByRole("button", { name: "Filtre", exact: true }).click();
   await page.getByLabel("Doar ideile salvate").check();
   await expect(
     page.getByRole("heading", { name: "Nu am găsit o combinație deocamdată" }),
