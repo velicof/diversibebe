@@ -109,6 +109,9 @@ async function connect() {
   const run = ++generation;
   update({ loading: true, error: null });
   try {
+    // Both round trips at once on a phone connection. The data is used only if the user is confirmed.
+    const loading = repository.load();
+    void loading.catch(() => {});
     const {
       data: { user },
       error,
@@ -127,7 +130,7 @@ async function connect() {
         selectedBabyId: null,
         connected: false,
       });
-    const value = await repository.load();
+    const value = await loading;
     if (run === generation)
       update({
         ...value,

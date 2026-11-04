@@ -35,6 +35,11 @@ test('V2 connects only to a loopback stack or to the exact Supabase project shar
   assert.equal(loader({NEXT_PUBLIC_V2_SUPABASE_URL:''})('src/features/v2/cloud/guard.ts').usesRealAccounts(),true,'online build without a V2 backend (Preview, guest mode) shows no test wording');
 });
 
+test('the local gateway allows the headers supabase-js sends (Playwright routing hides a CORS refusal)',()=>{
+  const allowed=require('node:fs').readFileSync(require('node:path').join(__dirname,'../scripts/native-gateway.cjs'),'utf8').match(/Access-Control-Allow-Headers','([^']+)'/)[1].split(',');
+  for(const header of ['authorization','apikey','content-type','accept-profile','content-profile','prefer','x-client-info'])assert.ok(allowed.includes(header),header);
+});
+
 test('the phone preview backend works only on loopback or a private Tailscale name, and never counts as real accounts',()=>{
   const {resolveBackendUrl,assertAllowedSupabaseUrl,usesRealAccounts,SAME_ORIGIN_BACKEND}=loader({NEXT_PUBLIC_V2_SUPABASE_URL:'same-origin'})('src/features/v2/cloud/guard.ts');
   const tailnet='https://laptop.tail1234.ts.net';
