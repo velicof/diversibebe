@@ -640,9 +640,12 @@ export default function RecipeDetailPage({
 
                   await supabase.from("food_journal").insert({
                     user_id: userId,
+                    // food_id is required; without it this entry was always rejected. The parent
+                    // reported no reaction here, so none is recorded on their behalf.
+                    food_id: recipe.id,
                     food_name: recipe.name,
                     meal_type: journalMealType,
-                    reaction: "pozitiv",
+                    reaction: null,
                     notes: "Rețetă gătită: " + recipe.name,
                     logged_at: new Date().toISOString(),
                   });
