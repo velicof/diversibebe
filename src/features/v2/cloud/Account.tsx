@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LogOut, ShieldCheck } from "lucide-react";
 import { nativeAuth } from "./config";
@@ -37,6 +37,14 @@ export function Account() {
   const [imported, setImported] = useState(false);
   const [importNote, setImportNote] = useState("");
   const oauthStarted = useRef(false);
+  const emailField = useRef<HTMLInputElement>(null);
+  const passwordField = useRef<HTMLInputElement>(null);
+  // Typed or autofilled before the page became interactive: adopted now, or the next render would erase it.
+  // In a layout effect, because the stores above re-render this form right after hydration.
+  useLayoutEffect(() => {
+    if (emailField.current?.value) setEmail(emailField.current.value);
+    if (passwordField.current?.value) setPassword(passwordField.current.value);
+  }, []);
   useEffect(() => {
     // Return from Google (PKCE): exchange the one-time code in the browser that started the sign-in.
     if (!realAccounts || oauthStarted.current) return;
@@ -237,6 +245,7 @@ export function Account() {
         <label htmlFor="v2-email">{accountCopy.emailLabel}</label>
         <input
           id="v2-email"
+          ref={emailField}
           type="email"
           autoComplete="username"
           value={email}
@@ -248,6 +257,7 @@ export function Account() {
         {mode!=="recover"&&<><label htmlFor="v2-password">{accountCopy.passwordLabel}</label>
         <input
           id="v2-password"
+          ref={passwordField}
           type="password"
           autoComplete={mode==="signup"?"new-password":"current-password"}
           value={password}

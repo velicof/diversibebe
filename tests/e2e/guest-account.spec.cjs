@@ -85,6 +85,24 @@ for(const width of [320,360]){
  });
 }
 
+test('what is typed or autofilled before the page is interactive stays in the form',async({page,context})=>{
+ // A slow connection: the form is on screen well before its scripts arrive. Safari showed this without any delay.
+ await context.route('**/_next/static/chunks/**',async route=>{await new Promise(r=>setTimeout(r,1500));await route.continue();});
+ await page.goto('/v2/cont',{waitUntil:'commit'});
+ const email=page.locator('#v2-email'),password=page.locator('#v2-password');
+ await email.waitFor();
+ const hydrated=()=>email.evaluate(node=>Object.keys(node).some(k=>k.startsWith('__reactFiber')));
+ expect(await hydrated(),'the test only means something before hydration').toBe(false);
+ await email.fill('ana@example.test');
+ await password.fill('o-parola-de-test');
+ await expect.poll(hydrated,{timeout:30000}).toBe(true);
+ // Whatever renders next (the account state settling, a click) must not erase it.
+ if(native)await page.getByRole('button',{name:/^Creează un cont/}).click();
+ else await page.getByLabel(/^Parola/).press('End');
+ await expect(email).toHaveValue('ana@example.test');
+ await expect(password).toHaveValue('o-parola-de-test');
+});
+
 test('the build is named on screen, so a phone can say which code it runs',async({page})=>{
  await page.goto('/v2');
  await expect(page.locator('.v2-build-stamp')).toHaveText(/^build [0-9a-f]{7,}(\+local)?$/);
