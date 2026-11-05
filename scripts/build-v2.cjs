@@ -1,5 +1,6 @@
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
+const { buildStamp } = require("./build-stamp.cjs");
 const testUrl =
   process.env.NEXT_PUBLIC_V2_SUPABASE_URL || "http://127.0.0.1:54329";
 if (!["127.0.0.1", "localhost", "[::1]"].includes(new URL(testUrl).hostname))
@@ -16,6 +17,7 @@ const result = spawnSync(
     env: {
       ...process.env,
       DIVERSIBEBE_V2_PREVIEW: "1",
+      NEXT_PUBLIC_V2_BUILD: buildStamp(),
       // Local QA only: unreviewed editorial content, clearly labelled in the UI. Never set for real families.
       NEXT_PUBLIC_V2_CONTENT_MODE: process.env.NEXT_PUBLIC_V2_CONTENT_MODE || "preview",
       NEXT_PUBLIC_V2_SUPABASE_URL: testUrl,

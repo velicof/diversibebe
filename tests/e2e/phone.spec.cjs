@@ -1,14 +1,16 @@
 // The private phone preview end to end: iPhone viewport and touch, one address for app + auth + data
 // (scripts/phone-gateway.cjs), a real GoTrue account, new browser session after closing the page.
 // Runs only against a phone build:  V2_PHONE_URL=https://name.tail1234.ts.net:8443 npx playwright test tests/e2e/phone.spec.cjs
-// WebKit is not installed here: this is Chromium with the iPhone profile, not Safari.
+// V2_PHONE_BROWSER=webkit runs it on Playwright's WebKit, Safari's engine on Windows; it is not Safari on an iPhone.
 const { test, expect, devices } = require('@playwright/test'), crypto = require('node:crypto');
+const { buildStamp } = require('../../scripts/build-stamp.cjs');
 const url = process.env.V2_PHONE_URL;
+const browserName = process.env.V2_PHONE_BROWSER || 'chromium';
 test.skip(!url, 'Needs a phone build behind scripts/phone-gateway.cjs');
 const { defaultBrowserType, ...iphone } = devices['iPhone 13'];
 const host = url ? new URL(url).hostname : '';
-test.use({ ...iphone, actionTimeout: 30000, baseURL: url, ignoreHTTPSErrors: true, // A *.ts.net address with a port is the local HTTPS simulation; without one it is the real Tailscale name.
-  launchOptions: { args: host.endsWith('.ts.net') && new URL(url).port ? [`--host-resolver-rules=MAP ${host} 127.0.0.1`] : [] } });
+test.use({ ...iphone, browserName, actionTimeout: 30000, baseURL: url, ignoreHTTPSErrors: true, // A *.ts.net address with a port is the local HTTPS simulation; without one it is the real Tailscale name.
+  launchOptions: { args: browserName === 'chromium' && host.endsWith('.ts.net') && new URL(url).port ? [`--host-resolver-rules=MAP ${host} 127.0.0.1`] : [] } });
 test.setTimeout(240000);
 const planned = (page) => page.locator('.v2-plan-days .v2-plan-recipe h2').allTextContents();
 
@@ -117,4 +119,98 @@ test('phone: account, library, recommendation, 5-day plan, shopping list, favori
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow, route).toBeLessThanOrEqual(0);
   }
+});
+
+test('phone: a visitor sees the way in, is invited, and reaches an account only after a yes', async ({ page, browser }) => {
+  const errors = [], backend = [], outbound = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('request', (r) => {
+    if (/\/(auth|rest)\/v1\//.test(r.url())) backend.push(r.url());
+    if (!r.url().startsWith(url) && !/^(data|blob):/.test(r.url())) outbound.push(r.url());
+  });
+  const connect = (p) => p.locator('.v2-topbar').getByRole('link', { name: 'Conectează-te', exact: true });
+  const fresh = (extra = {}) => browser.newContext({ ...iphone, baseURL: url, ignoreHTTPSErrors: true, ...extra });
+  const account = { email: `invite-${crypto.randomUUID()}@example.test`, password: crypto.randomBytes(18).toString('base64url') };
+
+  // 1. The first screen: this build, and the way in, without being stopped by it.
+  await page.goto('/v2');
+  await expect(page.locator('.v2-build-stamp'), 'the address serves the code of this checkout').toHaveText(`build ${buildStamp()}`);
+  await expect(connect(page)).toBeVisible();
+  expect((await connect(page).boundingBox()).y).toBeLessThan(100);
+
+  // 2. Free use, with no server, up to the invitation.
+  await page.goto('/v2/plan');
+  await page.getByRole('button', { name: 'Arată 5 zile de mese', exact: true }).click();
+  await expect(page.locator('.v2-proposal-day')).toHaveCount(5);
+  const chosen = await page.locator('.v2-proposal-day h3').allTextContents();
+  await page.getByRole('button', { name: 'Salvează planul', exact: true }).click();
+  const card = page.locator('.v2-save-invite');
+  await expect(card.getByRole('heading', { name: 'Salvează-ți progresul într-un cont gratuit' })).toBeVisible();
+  await expect(card).toContainText('ștergi datele browserului');
+  await expect(card.getByRole('button', { name: 'Continuă fără cont', exact: true })).toBeVisible();
+  expect(backend, 'a visitor calls no server').toEqual([]);
+
+  // 3. Signup from the invitation.
+  await card.getByRole('link', { name: 'Creează cont gratuit', exact: true }).click();
+  await page.getByLabel('Email de test', { exact: true }).fill(account.email);
+  await page.getByLabel('Parola contului de test', { exact: true }).fill(account.password);
+  await page.getByLabel('În ce etapă este copilul?').selectOption('8');
+  await page.getByRole('button', { name: 'Creează și salvează în cont', exact: true }).click();
+  await expect(page).toHaveURL(/\/v2\/azi/, { timeout: 60000 });
+
+  // 4. Nothing moves before the answer; after it, the plan is in the account.
+  await page.goto('/v2/plan');
+  const offer = page.getByRole('region', { name: 'Alegerile de pe acest dispozitiv' });
+  await expect(offer).toContainText('5 mese planificate', { timeout: 60000 });
+  expect(await planned(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Adaugă în cont', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Am adăugat în cont 5 mese' })).toBeVisible({ timeout: 60000 });
+  await expect.poll(() => planned(page), { timeout: 60000 }).toEqual(chosen);
+
+  // 5. Logout: a visitor again, with the way back in sight.
+  await page.goto('/v2/cont');
+  await page.getByRole('button', { name: 'Deconectare', exact: true }).click();
+  await expect(page.getByLabel('Email de test', { exact: true })).toBeVisible({ timeout: 60000 });
+  await page.goto('/v2');
+  await expect(connect(page)).toBeVisible();
+
+  // 6. Login on another device: the plan came from the server, and a new browser session stays connected.
+  const device = await fresh();
+  try {
+    const second = await device.newPage();
+    await second.goto('/v2/cont');
+    await second.getByLabel('Email de test', { exact: true }).fill(account.email);
+    await second.getByLabel('Parola contului de test', { exact: true }).fill(account.password);
+    await second.getByRole('button', { name: 'Conectare în test', exact: true }).click();
+    await expect(second).toHaveURL(/\/v2\/azi/, { timeout: 60000 });
+    await second.goto('/v2/plan');
+    await expect.poll(() => planned(second), { timeout: 60000 }).toEqual(chosen);
+    const state = await device.storageState();
+    await second.close();
+    const again = await fresh({ storageState: state });
+    try {
+      const resumed = await again.newPage();
+      await resumed.goto('/v2/plan');
+      await expect.poll(() => planned(resumed), { timeout: 60000 }).toEqual(chosen);
+      await expect(connect(resumed)).toHaveCount(0);
+    } finally { await again.close(); }
+  } finally { await device.close(); }
+
+  // 7. Another person: nothing of the first account.
+  const other = await fresh();
+  try {
+    const third = await other.newPage();
+    await third.goto('/v2/cont?nou=1');
+    await third.getByLabel('Email de test', { exact: true }).fill(`invite-other-${crypto.randomUUID()}@example.test`);
+    await third.getByLabel('Parola contului de test', { exact: true }).fill(crypto.randomBytes(18).toString('base64url'));
+    await third.getByLabel('În ce etapă este copilul?').selectOption('8');
+    await third.getByRole('button', { name: 'Creează și salvează în cont', exact: true }).click();
+    await expect(third).toHaveURL(/\/v2\/azi/, { timeout: 60000 });
+    await third.goto('/v2/plan');
+    await expect(third.locator('.v2-sync-status')).toContainText('Date sincronizate', { timeout: 60000 });
+    expect(await planned(third)).toEqual([]);
+  } finally { await other.close(); }
+
+  expect(errors, 'no script errors').toEqual([]);
+  expect(outbound, 'nothing leaves the private address').toEqual([]);
 });

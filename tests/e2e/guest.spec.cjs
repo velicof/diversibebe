@@ -33,7 +33,8 @@ test('a visitor uses the core flow with no backend call and is told the data sta
  await expect(page.getByRole('button',{name:/^Elimină Piure/})).toBeVisible();
  await expect(page.locator('main .v2-device-note').first()).toContainText('doar pe acest dispozitiv');
  await planFive(page);
- await expect(page.locator('.v2-plan-saved .v2-device-note')).toContainText('doar pe acest dispozitiv');
+ // The quiet note became the invitation here; after a "no" the note is back (covered below).
+ await expect(page.locator('.v2-plan-saved .v2-save-invite')).toContainText('doar în acest browser');
  await page.getByRole('button',{name:/De cumpărat/}).first().click();
  await expect(page.locator('.v2-device-note').first()).toContainText('doar pe acest dispozitiv');
  await page.locator('.v2-shopping-list > li').first().locator('input').check();

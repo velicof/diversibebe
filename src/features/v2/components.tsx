@@ -25,6 +25,9 @@ import { SyncStatus } from "./cloud/SyncStatus";
 import { GuestImportPrompt } from "./cloud/GuestImportPrompt";
 import { GrowthTelemetry } from "./growth/Telemetry";
 
+const accountsEnabled = Boolean(process.env.NEXT_PUBLIC_V2_SUPABASE_URL);
+const buildStamp = process.env.NEXT_PUBLIC_V2_BUILD;
+
 export const navItems = [
   { href: "/v2/azi", label: "Azi", icon: Home },
   { href: "/v2/idei", label: "Descoperă", icon: Search },
@@ -54,6 +57,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { storageError, cloud } = usePreview();
   const landing = pathname === "/v2";
   const marketing = landing || pathname === "/v2/onboarding" || pathname === "/v2/pregatire";
+  // From the build setting, not the live state: the button is in the first HTML the phone receives.
+  const offerConnect = accountsEnabled && !cloud.connected && !cloud.loading && !pathname.startsWith("/v2/cont");
   return (
     <div className={`v2-shell ${landing ? "v2-shell-landing" : ""} ${marketing ? "v2-shell-marketing" : ""}`}>
       <a className="v2-skip" href="#v2-content">
@@ -105,9 +110,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="v2-status-dot" />
             Un pic de inspirație pentru fiecare zi
           </span>
-          <Link href="/v2/premium" className="v2-plus-link" prefetch={false}>
-            <Sparkles size={16} /> DiversiBebe Plus
-          </Link>
+          <div className={`v2-top-actions ${offerConnect ? "v2-top-actions-guest" : ""}`}>
+            <Link href="/v2/premium" className="v2-plus-link" prefetch={false}>
+              <Sparkles size={16} /> DiversiBebe Plus
+            </Link>
+            {offerConnect && (
+              <Link href="/v2/cont" className="v2-connect-link" prefetch={false}>
+                {accountCopy.navConnect}
+              </Link>
+            )}
+          </div>
         </header>
         {contentMode === "preview" && (
           <div className="v2-preview-note">
@@ -115,6 +127,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {cloud.connected
               ? "Mediu local izolat. Datele sunt salvate în mediul de test."
               : "Mediu local izolat. Datele demo rămân pe acest dispozitiv."}
+            {buildStamp && <code className="v2-build-stamp" data-v2-build={buildStamp}>build {buildStamp}</code>}
           </div>
         )}
         {(!marketing || cloud.connected) && <SyncStatus />}

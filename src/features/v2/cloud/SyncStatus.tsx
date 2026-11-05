@@ -1,11 +1,13 @@
 "use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { cloudStore } from "./store";
 import { usePreview } from "../Provider";
 import { accountCopy } from "../content/copy";
 export function SyncStatus() {
   const { cloud } = usePreview();
+  const onAccountPage = usePathname().startsWith("/v2/cont");
   // Reserve the banner during server rendering; avoid pushing the page on hydration.
   if (!process.env.NEXT_PUBLIC_V2_SUPABASE_URL) return null;
   return (
@@ -39,7 +41,7 @@ export function SyncStatus() {
           </button>
           <Link prefetch={false} href="/v2/cont">{accountCopy.accountLink}</Link>
         </>
-      ) : (
+      ) : onAccountPage ? null : (
         <Link prefetch={false} href="/v2/cont">
           {accountCopy.connectLink} <ArrowRight size={14} />
         </Link>

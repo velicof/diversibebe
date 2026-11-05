@@ -141,7 +141,8 @@ test("empty results, favorite filter, cooking steps and keyboard navigation", as
   await page.getByRole("button", { name: "Următorul", exact: true }).click();
   await expect(page.getByText(/PASUL 2 DIN/)).toBeVisible();
   await page.getByRole("button", { name: "Toți pașii", exact: true }).click();
-  await expect(page.locator(".v2-recipe-steps")).toBeVisible();
+  // In main: for a moment the stream still holds an invisible copy of the server-rendered list (React #S:0, 0x0).
+  await expect(page.locator("main .v2-recipe-steps")).toBeVisible();
   await page.goto("/v2/azi");
   await page.keyboard.press("Tab");
   await expect(

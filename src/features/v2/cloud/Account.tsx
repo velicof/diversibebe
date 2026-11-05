@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LogOut, ShieldCheck } from "lucide-react";
 import { nativeAuth } from "./config";
@@ -13,19 +13,29 @@ import { LoadingState, PageHeading } from "../components";
 import { emitGrowth, journeyStore } from "../growth/browser";
 import { accountCopy, realAccounts } from "../content/copy";
 
+const noSubscription = () => () => {};
+const asksForNewAccount = () => new URLSearchParams(window.location.search).get("nou") === "1";
+
 export function Account() {
   const { cloud, announce } = usePreview();
   const router = useRouter();
-  const [mode,setMode]=useState<"login"|"signup"|"recover">("login");
+  // The invitation "Creează cont gratuit" opens straight on the signup form.
+  const newAccount = useSyncExternalStore(noSubscription, asksForNewAccount, () => false);
+  const [chosenMode,setMode]=useState<"login"|"signup"|"recover"|null>(null);
+  const mode=chosenMode??(newAccount?"signup":"login");
   const [notice,setNotice]=useState("");
   const [stage,setStage]=useState(0);
-  const [signupStage,setSignupStage]=useState("");
+  const local = useSyncExternalStore(previewStore.subscribe, previewStore.getSnapshot, previewStore.getServerSnapshot);
+  const [pickedStage,setSignupStage]=useState("");
+  // A stage the visitor chose is offered; the default of an untouched device is not, because it would be a guess about the child.
+  const signupStage=pickedStage||(local.state.onboarded?String(local.state.stage):"");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [childLabel, setChildLabel] = useState("");
   const [imported, setImported] = useState(false);
+  const [importNote, setImportNote] = useState("");
   const oauthStarted = useRef(false);
   useEffect(() => {
     // Return from Google (PKCE): exchange the one-time code in the browser that started the sign-in.
@@ -131,10 +141,11 @@ export function Account() {
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await cloudStore.importIdeas(
+                  const done = await cloudStore.importIdeas(
                     previewStore.getSnapshot().state,
                   );
                   setImported(true);
+                  setImportNote(`Am adăugat ${done.favorites} idei și ${done.plan} mese.${done.skipped ? ` ${done.skipped} nu se potrivesc etapei copilului din cont și nu s-au adăugat.` : ""}`);
                   announce(
                     "Ideile au fost importate fără înlocuirea planului existent.",
                   );
@@ -149,6 +160,7 @@ export function Account() {
             >
               {imported ? "Idei importate" : "Importă favoritele și planul"}
             </button>
+            {importNote && <p role="status">{importNote}</p>}
           </div>
           {error && <p role="alert">{error}</p>}
           <div className="v2-action-row">
@@ -164,6 +176,7 @@ export function Account() {
                 setMode("login");
                 setPassword("");
                 setImported(false);
+                setImportNote("");
                 setEmail("");
                 setChildLabel("");
                 setError("");
@@ -231,6 +244,7 @@ export function Account() {
           required
           maxLength={254}
         />
+        {nativeAuth&&accountCopy.emailNote&&<p className="v2-field-note">{accountCopy.emailNote}</p>}
         {mode!=="recover"&&<><label htmlFor="v2-password">{accountCopy.passwordLabel}</label>
         <input
           id="v2-password"

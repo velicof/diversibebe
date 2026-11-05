@@ -33,6 +33,7 @@ const MEAL_LABELS: Record<string, string> = { "mic-dejun": "Mic dejun", pranz: "
 const LIBRARY_ALLERGENS = ["Lapte", "Ou", "Gluten", "Pește", "Arahide", "Fructe cu coajă", "Susan", "Soia", "Țelină"] as const;
 const PAGE = 12;
 import { usePreview } from "./Provider";
+import { SaveProgressInvite } from "./cloud/SaveProgressInvite";
 import {
   DeviceOnlyNote,
   EmptyState,
@@ -1242,10 +1243,10 @@ function PlannerReady() {
               <div>
                 <h2>{saved.count} zile de mese, gata{saved.seconds ? ` în ${saved.seconds === 1 ? "o secundă" : `${saved.seconds} secunde`}` : ""}.</h2>
                 <p>Lista de cumpărături este pregătită din aceste mese.</p>
-                <DeviceOnlyNote />
                 <button className="v2-button v2-button-primary" onClick={openShopping}>
                   Vezi lista de cumpărături <ArrowRight size={17} />
                 </button>
+                <SaveProgressInvite quietNote />
               </div>
               <aside className="v2-plan-plus">
                 <p className="v2-eyebrow">DIVERSIBEBE PLUS · ÎN PREGĂTIRE</p>
@@ -1507,6 +1508,7 @@ function PlannerReady() {
               <button type="button" className="v2-button v2-button-secondary v2-copy-list" onClick={copyList}>
                 Copiază lista
               </button>
+              <SaveProgressInvite />
             </>
           ) : (
             <EmptyState title={atHome.length ? "Ai tot ce îți trebuie" : "Lista începe cu o idee"}>

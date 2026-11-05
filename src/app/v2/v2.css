@@ -3447,3 +3447,39 @@
 .v2-guest-import [role="alert"] { color: var(--v2-accent); }
 .gw-hero-copy .gw-demo-link + .gw-demo-link { margin-left: 20px; }
 @media (max-width: 400px) { .gw-hero-copy .gw-demo-link + .gw-demo-link { margin-left: 0; margin-top: 10px; } }
+/* A visitor's way into an account: always in sight, never in the way. */
+.v2-top-actions { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.v2-connect-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--v2-accent);
+  color: #fff !important;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.v2-connect-link:hover { background: #863c23; }
+@media (max-width: 480px) {
+  /* The brand and the button fill the bar: Plus keeps its icon, and its name for screen readers. */
+  .v2-top-actions { gap: 8px; }
+  .v2-top-actions-guest .v2-plus-link { font-size: 0; gap: 0; min-width: 32px; min-height: 44px; justify-content: center; }
+  .v2-top-actions-guest .v2-plus-link svg { width: 19px; height: 19px; }
+  .v2-connect-link { padding: 0 13px; font-size: 12.5px; }
+}
+.v2-build-stamp { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10px; margin-left: auto; white-space: nowrap; }
+.v2-save-invite-slot:focus { outline: none; }
+.v2-save-invite { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--v2-line); }
+.v2-root .v2-save-invite h3 { font-size: 16px; line-height: 1.35; margin: 0 0 6px; }
+.v2-save-invite p { margin: 0 0 12px; font-size: 13px; line-height: 1.55; color: var(--v2-muted); }
+.v2-shopping-panel .v2-save-invite { margin-top: 22px; }
+@media (max-width: 400px) {
+  /* Narrow phones: the brand gives way before the button does. */
+  .v2-root .v2-topbar, .v2-root .v2-shell-marketing .v2-topbar { padding-inline: 14px; }
+  .v2-root .v2-topbar .v2-brand, .v2-root .v2-shell-marketing .v2-topbar .v2-brand { font-size: 19px; gap: 7px; }
+  .v2-root .v2-topbar .v2-brand-mark { width: 26px; height: 31px; }
+  .v2-root .v2-topbar .v2-brand i { display: none; }
+  .v2-top-actions { gap: 4px; }
+}

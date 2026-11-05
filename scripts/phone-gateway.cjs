@@ -32,7 +32,9 @@ const server = http.createServer((req, res) => {
     delete headers.host;
   }
   const upstream = http.request({ hostname: '127.0.0.1', port, path: req.url, method: req.method, headers }, (reply) => {
-    res.writeHead(reply.statusCode || 502, reply.headers);
+    // A rebuild must reach the phone on the next load: Safari asks again for the page instead of trusting a copy.
+    const replyHeaders = String(reply.headers['content-type'] || '').includes('text/html') ? { ...reply.headers, 'cache-control': 'no-cache' } : reply.headers;
+    res.writeHead(reply.statusCode || 502, replyHeaders);
     reply.pipe(res);
   });
   upstream.on('error', () => {

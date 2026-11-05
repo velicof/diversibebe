@@ -50,6 +50,14 @@ test('a visitor plan enters an account only if it suits the child of that accoun
   assert.deepEqual(result.favorites,['piure'],'known, and not already in the account');
   assert.deepEqual(result.plan,[{slot:'2026-11-05',recipeId:'piure'}],'not too old for the child, not unpublished, not past, and a taken day stays as it is');
   assert.equal(result.skipped,2,'the 12+ meal and the unpublished one are reported');
+  // The check on age covers saved ideas too, and a day that is taken is reported, never replaced.
+  const younger=plain(importableFromGuest({favorites:['adult','piure'],plan:[]},{favorites:[],plan:[],stage:6},false,recipes,'2026-11-05'));
+  assert.deepEqual(younger.favorites,['piure'],'an idea for 12+ does not enter the account of a child of 6 months');
+  assert.equal(younger.skipped,1);
+  assert.deepEqual(plain(importableFromGuest({favorites:['piure'],plan:[]},{favorites:[],plan:[],stage:0},false,recipes,'2026-11-05')).favorites,[],'under 6 months: no meal ideas');
+  const taken=plain(importableFromGuest({favorites:[],plan:[{slot:'2026-11-08',recipeId:'piure'},{slot:'2026-11-09',recipeId:'adult'}]},{favorites:[],plan:[{slot:'2026-11-08',recipeId:'adult'},{slot:'2026-11-09',recipeId:'adult'}],stage:12},false,recipes,'2026-11-05'));
+  assert.deepEqual(taken.plan,[],'nothing replaces what the account already planned');
+  assert.equal(taken.kept,1,'a different meal on that day is reported; the same meal (already imported) is not');
   const twelve=plain(importableFromGuest(local,{...account,stage:12},false,recipes,'2026-11-05'));
   assert.deepEqual(twelve.plan.map(p=>p.recipeId),['piure','adult']);
   for(const blocked of [plain(importableFromGuest(local,{...account,stage:0},false,recipes,'2026-11-05')),plain(importableFromGuest(local,{...account,stage:12},true,recipes,'2026-11-05'))])assert.deepEqual(blocked.plan,[],'preparation stage or clinical guidance: no meals');
