@@ -57,6 +57,8 @@ export async function middleware(request: NextRequest) {
       .from("babies")
       .select("id, name, birthdate")
       .eq("user_id", user.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle();
 
     if (baby?.name && baby?.birthdate) {
@@ -70,6 +72,8 @@ export async function middleware(request: NextRequest) {
         .from("babies")
         .select("id, name, birthdate")
         .eq("user_id", user.id)
+        .order("created_at", { ascending: true })
+        .limit(1)
         .maybeSingle();
 
       if (baby?.name && baby?.birthdate) {

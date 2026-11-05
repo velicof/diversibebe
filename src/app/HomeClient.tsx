@@ -90,7 +90,7 @@ export default function Home() {
             className="mt-8 text-[12px] font-semibold leading-relaxed"
             style={{ color: "#8B7A8E" }}
           >
-            ✓ Gratuit &nbsp; ✓ În română &nbsp; ✓ Bazat pe ghiduri pediatrice
+            ✓ Gratuit &nbsp; ✓ În română &nbsp; ✓ Rețete pe vârste
           </p>
         </header>
 
@@ -201,46 +201,22 @@ export default function Home() {
           </div>
         </section>
 
-        {/* SOCIAL PROOF */}
+        {/* WHAT THIS IS: no testimonials or approvals without documented proof. */}
         <section className="py-12">
           <div className="flex flex-col gap-3 text-center">
             <p
               className="text-[14px] font-bold"
               style={{ color: "#0F6E56" }}
             >
-              Bazat pe ghiduri pediatrice românești
+              Idei de rețete și un plan simplu, organizate pe vârste
             </p>
             <p
               className="text-[14px] font-bold"
               style={{ color: "#6B5B71" }}
             >
-              Rețete testate și aprobate de nutriționiști
+              Informații generale, care nu înlocuiesc sfatul medicului pediatru
             </p>
           </div>
-          <blockquote
-            className="mt-8 rounded-[20px] border-2 bg-white p-5 text-left"
-            style={{
-              borderColor: "#C4B5E0",
-              boxShadow: cardShadow,
-            }}
-          >
-            <p
-              className="text-[15px] font-semibold italic leading-relaxed"
-              style={{ color: "#3D2C3E" }}
-            >
-              &ldquo;Nu știam de unde să încep cu diversificarea. DiversiBebe
-              mi-a dat un plan clar și am știut exact ce să îi dau Sofiei în
-              fiecare zi. Prima oară când a mâncat morcov piure a fost magic!
-              🥕&rdquo;
-            </p>
-            <footer
-              className="mt-4 text-[13px] font-bold"
-              style={{ color: "#8B7A8E" }}
-            >
-              <div>— Andreea M.</div>
-              <div className="mt-1 font-semibold">Mamă a Sofiei, 7 luni</div>
-            </footer>
-          </blockquote>
         </section>
 
         {/* FINAL CTA */}

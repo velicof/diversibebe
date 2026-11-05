@@ -114,6 +114,8 @@ export default function NotificariPage() {
               .from("babies")
               .select("name,birthdate")
               .eq("user_id", userId)
+              .order("created_at", { ascending: true })
+              .limit(1)
               .maybeSingle(),
             supabase
               .from("food_journal")

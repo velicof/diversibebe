@@ -31,6 +31,7 @@ export default function ProfilBebelusPage() {
   const [gender, setGender] = useState<Gender>("boy");
   const [allergies, setAllergies] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [babyId, setBabyId] = useState<string | null>(null);
   const [showAllergyPicker, setShowAllergyPicker] = useState(false);
 
   const COMMON_ALLERGIES = [
@@ -55,9 +56,12 @@ export default function ProfilBebelusPage() {
       .from("babies")
       .select("*")
       .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
+          setBabyId(data.id);
           setBabyName(data.name || "");
           setBirthDate(data.birthdate || "");
           setAvatarUrl(data.avatar_url || null);
@@ -85,8 +89,10 @@ export default function ProfilBebelusPage() {
   }, [allergies]);
 
   const handleSave = async () => {
-    if (!userId) return;
+    if (!userId || !babyId) return;
     const supabase = createClient();
+    // Update only the child shown on this page. `babies` has no allergies column: they stay in the
+    // local profile below (sending the field rejected the whole save).
     const { error } = await supabase
       .from("babies")
       .update({
@@ -96,8 +102,8 @@ export default function ProfilBebelusPage() {
           ? parseFloat(weight.replace(",", ".")) / 1000
           : null,
         gender,
-        allergies: allergies.length ? allergies : [],
       })
+      .eq("id", babyId)
       .eq("user_id", userId);
     if (error) {
       alert("Eroare: " + error.message);

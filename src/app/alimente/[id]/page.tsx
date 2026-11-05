@@ -81,6 +81,8 @@ export default function FoodDetailPage({
       .select("try_count, first_tried_at")
       .eq("user_id", userId)
       .eq("food_id", id)
+      .order("first_tried_at", { ascending: true })
+      .limit(1)
       .maybeSingle()
       .then(({ data }) => setTriedData(data));
 
