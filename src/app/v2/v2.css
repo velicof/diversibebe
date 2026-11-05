@@ -3438,3 +3438,12 @@
 .v2-plan-link { flex-basis: 100%; }
 .v2-price-question { margin-top: 16px; text-align: left; }
 .v2-price-question p { margin: 0 0 10px; font-size: 14px; }
+
+/* Visitors: where the data lives, and the way to keep it. */
+.v2-device-note { flex-basis: 100%; margin: 8px 0 0; font-size: 13px; color: var(--v2-muted); }
+.v2-device-note a { color: var(--v2-accent); text-decoration: underline; }
+.v2-guest-import { background: var(--v2-sage); border-bottom: 1px solid var(--v2-line); padding: 14px 20px; font-size: 14px; }
+.v2-guest-import p { margin: 0 0 10px; }
+.v2-guest-import [role="alert"] { color: var(--v2-accent); }
+.gw-hero-copy .gw-demo-link + .gw-demo-link { margin-left: 20px; }
+@media (max-width: 400px) { .gw-hero-copy .gw-demo-link + .gw-demo-link { margin-left: 0; margin-top: 10px; } }

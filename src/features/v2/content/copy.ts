@@ -71,6 +71,9 @@ export const accountCopy = {
   synced: pick("Date sincronizate cu contul tău", "Date sincronizate cu mediul local de test"),
   accountLink: pick("Contul meu", "Contul de test"),
   connectLink: pick("Conectează-te", "Conectează contul de test"),
+  haveAccount: "Am deja cont",
+  keepInAccount: pick("Conectează-te ca să le păstrezi în cont", "Conectează contul de test ca să le păstrezi"),
+  guestImportQuestion: pick("Le adaugi în cont, ca să le ai pe orice dispozitiv?", "Le adaugi în contul de test, ca să le ai pe orice dispozitiv?"),
   savedInAccount: pick("Rezultatul și preferințele sunt păstrate în contul tău.", "Rezultatul și preferințele sunt păstrate în contul tău de test."),
   accountInvitation: pick(
     "Creează un cont sau conectează-te cu contul DiversiBebe pe care îl ai deja. Preferințele și ideile se vor salva în cont, pentru revenirea din alt browser.",

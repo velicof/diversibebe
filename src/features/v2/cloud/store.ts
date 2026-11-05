@@ -9,6 +9,9 @@ import { journeyStage, type Journey } from "../growth/journey";
 import { AUTH_SIGNED_OUT_KEY, AUTH_STORAGE_KEY, backendUrl, hasStoredSession } from "./config";
 import type { CloudState, V2Repository } from "./repository";
 import { accountCopy } from "../content/copy";
+import { catalog } from "../catalog";
+import { nextDays } from "../planning";
+import { importableFromGuest } from "./guest-import";
 
 type Snapshot = CloudState & {
   available: boolean;
@@ -394,13 +397,15 @@ export const cloudStore = {
     }
   },
   async importIdeas(local: AppState) {
-    if (!repository || !snapshot.connected || !snapshot.selectedBabyId) return;
-    // Explicit, additive import only. Meals/clinical choices/history are never imported.
+    if (!repository || !snapshot.connected || !snapshot.selectedBabyId) return { favorites: 0, plan: 0, skipped: 0 };
+    // Explicit, additive import only. Meals/clinical choices/history are never imported, and a planned
+    // meal enters only if it suits the stage of the child in this account.
+    const { favorites, plan, skipped } = importableFromGuest(local, snapshot.state, snapshot.requiresClinicalGuidance, catalog, nextDays(new Date())[0].key);
     const owner = snapshot.userId,
       child = snapshot.selectedBabyId,
       run = generation;
     const stillCurrent = () => run === generation && snapshot.connected && owner === snapshot.userId && child === snapshot.selectedBabyId;
-    for (const id of local.favorites) {
+    for (const id of favorites) {
       if (!stillCurrent())
         throw new Error("Session changed");
       const value = await repository.call(child, "favorite", {
@@ -410,14 +415,13 @@ export const cloudStore = {
       if (!stillCurrent()) throw new Error("Session changed");
       update(value);
     }
-    for (const entry of local.plan) {
+    for (const entry of plan) {
       if (!stillCurrent())
         throw new Error("Session changed");
-      if (!snapshot.state.plan.some((p) => p.slot === entry.slot)) {
-        const value = await repository.call(child, "plan", entry);
-        if (!stillCurrent()) throw new Error("Session changed");
-        update(value);
-      }
+      const value = await repository.call(child, "plan", entry);
+      if (!stillCurrent()) throw new Error("Session changed");
+      update(value);
     }
+    return { favorites: favorites.length, plan: plan.length, skipped };
   },
 };

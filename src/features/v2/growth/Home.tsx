@@ -7,12 +7,14 @@ import { Landing as ClassicLanding } from "../screens";
 import { RecipeCard } from "../components";
 import { usePreview } from "../Provider";
 import { activeCatalog, contentMode } from "../catalog";
-import { reviewCopy } from "../content/copy";
+import { reviewCopy, accountCopy } from "../content/copy";
 import { initialFilters, recommend } from "../recommendations";
 import { challenges, newJourney } from "./journey";
 import { journeyScope, journeyStore, useJourney, useExperiment } from "./browser";
 import { headlines } from "./funnel";
 
+// Known at build time, so the link is in the first HTML and nothing moves when the page starts.
+const accountsEnabled=Boolean(process.env.NEXT_PUBLIC_V2_SUPABASE_URL);
 export function GrowthHome(){
   const experiment=useExperiment();
   const {state,cloud,clinicalGuidance}=usePreview();
@@ -32,6 +34,7 @@ export function GrowthHome(){
         <Link href="/v2/onboarding" className="v2-button v2-button-primary gw-main-cta">{resume?"Continuă de unde ai rămas":headline.cta}<ArrowRight size={19}/></Link>
         <div className="gw-reassurance"><span><Check size={14}/> Câteva răspunsuri</span><span><Check size={14}/> Fără cont</span><span><Check size={14}/> În ritmul tău</span></div>
         <a className="gw-demo-link" href="#incearca">Sau încearcă mai întâi o idee <ArrowRight size={16}/></a>
+        {accountsEnabled&&(cloud.connected?<Link className="gw-demo-link" href="/v2/azi" prefetch={false}>Mergi la planul tău <ArrowRight size={16}/></Link>:<Link className="gw-demo-link" href="/v2/cont" prefetch={false}>{accountCopy.haveAccount} <ArrowRight size={16}/></Link>)}
       </div>
       <div className="gw-hero-visual">
         <Image src="/v2/food-oats.webp" alt="Bol cu ovăz și banane, fotografie de atmosferă, fără rol de ghid de servire." width={1100} height={1400} priority sizes="(max-width:760px) 90vw, 45vw"/>
@@ -53,7 +56,7 @@ export function GrowthHome(){
     </section>
     <section className="gw-continuity"><div><p className="gw-eyebrow">ȘI MÂINE POATE FI MAI SIMPLU</p><h2>Nu începi de la zero.<br/><em>Păstrezi ce vă ajută.</em></h2><p>Salvezi o idee, o așezi în plan și revii când ai nevoie. Fără liste de bifat în fiecare zi.</p><Link href="/v2/onboarding" className="v2-text-link">Găsește punctul vostru de pornire <ArrowRight size={17}/></Link></div><div className="gw-continuity-cards"><div><Bookmark size={22}/><p><strong>Idei păstrate aproape</strong>Salvatele tale, fără căutarea de la capăt.</p></div><div><CalendarDays size={22}/><p><strong>Doar următoarele zile</strong>Un plan pe care îl poți schimba oricând.</p></div><div><Leaf size={22}/><p><strong>În ritmul familiei voastre</strong>Fără serii zilnice și fără zile „pierdute”.</p></div></div></section>
     <section className="gw-trust"><span className="gw-note-icon"><Leaf size={24}/></span><div><h2>Încrederea se construiește cu lucruri clare.</h2><p>{reviewCopy.homeTrust}</p><Link href="/v2/pregatire" className="v2-text-link">Vezi resursele de început <ArrowUpRight size={16}/></Link></div></section>
-  </div>,[headline,resume,minutes,demo,scope]);
+  </div>,[headline,resume,minutes,demo,scope,cloud.connected]);
   if(experiment.flow==="classic")return <ClassicLanding/>;
   return page;
 }

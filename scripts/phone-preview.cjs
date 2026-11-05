@@ -23,7 +23,8 @@ function tailscaleName() {
 
 (async () => {
   // Starts PostgreSQL + GoTrue + PostgREST + the default gateway when they are not running; loopback only.
-  run(['scripts/native-runtime.cjs']);
+  // V2_PORT stays out: the default gateway keeps serving the normal local preview on 3100.
+  run(['scripts/native-runtime.cjs'], { V2_PORT: '' });
   if (process.argv.includes('--build') || !fs.existsSync(path.join(repo, dist, 'BUILD_ID')))
     run(['scripts/native-command.cjs', 'build'], { V2_BACKEND: 'phone' });
   const children = [

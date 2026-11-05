@@ -19,9 +19,10 @@ import {
 } from "lucide-react";
 import { contentMode, type Recipe } from "./catalog";
 import { photoUrl } from "./content/photos";
-import { reviewCopy } from "./content/copy";
+import { accountCopy, reviewCopy } from "./content/copy";
 import { usePreview } from "./Provider";
 import { SyncStatus } from "./cloud/SyncStatus";
+import { GuestImportPrompt } from "./cloud/GuestImportPrompt";
 import { GrowthTelemetry } from "./growth/Telemetry";
 
 export const navItems = [
@@ -117,6 +118,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         )}
         {(!marketing || cloud.connected) && <SyncStatus />}
+        <GuestImportPrompt />
         <GrowthTelemetry />
         {storageError && (
           <div className="v2-alert" role="alert">
@@ -273,6 +275,17 @@ export function RecipePhoto({
     </div>
   );
 }
+/** A visitor's choices live only here: say so where they are saved, with the way to keep them. */
+export function DeviceOnlyNote() {
+  const { cloud } = usePreview();
+  if (cloud.connected || !cloud.available) return null;
+  return (
+    <p className="v2-device-note">
+      Salvat doar pe acest dispozitiv.{" "}
+      <Link href="/v2/cont" prefetch={false}>{accountCopy.keepInAccount}</Link>
+    </p>
+  );
+}
 export function SaveButton({
   recipe,
   compact = false,
@@ -301,7 +314,9 @@ export function SaveButton({
         announce(
           saved
             ? "Ideea a fost eliminată din salvate."
-            : "Gata, ideea este în colecția ta.",
+            : cloud.available && !cloud.connected
+              ? "Gata, ideea e salvată pe acest dispozitiv."
+              : "Gata, ideea este în colecția ta.",
         );
       }}
     >

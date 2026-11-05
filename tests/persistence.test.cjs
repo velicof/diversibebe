@@ -39,3 +39,18 @@ test('analytics uses server timestamps, deduplicates IDs and excludes sensitive 
   await asUser(db,USERS.B,async d=>assert.equal((await d.query('SELECT * FROM public.product_events')).rows.length,0));
  }finally{await db.close();}
 });
+
+test('a visitor plan enters an account only if it suits the child of that account',()=>{
+  const {importableFromGuest}=require('./load-ts.cjs').load('src/features/v2/cloud/guest-import.ts');
+  const recipes=[{id:'piure',published:true,minimumMonths:6},{id:'adult',published:true,minimumMonths:12},{id:'ficat',published:false,minimumMonths:6}];
+  const local={favorites:['piure','necunoscut','adult'],plan:[{slot:'2026-11-05',recipeId:'piure'},{slot:'2026-11-06',recipeId:'adult'},{slot:'2026-11-07',recipeId:'ficat'},{slot:'2026-11-08',recipeId:'piure'},{slot:'2026-11-01',recipeId:'piure'},{slot:'2026-11-09',recipeId:'necunoscut'}]};
+  const account={favorites:['adult'],plan:[{slot:'2026-11-08',recipeId:'adult'}],stage:6};
+  const plain=v=>JSON.parse(JSON.stringify(v));
+  const result=plain(importableFromGuest(local,account,false,recipes,'2026-11-05'));
+  assert.deepEqual(result.favorites,['piure'],'known, and not already in the account');
+  assert.deepEqual(result.plan,[{slot:'2026-11-05',recipeId:'piure'}],'not too old for the child, not unpublished, not past, and a taken day stays as it is');
+  assert.equal(result.skipped,2,'the 12+ meal and the unpublished one are reported');
+  const twelve=plain(importableFromGuest(local,{...account,stage:12},false,recipes,'2026-11-05'));
+  assert.deepEqual(twelve.plan.map(p=>p.recipeId),['piure','adult']);
+  for(const blocked of [plain(importableFromGuest(local,{...account,stage:0},false,recipes,'2026-11-05')),plain(importableFromGuest(local,{...account,stage:12},true,recipes,'2026-11-05'))])assert.deepEqual(blocked.plan,[],'preparation stage or clinical guidance: no meals');
+});

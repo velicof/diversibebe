@@ -34,6 +34,7 @@ const LIBRARY_ALLERGENS = ["Lapte", "Ou", "Gluten", "Pește", "Arahide", "Fructe
 const PAGE = 12;
 import { usePreview } from "./Provider";
 import {
+  DeviceOnlyNote,
   EmptyState,
   LoadingState,
   PageHeading,
@@ -1035,6 +1036,7 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
                   <Check size={16} /> Este în planul tău. Vezi planul
                 </Link>
               )}
+              {(state.favorites.includes(recipe.id) || state.plan.some((p) => p.recipeId === recipe.id)) && <DeviceOnlyNote />}
             </div>
           ) : (
             // Same footprint as the buttons (no layout shift); the saved state is unknown until the family's data loads.
@@ -1238,8 +1240,9 @@ function PlannerReady() {
             <section className="v2-plan-saved" aria-live="polite">
               <CheckCircle2 size={26} />
               <div>
-                <h2>{saved.count} zile de mese, gata{saved.seconds ? ` în ${saved.seconds} secunde` : ""}.</h2>
+                <h2>{saved.count} zile de mese, gata{saved.seconds ? ` în ${saved.seconds === 1 ? "o secundă" : `${saved.seconds} secunde`}` : ""}.</h2>
                 <p>Lista de cumpărături este pregătită din aceste mese.</p>
+                <DeviceOnlyNote />
                 <button className="v2-button v2-button-primary" onClick={openShopping}>
                   Vezi lista de cumpărături <ArrowRight size={17} />
                 </button>
@@ -1468,6 +1471,7 @@ function PlannerReady() {
           </p>
           {toBuy.length ? (
             <>
+              <DeviceOnlyNote />
               <ul className="v2-shopping-list">
                 {toBuy.map((item) => (
                   <li key={item.key}>

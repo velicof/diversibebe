@@ -14,6 +14,13 @@ async function enter(page,account){
 test('late import response from account A cannot enter the newly signed-in account B',async({page,context})=>{
  await context.route('**/*',r=>['127.0.0.1','localhost'].includes(new URL(r.request().url()).hostname)?r.continue():r.abort());
  const sdk=createClient(apiUrl,key,{auth:{persistSession:false,autoRefreshToken:false}});
+ // The import sends only what account A does not have yet: make sure there is a write to delay.
+ await sdk.auth.signInWithPassword(accounts[0]);
+ const stateA=await sdk.rpc('v2_load_state',{p_baby_id:null});
+ if(stateA.error)throw stateA.error;
+ const cleanedA=await sdk.rpc('v2_apply_action',{p_baby_id:stateA.data.selectedBabyId,p_action:'favorite',p_payload:{recipeId:'piure-dovlecel',enabled:false}});
+ if(cleanedA.error)throw cleanedA.error;
+ await sdk.auth.signOut({scope:'local'});
  await sdk.auth.signInWithPassword(accounts[1]);
  const cleaned=await sdk.rpc('v2_apply_action',{p_baby_id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',p_action:'favorite',p_payload:{recipeId:'piure-dovlecel',enabled:false}});
  if(cleaned.error)throw cleaned.error;

@@ -25,7 +25,7 @@ export function SyncStatus() {
           ? cloud.saving
             ? accountCopy.saving
             : accountCopy.synced
-          : "Explorezi fără cont"}
+          : "Explorezi fără cont. Alegerile rămân pe acest dispozitiv."}
       </span>
       {cloud.connected ? (
         <>
