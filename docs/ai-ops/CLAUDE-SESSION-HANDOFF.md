@@ -5,7 +5,8 @@
 Starea, blocajele și ordinea de lansare: **`RELEASE-READINESS.md`**. Telefon: **`PHONE-PREVIEW.md`**. Fotografii: **`photos/VISUAL-REVIEW-20261104.md`**.
 
 - PR #2: 9 commituri, head `6150077`, CLEAN, Vercel SUCCESS, **fără merge**. `scripts/v1-browser-check.cjs` rulează paginile V1 reale pe schema V2.
-- Telefon cu conturi: `node scripts/phone-preview.cjs --build` + `tailscale serve --bg 3105`; `tests/e2e/phone.spec.cjs` rulează doar cu `V2_PHONE_URL`.
+- Telefon cu conturi: `node scripts/phone-preview.cjs --build`; Serve e deja activ pe contul fondatorului (`desktop-17iacdj.tail2c8250.ts.net`, tailnet only). `tests/e2e/phone.spec.cjs` rulează doar cu `V2_PHONE_URL`.
+- Vizitator și securitate (5 nov.): `node scripts/access-attack.cjs <url>` atacă accesul la date; `tests/e2e/guest.spec.cjs` acoperă fluxul vizitator → cont. Importul în cont trece prin `cloud/guest-import.ts` (filtru pe etapa copilului).
 - Local, după o schimbare în `scripts/native-gateway.cjs`, repornește gateway-ul de pe 54321: `native-runtime` nu îl repornește dacă portul e ocupat, iar `context.route` din E2E ascunde refuzurile CORS.
 - 8 migrații (`20261104100000_v2_shopping_event` e nouă). `supabase-js` se încarcă lazy: `cloud/config.ts` nu îl importă; nu adăuga importuri din `cloud/client.ts` în afara lui `store.ts` (dinamic) și `Recovery.tsx`.
 - `public/v2/dm-sans.woff2` e subset din `dm-sans.ttf` (subset-font, opsz 14, wght 300–800, latin + română).

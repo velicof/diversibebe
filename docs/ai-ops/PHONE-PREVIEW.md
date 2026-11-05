@@ -13,6 +13,22 @@ Laptopul servește V2 și propriul mediu local (PostgreSQL + GoTrue + PostgREST)
 - totul trece printr-un singur punct local (`scripts/phone-gateway.cjs`, doar `127.0.0.1`): baza de date, GoTrue, PostgREST și căsuța de email locală nu sunt accesibile direct de pe telefon;
 - același mod de lucru refuză orice adresă publică (`resolveBackendUrl`, testat).
 
+### De ce se deschide fără autentificare
+
+Este explorare gratuită, intenționată. Bara de sus spune „Explorezi fără cont. Alegerile rămân pe acest dispozitiv”.
+
+| | Vizitator | Conectat |
+|---|---|---|
+| Unde stau favoritele, planul, lista | doar în browserul acestui dispozitiv (`localStorage`) | pe server, vizibile doar contului |
+| Cereri către backend | niciuna; supabase-js nici nu se descarcă | cu sesiune GoTrue, sub RLS |
+| Datele unui cont | inaccesibile | numai ale propriului cont |
+
+Pe un dispozitiv partajat, alegerile de vizitator pot fi văzute de următoarea persoană, până când le ștergi din Profil. Nu conțin nume, email sau parolă.
+
+Linkul de conectare apare pe toate ecranele; pe prima pagină e „Am deja cont”. După conectare, aplicația întreabă dacă adaugă alegerile în cont și nu mută nimic fără „Adaugă în cont”. O masă nepotrivită etapei copilului din cont nu se adaugă.
+
+**Doar aici** `/v2` se deschide fără cod: scriptul local setează `V2_ACCESS=public`, pentru că adresa e vizibilă numai dispozitivelor tale. Online, fără cod de invitație, orice pagină `/v2` duce la `/acces-beta`, iar consola de revizie are cod separat (verificat prin HTTP, 5 nov.).
+
 ### Pași (prima dată ~15 min; apoi 1 min)
 
 Laptopul trebuie să rămână pornit și treaz cât testezi.

@@ -1,6 +1,6 @@
 # Release readiness — DiversiBebe 2.0
 
-Evaluare: 4 nov. 2026 · branch `release/v2-rc` · verificări automate: `node scripts/release-check.cjs` · jurnale: `outputs/release-2026-11-04/`.
+Evaluare: 5 nov. 2026 · branch `release/v2-rc` · verificări automate: `node scripts/release-check.cjs` · jurnale: `outputs/release-2026-11-04/` și `outputs/release-2026-11-05/`.
 
 Rețetele nu sunt validate medical: trec prin verificări automate și corecturi notate, fără revizie de specialitate.
 
@@ -20,6 +20,7 @@ Fiecare pas cere aprobarea ta și se oprește dacă verificarea lui pică.
 | # | Pas | Cine | Verificare | Înapoi |
 |---|---|---|---|---|
 | 0 | Test privat pe iPhone (`PHONE-PREVIEW.md`) | tu | checklist-ul din document | — |
+| 0b | Vizitator → cont: planul și favoritele se adaugă în cont doar după „Adaugă în cont” | tu | `PHONE-PREVIEW.md` | — |
 | 1 | **Merge PR [#2](https://github.com/velicof/diversibebe/pull/2)** → deploy V1 | tu | checklist „După merge” din PR (10 min) | Vercel Instant Rollback la `db14a4c` |
 | 2 | **Backup** (`node scripts/prod-backup.cjs`, apoi `--verify … --restore-local`) | tu; parola nu ajunge la agent | „restore check: 12 tables identical” | — |
 | 3 | Preflight (`v2-preflight.sql`, read-only) | agent, cu aprobare | 5 × 0 anomalii; numărul de rânduri notat | — |
@@ -87,8 +88,8 @@ Ce a schimbat cifrele (dovezi: profil CPU atribuit prin source maps, `V2_SOURCE_
 | # | Condiție | Stare | Dovadă |
 |---|---|---|---|
 | G1 | Fără vulnerabilități critice | ✅ local · ⏳ producție | `npm audit` 0; ruta de email și redirectul din callback corectate în PR #2 (nepublicat) |
-| G2 | Izolare între familii | ✅ | RLS: PGlite + PostgREST real; în browser, al doilea cont nu vede date din primul |
-| G3 | Fluxuri E2E | ✅ local · ⏳ iPhone real | E2E 112/112; `phone.spec` pe profil de iPhone |
+| G2 | Izolare între familii | ✅ local | `scripts/access-attack.cjs` 46/46 pe adresa privată: anonim, fără credențiale, token fals, `alg none`, service role fals, token expirat, altă familie. Catalog: rolul anonim nu are niciun drept pe tabele sau funcții. Se repetă pe proiectul real după migrații |
+| G3 | Fluxuri E2E | ✅ local · ⏳ cont pe iPhone real | E2E 116/116, inclusiv `guest.spec`; `phone.spec` pe profil de iPhone, prin adresa reală. Fondatorul a deschis V2 pe iPhone real, ca vizitator |
 | G4 | Backend online | ⏳ pasul 6 | — |
 | G5 | Migrații și rollback | ✅ local | repetiție pe stack real 38/38, 8 migrații |
 | G6 | Conținut | ✅ automat · ⏳ specialitate | 289 publicabile, 2 în coada de specialitate, 0 aprobări medicale |
@@ -98,7 +99,7 @@ Ce a schimbat cifrele (dovezi: profil CPU atribuit prin source maps, `V2_SOURCE_
 | G10 | Monitorizare | ✅ plan cost 0 | idem, §3 |
 | G11 | Costuri | ✅ 0 lei | — |
 | G12 | V1 după migrații | ✅ local · ⏳ producție | `v1-browser-check` 40/40 pe PR #2; codul din producție pică același test |
-| G13 | Acces controlat | ✅ | poartă fail-closed; `check-v2-boundary` (404 fără flag) |
+| G13 | Acces controlat | ✅ | poartă fail-closed verificată prin HTTP în modul de producție: fără cod sau cu cod greșit → `/acces-beta`; codul de invitație nu deschide consola de revizie; `check-v2-boundary` (404 fără flag) |
 | G14 | Fotografii | ✅ pipeline · ⏳ decizia ta | versiuni `-vN`; `photos/VISUAL-REVIEW-20261104.md`; 0 aprobate automat |
 | G15 | Performanță mobil | ✅ vizitator · ⏳ cont real | tabelul de mai sus |
 
