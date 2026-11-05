@@ -12,11 +12,14 @@ const host = url ? new URL(url).hostname : '';
 test.use({ ...iphone, browserName, actionTimeout: 30000, baseURL: url, ignoreHTTPSErrors: true, // A *.ts.net address with a port is the local HTTPS simulation; without one it is the real Tailscale name.
   launchOptions: { args: browserName === 'chromium' && host.endsWith('.ts.net') && new URL(url).port ? [`--host-resolver-rules=MAP ${host} 127.0.0.1`] : [] } });
 test.setTimeout(240000);
+// WebKit logs this for requests to its own address that a full page load cuts off (these tests use page.goto).
+// Moving inside the app shows none: that is checked below with no filter.
+const cutOffByPageLoad = (message) => browserName === 'webkit' && /due to access control checks.$/.test(message);
 const planned = (page) => page.locator('.v2-plan-days .v2-plan-recipe h2').allTextContents();
 
 test('phone: account, library, recommendation, 5-day plan, shopping list, favorites, return', async ({ page, browser }) => {
   const errors = [], outbound = [];
-  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('pageerror', (e) => { if (!cutOffByPageLoad(e.message)) errors.push(e.message); });
   page.on('request', (r) => { if (!r.url().startsWith(url) && !/^(data|blob):/.test(r.url())) outbound.push(r.url()); });
   const email = `phone-${crypto.randomUUID()}@example.test`, password = crypto.randomBytes(18).toString('base64url');
 
@@ -123,7 +126,7 @@ test('phone: account, library, recommendation, 5-day plan, shopping list, favori
 
 test('phone: a visitor sees the way in, is invited, and reaches an account only after a yes', async ({ page, browser }) => {
   const errors = [], backend = [], outbound = [];
-  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('pageerror', (e) => { if (!cutOffByPageLoad(e.message)) errors.push(e.message); });
   page.on('request', (r) => {
     if (/\/(auth|rest)\/v1\//.test(r.url())) backend.push(r.url());
     if (!r.url().startsWith(url) && !/^(data|blob):/.test(r.url())) outbound.push(r.url());
@@ -213,4 +216,23 @@ test('phone: a visitor sees the way in, is invited, and reaches an account only 
 
   expect(errors, 'no script errors').toEqual([]);
   expect(outbound, 'nothing leaves the private address').toEqual([]);
+});
+
+test('phone: tapping through the app raises no script error and no failed request', async ({ page }) => {
+  const errors = [], failed = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('response', (r) => { if (r.status() >= 400) failed.push(`${r.status()} ${r.url()}`); });
+  await page.goto('/v2/azi');
+  await page.waitForLoadState('networkidle');
+  const nav = page.locator('.v2-bottom-nav');
+  for (const [name, route] of [['Descoperă', '/v2/idei'], ['Planul meu', '/v2/plan'], ['Profil', '/v2/profil'], ['Azi', '/v2/azi'], ['Descoperă', '/v2/idei']]) {
+    await nav.getByRole('link', { name }).click();
+    await expect(page).toHaveURL(new RegExp(route));
+    await page.waitForLoadState('networkidle');
+  }
+  await page.locator('.v2-recipe-card a').first().click();
+  await expect(page).toHaveURL(new RegExp('/v2/retete/'));
+  await page.waitForLoadState('networkidle');
+  expect(errors).toEqual([]);
+  expect(failed).toEqual([]);
 });

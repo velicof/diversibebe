@@ -8,7 +8,7 @@ Rețetele nu sunt validate medical: trec prin verificări automate și corecturi
 
 | Etapă | Decizie | Ce lipsește (doar blocaje reale) |
 |---|---|---|
-| **1. Test privat pe telefon, mediu local izolat, cu cont de test** | **GO** după un pas al tău | Tailscale pe laptop și iPhone (`PHONE-PREVIEW.md`). Safari real nu a putut fi testat de agent |
+| **1. Test privat pe telefon, mediu local izolat, cu cont de test** | **GO** după un pas al tău | Testul tău pe iPhone (`PHONE-PREVIEW.md`). Agentul a rulat WebKit pe Windows, nu Safari real |
 | **2. Testare cu contul fondatorului** (Preview, proiectul comun) | **NO-GO** | merge PR #2 · backup verificat · migrații + postflight · Auth (Redirect URLs, SMTP, șablon) · push `release/v2-rc` + variabile Preview |
 | **3. Beta restrânsă** (familii invitate, cod de invitație) | **NO-GO** | etapa 2 trecută · deciziile despre fotografii și BebeAsist · mențiunea din politica de confidențialitate · merge `release/v2-rc` → `main` |
 | **4. Lansare publică** | **NO-GO** | beta fără incidente · decizia despre revizia de specialitate · fotografii pentru rețetele principale · confirmarea performanței pe conturi reale |
@@ -20,7 +20,7 @@ Fiecare pas cere aprobarea ta și se oprește dacă verificarea lui pică.
 | # | Pas | Cine | Verificare | Înapoi |
 |---|---|---|---|---|
 | 0 | Test privat pe iPhone (`PHONE-PREVIEW.md`) | tu | checklist-ul din document | — |
-| 0b | Vizitator → cont: planul și favoritele se adaugă în cont doar după „Adaugă în cont” | tu | `PHONE-PREVIEW.md` | — |
+| 0b | Vizitator → cont: „Conectează-te” vizibil, invitația după primul plan, adăugare în cont doar după „Adaugă în cont” | tu | `PHONE-PREVIEW.md` | — |
 | 1 | **Merge PR [#2](https://github.com/velicof/diversibebe/pull/2)** → deploy V1 | tu | checklist „După merge” din PR (10 min) | Vercel Instant Rollback la `db14a4c` |
 | 2 | **Backup** (`node scripts/prod-backup.cjs`, apoi `--verify … --restore-local`) | tu; parola nu ajunge la agent | „restore check: 12 tables identical” | — |
 | 3 | Preflight (`v2-preflight.sql`, read-only) | agent, cu aprobare | 5 × 0 anomalii; numărul de rânduri notat | — |
@@ -39,7 +39,8 @@ Fiecare pas cere aprobarea ta și se oprește dacă verificarea lui pică.
 **P0 (înaintea oricărei migrații):** PR #2 nemerge-uit · fără backup · migrații neaplicate · fără SMTP (65 de conturi numai cu Google nu au alternativă la buton, iar recuperarea nu e de încredere).
 
 **P1 (înainte de beta):**
-- testul pe iPhone real (Safari neverificat automat);
+- testul pe iPhone real (WebKit verificat automat, Safari real nu);
+- măsurarea conversiei vizitator → cont: evenimentele vizitatorului rămân pe dispozitiv, deci rata nu se vede online. Un eveniment agregat ar cere o migrație și o decizie;
 - deciziile despre fotografii (3 de regenerat, 5 versiuni de ales);
 - mențiunea din politica de confidențialitate;
 - BebeAsist: rămâne oprit în V2? Promptul din V1 încă îi cere să se bazeze pe „OMS și Societatea Română de Pediatrie”: dacă rămâne activ, promptul trebuie reformulat;
@@ -89,7 +90,7 @@ Ce a schimbat cifrele (dovezi: profil CPU atribuit prin source maps, `V2_SOURCE_
 |---|---|---|---|
 | G1 | Fără vulnerabilități critice | ✅ local · ⏳ producție | `npm audit` 0; ruta de email și redirectul din callback corectate în PR #2 (nepublicat) |
 | G2 | Izolare între familii | ✅ local | `scripts/access-attack.cjs` 46/46 pe adresa privată: anonim, fără credențiale, token fals, `alg none`, service role fals, token expirat, altă familie. Catalog: rolul anonim nu are niciun drept pe tabele sau funcții. Se repetă pe proiectul real după migrații |
-| G3 | Fluxuri E2E | ✅ local · ⏳ cont pe iPhone real | E2E 116/116, inclusiv `guest.spec`; `phone.spec` pe profil de iPhone, prin adresa reală. Fondatorul a deschis V2 pe iPhone real, ca vizitator |
+| G3 | Fluxuri E2E | ✅ local · ⏳ cont pe iPhone real | E2E 128/128 (5 nov.), inclusiv `guest.spec` și `guest-account.spec`; `phone.spec` 3/3 pe WebKit și pe Chromium, prin adresa reală. Fondatorul a folosit V2 pe iPhone real, ca vizitator. Instabilitate deschisă: `cloud.spec` a picat o dată din 2 rulări complete („Nu am putut sincroniza datele”), apoi a trecut de 3 ori din 3 separat; cauză negăsită |
 | G4 | Backend online | ⏳ pasul 6 | — |
 | G5 | Migrații și rollback | ✅ local | repetiție pe stack real 38/38, 8 migrații |
 | G6 | Conținut | ✅ automat · ⏳ specialitate | 289 publicabile, 2 în coada de specialitate, 0 aprobări medicale |

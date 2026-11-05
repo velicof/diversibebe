@@ -25,7 +25,19 @@ Este explorare gratuită, intenționată. Bara de sus spune „Explorezi fără 
 
 Pe un dispozitiv partajat, alegerile de vizitator pot fi văzute de următoarea persoană, până când le ștergi din Profil. Nu conțin nume, email sau parolă.
 
-Linkul de conectare apare pe toate ecranele; pe prima pagină e „Am deja cont”. După conectare, aplicația întreabă dacă adaugă alegerile în cont și nu mută nimic fără „Adaugă în cont”. O masă nepotrivită etapei copilului din cont nu se adaugă.
+Butonul **Conectează-te** e în bara de sus, pe fiecare pagină, inclusiv pe prima; nu te obligă la nimic. După primul plan de 5 zile sau prima listă de cumpărături apare, în pagină, invitația „Salvează-ți progresul într-un cont gratuit”, cu „Creează cont gratuit” și „Continuă fără cont”. Un „nu” rămâne ținut minte pe acest dispozitiv.
+
+Datele de vizitator stau doar în browser: se pierd dacă ștergi datele browserului, iar Safari le poate curăța singur dacă site-ul nu e folosit câteva zile (politica de 7 zile a WebKit).
+
+După conectare, aplicația întreabă dacă adaugă alegerile în cont și nu mută nimic fără „Adaugă în cont”. Nu înlocuiește nimic din cont: o zi deja planificată își păstrează masa și îți spune asta. O idee sau o masă nepotrivită etapei copilului din cont nu se adaugă, iar dacă nimic nu se potrivește, primești explicația în loc ca planul să pară dispărut.
+
+### Ce build ai pe telefon
+
+Sub bara de sus scrie `build <commit>`: ultimul commit care a schimbat codul. Dacă nu e cel așteptat, reîncarcă pagina; o filă deja deschisă poate păstra codul vechi. `+local` înseamnă că build-ul conține și modificări necomise. Din laptop, adresa însăși răspunde ce servește:
+
+```bash
+node scripts/phone-build-check.cjs https://desktop-17iacdj.tail2c8250.ts.net
+```
 
 **Doar aici** `/v2` se deschide fără cod: scriptul local setează `V2_ACCESS=public`, pentru că adresa e vizibilă numai dispozitivelor tale. Online, fără cod de invitație, orice pagină `/v2` duce la `/acces-beta`, iar consola de revizie are cod separat (verificat prin HTTP, 5 nov.).
 
@@ -56,7 +68,7 @@ Dacă Tailscale cere activarea HTTPS pentru rețeaua ta, deschide linkul afișat
 
 **4. Pe iPhone**, cu Tailscale pornit, deschizi în Safari adresa afișată la pasul 2 (`https://<laptop>.<tailnet>.ts.net/v2`).
 
-**5. Contul:** atingi **Conectează contul de test** (sau deschizi `/v2/cont`) → **Creează un cont de test** → orice adresă `ceva@example.test`, o parolă de minimum 8 caractere și etapa copilului. Nu folosi datele unui cont real.
+**5. Contul:** atingi **Conectează-te** → **Creează un cont de test** → orice adresă `ceva@example.test`, o parolă de minimum 8 caractere și etapa copilului. Nu folosi datele unui cont real.
 
 Serve rămâne activ și după repornire, dar adresa funcționează doar cât rulează scriptul de la pasul 2 (fără el apare o eroare). Când revii, pornește din nou scriptul, fără `--build` dacă nu s-a schimbat codul.
 
@@ -68,13 +80,16 @@ tailscale serve reset
 
 ### Ce să verifici pe iPhone
 
+- [ ] pe primul ecran vezi **Conectează-te** și `build <commit>`, fără să fii obligat să te conectezi;
 - [ ] pagina se încarcă rezonabil și textul se citește fără zoom;
 - [ ] „Hai să găsim o idee de masă” → 3 întrebări → primele idei, doar cu degetul mare;
 - [ ] Descoperă: căutare, primele rețete pe primul ecran, butonul **Filtre**, „Fără Lapte”, „Mai multe idei”;
 - [ ] o rețetă: fotografia sau imaginea de rezervă, alergenii, „Cum servești”, „Un pas pe ecran”, **Salvează**, **Adaugă în plan** → „Vezi planul”;
 - [ ] Planul meu → „Arată 5 zile de mese” → înlocuiești o masă → „Salvează planul”;
+- [ ] după „Salvează planul” apare invitația; „Continuă fără cont” o închide și nu mai revine;
 - [ ] „De cumpărat”: bifezi rapid câteva produse (bifele apar imediat) → „Am acasă”;
 - [ ] Azi: arată câte mese ai planificate și câte produse mai ai de cumpărat;
+- [ ] pe un plan nou, „Creează cont gratuit”: după creare, nimic nu se mută până la „Adaugă în cont”;
 - [ ] închizi Safari, revii: datele sunt acolo; deconectare → reconectare;
 - [ ] Plus (`/v2/premium`): „Mi-ar fi util” → întrebarea despre preț. Nu există plăți;
 - [ ] `/v2/revizie/fotografii`: imaginile candidate, checklist, export. Niciuna nu este aprobată încă;
@@ -84,8 +99,12 @@ tailscale serve reset
 
 **Verificat (4 nov.):** `tests/e2e/phone.spec.cjs` parcurge tot fluxul de mai sus cu profil de iPhone (touch, 390×844), de pe laptop, prin adresa **reală** Tailscale (`tailnet only`, certificat HTTPS valid), fără nicio cerere în afara adresei private. Pe aceeași adresă: originile străine primesc 403, `/auth/v1/admin` 404, iar porturile interne nu răspund pe IP-ul Tailscale.
 
+**Verificat (5 nov.), pe WebKit și pe Chromium, prin adresa reală:** creare de cont din invitație, import doar cu acord, deconectare, conectare pe alt dispozitiv, sesiune nouă, izolare între două conturi, navigare prin aplicație fără erori. `node scripts/access-attack.cjs`: 46/46.
+
+WebKit a găsit un defect pe care Chromium nu îl arăta: ce scriai înainte ca pagina să devină interactivă se ștergea din formular. Reparat și acoperit de test. Pe WebKit apare și mesajul „due to access control checks” la cereri către aceeași adresă, când o încărcare completă de pagină le întrerupe; navigând în aplicație nu apare.
+
 **Nu am putut verifica eu:**
-- **Safari real:** testul rulează în Chromium; motorul WebKit nu e instalat aici. Din acest motiv, testul tău de pe iPhone contează;
+- **Safari real pe iPhone:** am rulat WebKit-ul Playwright pe Windows, același motor, dar nu același browser. Din acest motiv, testul tău de pe iPhone contează;
 - **recuperarea parolei de pe telefon:** linkul din email duce la serviciul local, deci funcționează doar de pe laptop (`http://127.0.0.1:54324`). Pe telefon testezi asta în etapa cu contul real;
 - **Google:** nu există pe stack-ul local. Se testează în canary.
 
