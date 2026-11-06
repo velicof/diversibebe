@@ -4,7 +4,7 @@
 
 Starea, blocajele și ordinea de lansare: **`RELEASE-READINESS.md`**. Telefon: **`PHONE-PREVIEW.md`**. Fotografii: **`photos/VISUAL-REVIEW-20261104.md`**.
 
-- PR #2: **merge-uit 5 nov.**, live `9c56e83` (`dpl_B1JiEmpFN6FyEfqisgC44BrdQm6P`); rollback la `db14a4c` = `dpl_z6E6xAaCN17TEq2goKUmkjJgV9EQ`. Migrațiile V2 **nu** sunt aplicate. Backupul se rulează după `BACKUP-RUNBOOK.md`. `scripts/v1-browser-check.cjs` rulează paginile V1 reale pe schema V2.
+- PR #2: **merge-uit 5 nov.**, live `9c56e83` (`dpl_B1JiEmpFN6FyEfqisgC44BrdQm6P`); rollback la `db14a4c` = `dpl_z6E6xAaCN17TEq2goKUmkjJgV9EQ`. Verificat live 6 nov. cu un cont de test (`PATCH babies` 204, `POST cooked_recipes` 201, `POST food_journal` 201). Migrațiile V2 **nu** sunt aplicate. Backupul se rulează după `BACKUP-RUNBOOK.md`. `scripts/v1-browser-check.cjs` rulează paginile V1 reale pe schema V2.
 - Telefon cu conturi: `node scripts/phone-preview.cjs --build`; Serve e deja activ pe contul fondatorului (`desktop-17iacdj.tail2c8250.ts.net`, tailnet only). `tests/e2e/phone.spec.cjs` rulează doar cu `V2_PHONE_URL`.
 - Vizitator și securitate (5 nov.): `node scripts/access-attack.cjs <url>` atacă accesul la date; `tests/e2e/guest.spec.cjs` și `guest-account.spec.cjs` acoperă fluxul vizitator → cont. WebKit e instalat: `V2_PHONE_BROWSER=webkit V2_PHONE_URL=<adresa> node scripts/native-command.cjs e2e tests/e2e/phone.spec.cjs`. `node scripts/phone-build-check.cjs <adresa>` confirmă commitul servit. Importul în cont trece prin `cloud/guest-import.ts` (filtru pe etapa copilului).
 - Local, după o schimbare în `scripts/native-gateway.cjs`, repornește gateway-ul de pe 54321: `native-runtime` nu îl repornește dacă portul e ocupat, iar `context.route` din E2E ascunde refuzurile CORS.
