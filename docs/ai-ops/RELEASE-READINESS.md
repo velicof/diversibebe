@@ -24,7 +24,7 @@ Fiecare pas cere aprobarea ta și se oprește dacă verificarea lui pică.
 | 1 | **Merge PR [#2](https://github.com/velicof/diversibebe/pull/2)** → deploy V1. **Făcut 5 nov.: live `9c56e83`. Verificat 6 nov. și cu un cont real de test:** salvarea profilului și „Am gătit” ajung în baza de date. Rămân de verificat live: Google și un cont cu doi copii | agent, cu aprobare | checklist „După merge” din PR | Vercel Instant Rollback la `db14a4c` (`dpl_z6E6xAaCN17TEq2goKUmkjJgV9EQ`) |
 | 2 | **Backup** (`BACKUP-RUNBOOK.md`): baza de date și fișierele din Storage. **Făcut 7 nov., 19:17 UTC**, trecut | agent; parola tastată de tine într-o fereastră locală | „Storage: 7/7” și „restore check: all 12 tables” | — |
 | 3 | Preflight (`v2-preflight.sql`, read-only). **7 nov.: 0 anomalii**; se reia imediat înaintea migrațiilor | agent | 5 × 0 anomalii; numărul de rânduri notat | — |
-| 4 | **Cele 8 migrații** (`supabase/v2-release.cjs`), în ordine, la oră cu trafic minim | agent, cu aprobare | postflight 9/9, același număr de rânduri, advisors fără ERROR, V1 smoke | L1 `v2-disable.sql` (testat); L3 backup |
+| 4 | **Făcut 7 nov., 21:03 UTC: postflight 9/9, rânduri identice, V1 verificat.** **Cele 8 migrații** (`supabase/v2-release.cjs`), în ordine, la oră cu trafic minim | agent, cu aprobare | postflight 9/9, același număr de rânduri, advisors fără ERROR, V1 smoke | L1 `v2-disable.sql` (testat); L3 backup |
 | 5 | **Auth** (`AUTH-SETUP.md`): Redirect URLs, SMTP Resend, șablon | tu, cu ghidaj. Nu activa „Confirm email” | email de recuperare primit | revii la setarea anterioară |
 | 6 | Push `release/v2-rc` + variabile Preview (etapele 1 și 2 din `PHONE-PREVIEW.md`) | agent, cu aprobare | build Vercel; cont real pe telefon: email, Google, recuperare, izolare între 2 conturi | ștergi deployment-ul |
 | 7 | Deciziile tale: fotografii, BebeAsist, text confidențialitate | tu | `photos/VISUAL-REVIEW-20261104.md`; `PRIVACY-AND-MONITORING.md` | — |
@@ -36,7 +36,7 @@ Fiecare pas cere aprobarea ta și se oprește dacă verificarea lui pică.
 
 ## Blocaje reale
 
-**Înaintea migrațiilor:** doar aprobarea ta și o oră cu trafic minim (`V2-MIGRATION-GO-NOGO.md`). **P0 înaintea conturilor V2 reale:** SMTP (65 de conturi numai cu Google nu au alternativă la buton, iar recuperarea nu e de încredere).
+**Migrațiile sunt aplicate (7 nov.).** **P0 înaintea conturilor V2 reale:** SMTP (65 de conturi numai cu Google nu au alternativă la buton, iar recuperarea nu e de încredere).
 
 **P1 (înainte de beta):**
 - testul pe iPhone real (WebKit verificat automat, Safari real nu);

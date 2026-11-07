@@ -1,6 +1,24 @@
 # Migrarea V2 în producție: GO / NO-GO
 
-Evaluare: 7 nov. 2026, 19:30 UTC. **Nimic nu se execută fără aprobarea ta separată.**
+## Rezultat: aplicată, 7 nov. 2026, 20:59–21:03 UTC
+
+**Cele 8 migrații sunt aplicate în producție, fără eroare.** V2 nu e publicat: `/v2` răspunde 404 pe site.
+
+| Verificare | Rezultat |
+|---|---|
+| Condiții | backup valid; copie criptată în OneDrive, recitită din cloud cu SHA-256 identic; fraza confirmată în managerul de parole (20:57 UTC); preflight 0 anomalii; V1 live pe `9c56e83`; 0 cereri în ultima oră și 0 sesiuni active |
+| Textul aplicat | MD5 normalizat al fiecărei migrații înregistrate în `supabase_migrations` identic cu fișierul local, 8/8 |
+| Postflight | **9/9**: tabelele V2, 11 politici restrictive, 4 chei de proprietate validate, constrângerile vechi înlocuite, `anon` fără acces la tabelele de familie, `user_login_summary` închis, funcțiile V2 doar pentru conturi, `handle_new_user` securizat, triggerul de înregistrare prezent |
+| Rânduri | identice înainte și după, în toate cele 12 tabele (435 de conturi, 440 de copii, 4.696 alimente încercate, 1.184 intrări în jurnal…); 0 profiluri fără cont; RLS activ pe toate tabelele publice |
+| Izolare, din exterior | cu cheia publică a site-ului: 9 tabele și `v2_load_state` răspund 401 `permission denied` |
+| V1 live, cont de test | dashboard; salvarea profilului („Salvat!”, valori neschimbate după reîncărcare); „Am gătit” rămâne marcat după reîncărcare; intrarea apare în jurnal; 0 erori în consolă |
+| Erori | Vercel: 0. Postgres: doar cele 10 refuzuri `42501` provocate de testul de izolare |
+| Advisors | 0 ERROR. Nou: WARN pentru `consume_bebeasist_quota` (`SECURITY DEFINER` intenționat, documentat în migrație) și INFO pentru `app_private.ai_usage` (tabel privat, fără politici, intenționat). Rămase din V1: `auth_rls_initplan` pe politicile V1, chei străine fără index, protecția parolelor compromise oprită |
+
+**Recuperare, dacă apare o problemă:** L1 `v2-disable.sql` (oprește funcțiile V2; V1 continuă), testat în repetiție. L3 restaurare țintită din backupul din 7 nov. (local și OneDrive). Nu există L2, intenționat.
+
+
+Evaluarea dinaintea migrării (7 nov., 19:30 UTC), păstrată pentru istoric:
 
 ## Verdict
 
