@@ -61,9 +61,10 @@ Blocările pe tabele durează sub o secundă: tabelele au sub 5.000 de rânduri.
 | Criptare | AES-256-GCM; fraza e generată automat și păstrată cu DPAPI (`passphrase.dpapi`), deci o poate citi doar acest cont Windows |
 
 **Limite:**
-- `pg_restore` a raportat o eroare non-date, din rolurile sau extensiile specifice Supabase, la fel ca pe baza sintetică. Numărul de rânduri e identic.
+- `pg_restore` a raportat o singură eroare: `schema "public" already exists` (`CREATE SCHEMA public`), fiindcă baza temporară avea deja schema. Nu afectează datele (12/12 tabele cu același număr de rânduri) și nici restaurarea țintită L3, care scrie doar date în tabele existente. Corectură: inițial am atribuit-o rolurilor Supabase.
 - Fișierele Storage sunt verificate prin recitire, nu reîncărcate undeva.
-- Dacă laptopul se pierde sau contul Windows se schimbă, backupul nu mai poate fi citit fără fraza copiată într-un manager de parole.
+- **Copie în afara laptopului (7 nov.):** cele 3 fișiere criptate sunt în OneDrive (`OneDrive\DiversiBebe-backups`); erau doar în cloud, iar după descărcarea înapoi au SHA-256 identic. Fraza nu e acolo.
+- **Fraza în managerul de parole:** neconfirmată încă (`scripts/backup-passphrase-check.ps1`). Fără ea, copia din OneDrive nu poate fi citită pe alt calculator. **Migrațiile nu pornesc până la confirmare.**
 
 **Siguranța față de producție:**
 - toate citirile au rulat în sesiuni read-only;

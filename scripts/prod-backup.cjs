@@ -138,7 +138,9 @@ function verify(file,restore){
       // Supabase-only roles/extensions do not exist locally: object errors are reported, row counts decide.
       const r=run('pg_restore.exe',['--no-owner','--no-privileges','--dbname',db,plain],env,{allowFail:true});
       const restored=counts(env,db),diff=TABLES.filter(t=>restored[t]!==manifest.rowCounts[t]);
-      console.log(`pg_restore: ${(r.err.match(/error:/g)||[]).length} non-data errors (Supabase-specific roles/extensions)`);
+      console.log(`pg_restore: ${(r.err.match(/error:/g)||[]).length} errors creating objects (e.g. a schema that already exists; row counts decide)`);
+      // Which objects failed, never row values: key details and quoted literals are cut.
+      if(process.argv.includes('--show-restore-errors'))for(const line of r.err.split(/\r?\n/).filter(l=>/error:|Command was:/.test(l)))console.log('  '+line.replace(/Key \(.*$/,'Key (…)').replace(/'[^']*'/g,"'…'").slice(0,200));
       if(diff.length)fail(`row counts differ after restore: ${diff.map(t=>`${t} ${restored[t]}≠${manifest.rowCounts[t]}`).join(', ')}`);
       console.log(`✔ restore check: all ${TABLES.length} tables restored with identical row counts`);
     }finally{run('psql.exe',['-X','-q','-d','postgres','-c',`DROP DATABASE IF EXISTS ${db} WITH (FORCE)`],env);}
