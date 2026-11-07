@@ -6,6 +6,8 @@
 #   ... -Rehearsal -BackupDir <folder> -StorageUrl <stub>   (local synthetic database, no prompt)
 param([switch]$Rehearsal, [string]$BackupDir = (Join-Path $env:USERPROFILE 'DiversiBebe-backups'), [string]$StorageUrl = 'https://smyimgvxlggggjeoajdo.supabase.co')
 $ErrorActionPreference = 'Continue'
+# node prints UTF-8: without this, the log shows the check marks as mojibake.
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
 $repo = Split-Path $PSScriptRoot -Parent
 Set-Location $repo
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH-mm-ssZ')

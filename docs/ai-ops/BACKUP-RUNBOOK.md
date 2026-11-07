@@ -14,7 +14,15 @@ Criptare AES-256-GCM. Folderul implicit este `%USERPROFILE%\DiversiBebe-backups`
 
 **Nu acoperă:** setările Auth, variabilele Vercel și funcțiile din alte scheme. Migrațiile V2 nu le schimbă.
 
-## Pași
+## Pași (recomandat: fereastra locală)
+
+```bash
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prod-backup-window.ps1
+```
+
+Fereastra cere doar parola bazei de date (nu se afișează și nu se salvează) și face singură restul: alege adresa printr-un `SELECT 1` read-only, face backupul, îl verifică și face restaurarea de test. Fraza de criptare e generată și păstrată cu DPAPI. Rezultatul, fără secrete, ajunge în `last-run.json`. Folosită pe 7 nov.: totul a trecut.
+
+### Manual
 
 Din `work/diversibebe`, în PowerShell. Datele de conectare sunt în Supabase → **Connect** → **Session pooler**.
 
@@ -56,7 +64,7 @@ Pe baza locală sintetică (5 nov.): backup, restaurare 12/12, fișiere 2/2. Sun
 
 În producție (citire): server PostgreSQL 17.6, compatibil cu `pg_dump` 17.11; rolul `postgres` poate citi toate tabelele din `public` și `auth`.
 
-**Backupul real nu a fost rulat încă.** Doar rularea ta dovedește că funcționează pe producție.
+**Rulat pe producție pe 7 nov., 19:17 UTC: trecut** (`V2-MIGRATION-GO-NOGO.md`).
 
 ## După backup
 
