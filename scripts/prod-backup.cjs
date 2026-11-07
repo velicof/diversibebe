@@ -41,13 +41,15 @@ function decrypt(src,dst,passphrase){
   d.setAuthTag(tag);try{fs.writeFileSync(dst,Buffer.concat([d.update(b.subarray(49)),d.final()]));}catch{fail('wrong passphrase or corrupted file');}
 }
 const sha256=f=>crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
-const counts=(env,db)=>Object.fromEntries(run('psql.exe',['-X','-At','-d',db,'-c',TABLES.map(t=>`SELECT '${t}',count(*) FROM ${t}`).join(' UNION ALL ')],env).out.trim().split(/\r?\n/).map(l=>{const [t,n]=l.split('|');return [t,Number(n)];}));
+// Queries to the source database: in a read-only session, so a mistake here cannot write.
+const readOnly=(env,sql,opts)=>run('psql.exe',['-X','-q','-At','-c','SET default_transaction_read_only = on','-c',sql],env,opts);
+const counts=(env,db)=>Object.fromEntries(run('psql.exe',['-X','-q','-At','-d',db,'-c','SET default_transaction_read_only = on','-c',TABLES.map(t=>`SELECT '${t}',count(*) FROM ${t}`).join(' UNION ALL ')],env).out.trim().split(/\r?\n/).map(l=>{const [t,n]=l.split('|');return [t,Number(n)];}));
 
 // pg_dump holds no Storage file: they are fetched one by one, and a single missing file fails the backup.
 async function storageBundle(env,dst,passphrase){
-  const exists=run('psql.exe',['-X','-At','-c',"SELECT to_regclass('storage.objects') IS NOT NULL"],env).out.trim()==='t';
+  const exists=readOnly(env,"SELECT to_regclass('storage.objects') IS NOT NULL").out.trim()==='t';
   if(!exists)return {objects:0,bytes:0,file:null,sha256:null};
-  const rows=JSON.parse(run('psql.exe',['-X','-At','-c',"SELECT coalesce(json_agg(json_build_object('bucket',o.bucket_id,'name',o.name,'public',b.public,'metadata',o.metadata) ORDER BY o.bucket_id,o.name),'[]') FROM storage.objects o JOIN storage.buckets b ON b.id=o.bucket_id"],env).out.trim());
+  const rows=JSON.parse(readOnly(env,"SELECT coalesce(json_agg(json_build_object('bucket',o.bucket_id,'name',o.name,'public',b.public,'metadata',o.metadata) ORDER BY o.bucket_id,o.name),'[]') FROM storage.objects o JOIN storage.buckets b ON b.id=o.bucket_id").out.trim());
   if(!rows.length)return {objects:0,bytes:0,file:null,sha256:null};
   const base=process.env.BACKUP_STORAGE_URL,token=process.env.BACKUP_STORAGE_KEY;
   if(!base)fail(`The project has ${rows.length} files in Storage: set BACKUP_STORAGE_URL (https://<project>.supabase.co).`);
@@ -78,6 +80,19 @@ function checkStorage(manifest,file,passphrase){
   }finally{fs.rmSync(plain,{force:true});}
 }
 
+function sourceEnv(){
+  const {PGHOST}=process.env;
+  return {...process.env,PGPORT:process.env.PGPORT||'5432',PGDATABASE:process.env.PGDATABASE||'postgres',PGSSLMODE:process.env.PGSSLMODE||(loopback(PGHOST)?'disable':'require'),PGCONNECT_TIMEOUT:'10',PGAPPNAME:'diversibebe-backup'};
+}
+// One read-only "SELECT 1", to choose the address before the backup. Prints a category, never the reply.
+function probe(){
+  if(!process.env.PGHOST||!process.env.PGUSER||!process.env.PGPASSWORD)fail('Set PGHOST, PGUSER and PGPASSWORD.');
+  const r=readOnly(sourceEnv(),'SELECT 1',{allowFail:true});
+  const why=r.status===0&&r.out.trim()==='1'?'ok':/tenant or user not found/i.test(r.err)?'wrong-address':/password authentication failed|authentication failed/i.test(r.err)?'wrong-password':/timeout|could not translate|refused|unreachable|Network/i.test(r.err)?'unreachable':'other';
+  console.log('probe: '+why);
+  if(why!=='ok')process.exitCode=1;
+}
+
 async function backup(){
   const {PGHOST,PGUSER,PGPASSWORD,BACKUP_PASSPHRASE}=process.env;
   if(!PGHOST||!PGUSER||!PGPASSWORD)fail('Set PGHOST, PGUSER and PGPASSWORD in this terminal (Supabase → Connect → Session pooler).');
@@ -85,14 +100,14 @@ async function backup(){
   const rel=path.relative(repo,dir);
   if(!rel.startsWith('..')&&!path.isAbsolute(rel))fail('BACKUP_DIR must be outside the repository (a backup is never committed).');
   key(BACKUP_PASSPHRASE,Buffer.alloc(16));fs.mkdirSync(dir,{recursive:true});
-  const env={...process.env,PGPORT:process.env.PGPORT||'5432',PGDATABASE:process.env.PGDATABASE||'postgres',PGSSLMODE:process.env.PGSSLMODE||(loopback(PGHOST)?'disable':'require'),PGCONNECT_TIMEOUT:'10',PGAPPNAME:'diversibebe-backup'};
+  const env=sourceEnv();
   const stamp=new Date().toISOString().replace(/[:.]/g,'-'),base=path.join(dir,`diversibebe-${stamp}`),plain=path.join(os.tmpdir(),`db-${crypto.randomUUID()}.dump`);
-  const server=run('psql.exe',['-X','-At','-c','SHOW server_version'],env).out.trim();
+  const server=readOnly(env,'SHOW server_version').out.trim();
   const before=counts(env,env.PGDATABASE);
   // Before the dump: a problem with Storage is found without an unencrypted copy ever being written.
   const storage=await storageBundle(env,base+'.storage.enc',BACKUP_PASSPHRASE);
   console.log(`Server ${server}. Dumping schemas public + auth (read-only)…`);
-  run('pg_dump.exe',['--format=custom','--compress=9','--schema=public','--schema=auth','--file',plain],env);
+  run('pg_dump.exe',['--format=custom','--compress=9','--lock-wait-timeout=10s','--schema=public','--schema=auth','--file',plain],env);
   try{
     encrypt(plain,base+'.dump.enc',BACKUP_PASSPHRASE);
     const manifest={storage,createdAt:new Date().toISOString(),source:{host:PGHOST,database:env.PGDATABASE,serverVersion:server},pgDump:run('pg_dump.exe',['--version'],env).out.trim(),schemas:['public','auth'],rowCounts:before,file:path.basename(base+'.dump.enc'),sha256:sha256(base+'.dump.enc'),encryption:'AES-256-GCM, scrypt(N=32768,r=8,p=1)'};
@@ -131,4 +146,4 @@ function verify(file,restore){
 }
 
 const i=process.argv.indexOf('--verify');
-Promise.resolve().then(()=>i>0?verify(path.resolve(process.argv[i+1]||''),process.argv.includes('--restore-local')):backup()).catch(e=>{console.error('✖ '+e.message);process.exitCode=1;});
+Promise.resolve().then(()=>process.argv.includes('--probe')?probe():i>0?verify(path.resolve(process.argv[i+1]||''),process.argv.includes('--restore-local')):backup()).catch(e=>{console.error('✖ '+e.message);process.exitCode=1;});
