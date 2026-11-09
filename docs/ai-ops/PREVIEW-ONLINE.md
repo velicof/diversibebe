@@ -26,7 +26,7 @@ Adresa, după push: `https://diversibebe-git-release-v2-rc-velicofs-projects.ver
 
 ## Stare
 
-**9 nov.: A, B și C sunt făcute, cu aprobarea ta.** Cele trei chei secrete au acum doar țintele Production și Development, iar cele 6 variabile sunt legate doar de branch-ul `release/v2-rc`. Branch-ul e pe GitHub, fără PR. Primul build a pornit fără variabile (Vercel le acceptă doar după ce branch-ul există), iar al doilea le include. Rămân de făcut de tine: Redirect URLs și SMTP.
+**9 nov.: A, B și C sunt făcute, cu aprobarea ta.** Cele trei chei secrete au acum doar țintele Production și Development, iar cele 6 variabile sunt legate doar de branch-ul `release/v2-rc`. Branch-ul e pe GitHub, fără PR. Primul build a pornit fără variabile (Vercel le acceptă doar după ce branch-ul există), iar al doilea le include. Rămân de făcut de tine: Redirect URLs și SMTP. **Verificat online (9 nov.):** fără sesiune Vercel, toate adresele răspund 302 spre autentificarea Vercel; cu sesiunea ta, `/v2` duce la `/acces-beta`, iar consola de revizie la `/acces-revizie`; V1 se încarcă fără erori; `www` rămâne neschimbat (`/v2` 404).
 
 ## Cere aprobarea ta (le face agentul, după „da”)
 
