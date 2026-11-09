@@ -23,7 +23,7 @@ export function SaveProgressInvite({ quietNote = false }: { quietNote?: boolean 
   const { cloud, announce } = usePreview();
   const [dismissed, setDismissed] = useState(wasDismissed);
   const slot = useRef<HTMLDivElement>(null);
-  const applicable = cloud.available && !cloud.connected && !cloud.loading;
+  const applicable = cloud.available && !cloud.connected && !cloud.loading && !cloud.reconnecting;
   const show = applicable && !dismissed;
   useEffect(() => {
     if (show) emitGrowth("account_prompt_viewed", {}, "save-invite");

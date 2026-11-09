@@ -72,6 +72,12 @@ export const accountCopy = {
   accountLink: pick("Contul meu", "Contul de test"),
   connectLink: pick("Conectează-te", "Conectează contul de test"),
   navConnect: "Conectează-te",
+  reconnecting: pick("Contul tău se încarcă…", "Contul de test se încarcă…"),
+  reconnectFailed: pick(
+    "Nu am putut încărca datele contului. Ești în continuare conectat; nimic nu se salvează pe acest dispozitiv între timp.",
+    "Nu am putut încărca datele contului de test. Ești în continuare conectat; nimic nu se salvează pe acest dispozitiv între timp.",
+  ),
+  notSavedReconnecting: "Contul se încarcă încă: modificarea nu a fost salvată. Încearcă din nou peste câteva secunde.",
   haveAccount: "Am deja cont",
   emailNote: pick("", "În această versiune de test merge doar o adresă inventată, de exemplu ana@example.test. Nu folosi emailul tău."),
   keepInAccount: pick("Conectează-te ca să le păstrezi în cont", "Conectează contul de test ca să le păstrezi"),

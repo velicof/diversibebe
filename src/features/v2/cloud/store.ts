@@ -21,6 +21,8 @@ type Snapshot = CloudState & {
   error: string | null;
   userId: string | null;
   email: string | null;
+  /** A stored account session whose data is not loaded yet, or failed to load: never shown as a visitor. */
+  reconnecting: boolean;
 };
 const initial: Snapshot = {
   journey: null,
@@ -35,6 +37,7 @@ const initial: Snapshot = {
   error: null,
   userId: null,
   email: null,
+  reconnecting: false,
 };
 let snapshot = initial,
   initialized = false,
@@ -78,6 +81,38 @@ async function flushShopping() {
   }
 }
 let signingOut = false, locallySignedOut = false, authenticating = false;
+// A temporary failure (network, timeout, server error) keeps the account: retried after 1, 3 and 8 s, then on
+// "online" or on request. Only a rejected session (401/403, no session) turns the page back into a visitor's.
+const RECONNECT_DELAYS = [1000, 3000, 8000];
+let reconnectAttempts = 0, reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+function stopReconnecting() {
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = null;
+  reconnectAttempts = 0;
+}
+function reconnect() {
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = null;
+  if (signingOut || locallySignedOut) return;
+  update({ loading: true, reconnecting: true });
+  void activate().then(connect, () => scheduleReconnect());
+}
+function scheduleReconnect() {
+  if (signingOut || locallySignedOut) return;
+  const delay = RECONNECT_DELAYS[reconnectAttempts];
+  if (delay === undefined) {
+    update({ loading: false, reconnecting: true, error: accountCopy.reconnectFailed });
+    return;
+  }
+  reconnectAttempts++;
+  const run = generation;
+  update({ loading: true, reconnecting: true, error: null });
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    if (run === generation) reconnect();
+  }, delay);
+}
 let failed: { owner: string; child: string | null; action: Action } | null =
   null;
 const listeners = new Set<() => void>();
@@ -95,6 +130,7 @@ function activate(): Promise<void> {
         locallySignedOut = true;
         generation++;
         failed = null;
+        stopReconnecting();
         update({ ...initial, available: true, loading: signingOut });
       } else if (!authenticating && ["SIGNED_IN", "TOKEN_REFRESHED"].includes(event))
         window.setTimeout(() => {
@@ -122,6 +158,7 @@ async function connect() {
     if (run !== generation) return;
     if (error && error.name !== "AuthSessionMissingError" && error.status !== 401 && error.status !== 403) throw error;
     if (error || !user) {
+      stopReconnecting();
       update({ ...initial, available: true });
       return;
     }
@@ -140,16 +177,16 @@ async function connect() {
         loading: false,
         saving: false,
         connected: true,
+        reconnecting: false,
         userId: user.id,
         email: user.email ?? null,
       });
+    if (run === generation) stopReconnecting();
   } catch {
-    if (run === generation)
-      update({
-        loading: false,
-        error:
-          "Nu am putut sincroniza datele. Verifică legătura și reîncearcă.",
-      });
+    if (run !== generation) return;
+    // Already showing the account's data: keep it and say so. Otherwise the account is still being loaded.
+    if (snapshot.connected) update({ loading: false, error: "Nu am putut sincroniza datele. Verifică legătura și reîncearcă." });
+    else scheduleReconnect();
   }
 }
 export const cloudStore = {
@@ -178,6 +215,12 @@ export const cloudStore = {
     window.addEventListener("focus", () => {
       if (snapshot.connected && !snapshot.saving) void connect();
     });
+    window.addEventListener("online", () => {
+      if (snapshot.reconnecting && !snapshot.connected) {
+        reconnectAttempts = 0;
+        reconnect();
+      }
+    });
     window.addEventListener("storage", (event) => {
       // Signed in from another tab: this one needs the client now.
       if (event.key === AUTH_STORAGE_KEY && event.newValue && !repository) void activate().then(connect, () => {});
@@ -185,15 +228,11 @@ export const cloudStore = {
         generation++;
         locallySignedOut = true;
         failed = null;
+        stopReconnecting();
         update({ ...initial, available: true });
       }
     });
-    if (hasStoredSession()) {
-      update({ loading: true });
-      void activate().then(connect, () =>
-        update({ loading: false, error: "Nu am putut sincroniza datele. Verifică legătura și reîncearcă." }),
-      );
-    }
+    if (hasStoredSession()) reconnect();
   },
   async login(email: string, password: string) {
     await activate();
@@ -275,6 +314,7 @@ export const cloudStore = {
     locallySignedOut = true;
     generation++;
     failed = null;
+    stopReconnecting();
     // Clear private views immediately even if the network is unavailable.
     update({ ...initial, available: true, loading: true });
     let serverConfirmed = false;
@@ -355,7 +395,10 @@ export const cloudStore = {
       failed.child === snapshot.selectedBabyId
     )
       this.dispatch(failed.action);
-    else void connect();
+    else if (snapshot.reconnecting && !snapshot.connected) {
+      reconnectAttempts = 0;
+      reconnect();
+    } else void connect();
   },
   async selectChild(id: string) {
     if (!repository || snapshot.saving) return;

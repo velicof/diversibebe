@@ -37,7 +37,7 @@ export function PreviewProvider({ children }: { children: React.ReactNode }) {
   );
   const snapshot = cloud.connected
     ? { state: cloud.state, ready: !cloud.loading, storageError: false }
-    : { ...local, ready: local.ready && !cloud.loading };
+    : { ...local, ready: local.ready && !cloud.loading && !cloud.reconnecting };
   const [message, setMessage] = useState("");
   const sessionStarted = useRef(false);
   const journeyOwner = useRef<string | null>(null);
@@ -87,6 +87,12 @@ export function PreviewProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(id);
   }, [message]);
   const dispatch = (action: Action) => {
+    const now = cloudStore.getSnapshot();
+    // An account that is still loading must not write a visitor's copy on this device.
+    if (now.reconnecting && !now.connected && action.type !== "event") {
+      setMessage(accountCopy.notSavedReconnecting);
+      return;
+    }
     if (
       cloudStore.getSnapshot().connected &&
       action.type !== "event" &&

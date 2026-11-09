@@ -58,7 +58,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const landing = pathname === "/v2";
   const marketing = landing || pathname === "/v2/onboarding" || pathname === "/v2/pregatire";
   // From the build setting, not the live state: the button is in the first HTML the phone receives.
-  const offerConnect = accountsEnabled && !cloud.connected && !cloud.loading && !pathname.startsWith("/v2/cont");
+  const offerConnect = accountsEnabled && !cloud.connected && !cloud.loading && !cloud.reconnecting && !pathname.startsWith("/v2/cont");
   return (
     <div className={`v2-shell ${landing ? "v2-shell-landing" : ""} ${marketing ? "v2-shell-marketing" : ""}`}>
       <a className="v2-skip" href="#v2-content">
@@ -130,7 +130,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {buildStamp && <code className="v2-build-stamp" data-v2-build={buildStamp}>build {buildStamp}</code>}
           </div>
         )}
-        {(!marketing || cloud.connected) && <SyncStatus />}
+        {(!marketing || cloud.connected || cloud.reconnecting) && <SyncStatus />}
         <GuestImportPrompt />
         <GrowthTelemetry />
         {storageError && (
@@ -291,7 +291,7 @@ export function RecipePhoto({
 /** A visitor's choices live only here: say so where they are saved, with the way to keep them. */
 export function DeviceOnlyNote() {
   const { cloud } = usePreview();
-  if (cloud.connected || !cloud.available) return null;
+  if (cloud.connected || !cloud.available || cloud.reconnecting) return null;
   return (
     <p className="v2-device-note">
       Salvat doar pe acest dispozitiv.{" "}

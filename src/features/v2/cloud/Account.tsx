@@ -77,6 +77,30 @@ export function Account() {
     journeyStore.claimHandoff(journeyScope(current.userId,current.selectedBabyId));
   }
   if (cloud.loading && !cloud.connected) return <LoadingState />;
+  // Signed in, but the account could not be loaded: offer to try again or to sign out, never the login form.
+  if (cloud.reconnecting && !cloud.connected)
+    return (
+      <>
+        <PageHeading eyebrow={accountCopy.connectedEyebrow} title={accountCopy.reconnecting}>
+          {accountCopy.reconnectFailed}
+        </PageHeading>
+        <div className="v2-action-row">
+          <button className="v2-button v2-button-primary" onClick={() => cloudStore.retry()}>
+            Reîncearcă
+          </button>
+          <button
+            className="v2-button v2-button-secondary"
+            onClick={async () => {
+              const serverConfirmed = await cloudStore.logout();
+              announce(serverConfirmed ? accountCopy.signedOut : "Ai ieșit pe acest dispozitiv. Revocarea sesiunii pe server nu a putut fi confirmată.");
+            }}
+          >
+            <LogOut size={16} />
+            Deconectare
+          </button>
+        </div>
+      </>
+    );
   if (cloud.connected)
     return (
       <>

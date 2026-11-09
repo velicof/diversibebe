@@ -27,7 +27,9 @@ export function SyncStatus() {
           ? cloud.saving
             ? accountCopy.saving
             : accountCopy.synced
-          : "Explorezi fără cont. Alegerile rămân pe acest dispozitiv."}
+          : cloud.reconnecting
+            ? accountCopy.reconnecting
+            : "Explorezi fără cont. Alegerile rămân pe acest dispozitiv."}
       </span>
       {cloud.connected ? (
         <>
@@ -41,7 +43,7 @@ export function SyncStatus() {
           </button>
           <Link prefetch={false} href="/v2/cont">{accountCopy.accountLink}</Link>
         </>
-      ) : onAccountPage ? null : (
+      ) : onAccountPage || cloud.reconnecting ? null : (
         <Link prefetch={false} href="/v2/cont">
           {accountCopy.connectLink} <ArrowRight size={14} />
         </Link>
