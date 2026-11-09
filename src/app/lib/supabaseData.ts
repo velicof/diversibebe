@@ -45,8 +45,8 @@ export async function getCurrentUserId(): Promise<string | null> {
 }
 
 export async function getCurrentBaby(): Promise<DbBaby | null> {
-
   const userId = await getCurrentUserId();
+  if (cachedBaby && cachedBaby.user_id === userId) return cachedBaby;
   if (!userId) return null;
   const { data, error } = await supabase
     .from("babies")
@@ -215,7 +215,7 @@ export async function upsertTriedFood(input: {
     .maybeSingle();
 
   // Plain insert after the existence check: V2 keeps uniqueness per child via partial
-  // indexes, which PostgREST `onConflict` cannot target. Works before and after the V2 migrations.
+  // indexes, which PostgREST `onConflict` cannot target.
   if (!existing?.id) {
     await supabase.from("tried_foods").insert({
       user_id: userId,
@@ -321,9 +321,9 @@ export async function markRecipeCooked(
   const userId = await getCurrentUserId();
   if (!userId) return false;
 
-  // Plain table insert, not the V2 RPC: it works before the V2 migrations, after them, and after the
-  // operational rollback (v2-disable.sql revokes the V2 RPCs). An existing legacy row surfaces as a
-  // unique violation (already cooked); V2 confirmation rows are never touched.
+  // The production table has no `notes` column, and V2 replaces the (user_id, recipe_id)
+  // constraint with a partial index on legacy rows. Insert only: an existing legacy row
+  // surfaces as a unique violation (already cooked), and V2 confirmation rows are never touched.
   const { error } = await supabase
     .from("cooked_recipes")
     .insert({ user_id: userId, recipe_id: recipeId, cooked_at: new Date().toISOString() });
