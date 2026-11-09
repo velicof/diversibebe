@@ -5,7 +5,7 @@ import { SOURCES } from "./safety";
 
 export type Correction = {
   recipeId: string;
-  field: "ingredients" | "steps";
+  field: "ingredients" | "steps" | "name";
   before: string;
   /** Empty string removes the line. */
   after: string;
@@ -35,6 +35,14 @@ export const corrections: Correction[] = [
   c("orez-pui-legume-asiatic", "ingredients", "1 linguriță sos de soia fără sare", "", "Sosul de soia are mult sodiu chiar în varianta „redusă”; preparatul rămâne aromat prin ceapă verde și ulei de susan.", SOURCES.nhsAvoid),
   c("orez-pui-legume-asiatic", "steps", "Stropește cu sos de soia. Servește călduț.", "Servește călduț.", "Sosul de soia are mult sodiu.", SOURCES.nhsAvoid),
   c("piure-avocado-banana-chia-10", "steps", "Adaugă semințele de chia și sucul de lămâie.", "Adaugă semințele de chia și sucul de lămâie, apoi lasă 10 minute să se hidrateze chia.", "Chia uscată se umflă; se servește hidratată.", SOURCES.cdcChoking),
+  // The library's rule is a fully cooked egg (white and yolk firm). These two recipes relied on residual heat
+  // and on a runny yolk: rewritten to the same rule, as an editorial correction, not a medical review.
+  c("paste-mic-dejun-branza-ou", "steps", "Pune pastele calde în castron.", "", "Oul se gătește pe foc, nu doar cu căldura pastelor.", SOURCES.nhsAvoid),
+  c("paste-mic-dejun-branza-ou", "steps", "Adaugă amestecul de ou și brânză — căldura gătește oul.", "Pune pastele înapoi pe foc mic, adaugă amestecul de ou și brânză și amestecă 2–3 minute, până când oul se închegă complet și nu mai rămâne lichid.", "Căldura pastelor nu garantează un ou gătit complet.", SOURCES.nhsAvoid),
+  c("ou-fiert-soldati-toast", "name", "Ou fiert moale cu „soldăței\" de toast", "Ou fiert tare cu „soldăței\" de toast", "Oul se servește gătit complet, nu moale.", SOURCES.nhsAvoid),
+  c("ou-fiert-soldati-toast", "steps", "Fierbe oul 7-8 minute (gălbenușul să fie aproape fiert complet).", "Fierbe oul 10–12 minute, până când albușul și gălbenușul sunt complet tari.", "Gălbenușul „aproape fiert” nu e un ou gătit complet.", SOURCES.nhsAvoid),
+  c("ou-fiert-soldati-toast", "steps", "Pune oul într-un suport, decapitează-l.", "Curăță oul și taie-l în sferturi sau zdrobește-l cu furculița.", "Fără gălbenuș lichid în care să se înmoaie pâinea.", SOURCES.nhsAvoid),
+  c("ou-fiert-soldati-toast", "steps", "Bebelușul înmoaie soldățeii în ou!", "Servește bețișoarele de pâine alături de ou; copilul le poate ține singur.", "Fără gălbenuș lichid în care să se înmoaie pâinea.", SOURCES.nhsAvoid),
 ];
 
 /**

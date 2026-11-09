@@ -18,7 +18,9 @@ test('all 291 legacy recipes are inventoried, by meal, and none disappeared',()=
   for(const source of RECIPES){
     const r=findAnyRecipe(source.id);
     assert.ok(r,`${source.id} lost`);
-    assert.equal(r.name,source.name);assert.equal(r.mealType,source.mealType);assert.equal(r.age,source.age);assert.equal(r.time,source.time);
+    // A name changes only through a logged editorial correction (reason + public source).
+    const renamed=corrections.find(c=>c.field==='name'&&c.before===source.name&&(c.recipeId===r.id||c.recipeId===source.id));
+    assert.equal(r.name,renamed?renamed.after:source.name);assert.equal(r.mealType,source.mealType);assert.equal(r.age,source.age);assert.equal(r.time,source.time);
   }
   assert.equal(new Set(catalog.map(r=>r.id)).size,291,'stable unique V2 ids');
 });

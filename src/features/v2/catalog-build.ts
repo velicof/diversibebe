@@ -17,14 +17,16 @@ const STAGES = [6, 7, 8, 10, 12];
 
 function applyCorrections(recipe: RecipeCatalogItem, id: string) {
   const applied: Correction[] = [];
-  const edit = (field: Correction["field"]) =>
-    recipe[field].flatMap((line) => {
+  const edit = (field: "ingredients" | "steps") =>
+    recipe[field].flatMap((line: string) => {
       const fix = corrections.find((x) => (x.recipeId === id || x.recipeId === recipe.id) && x.field === field && x.before === line);
       if (!fix) return [line];
       applied.push(fix);
       return fix.after ? [fix.after] : [];
     });
-  return { ingredients: edit("ingredients"), steps: edit("steps"), applied };
+  const nameFix = corrections.find((x) => (x.recipeId === id || x.recipeId === recipe.id) && x.field === "name" && x.before === recipe.name);
+  if (nameFix) applied.push(nameFix);
+  return { name: nameFix ? nameFix.after : recipe.name, ingredients: edit("ingredients"), steps: edit("steps"), applied };
 }
 
 const imageFor = (recipe: RecipeCatalogItem) =>
@@ -35,7 +37,7 @@ export function buildRecipes(): StoredRecipe[] {
     const id = legacyToV2[source.id] ?? source.id;
     const fixed = applyCorrections(source, id);
     const allergenInfo = canonicalAllergens(source.allergens, fixed.ingredients);
-    const corrected = { ...source, ingredients: fixed.ingredients, steps: fixed.steps, allergens: allergenInfo.allergens };
+    const corrected = { ...source, name: fixed.name, ingredients: fixed.ingredients, steps: fixed.steps, allergens: allergenInfo.allergens };
     const minimumMonths = Number(source.age.match(/\d+/)?.[0] ?? 99);
     const safetyFlags = assessSafety(corrected, minimumMonths);
     const blocking = safetyFlags.filter((f) => f.severity === "blocking").length;

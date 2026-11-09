@@ -126,7 +126,7 @@ export function assessSafety(recipe: RecipeCatalogItem, minimumMonths: number): 
   for (const line of ing.split("\n"))
     if (round.test(line) && !/ulei/.test(line) && !cut.test(line) && !bakedIn && !cut.test(steps.filter((s) => round.test(s)).join(" ")))
       block("small-round", "Fructe/legume mici și rotunde servite întregi (struguri, roșii cherry, afine).", SOURCES.nhsAvoid);
-  if (has(all, /\bochi(?:uri)?\b|ou moale|posat|galbenus moale|galbenus lichid/) && !has(all, /bine facut|galbenus(?:ul)? tare|fierte tari/))
+  if (has(all, /\bochi(?:uri)?\b|ou moale|ou(?:a|le)? fiert(?:e)? moale|posat|galbenus moale|galbenus lichid|aproape fiert|caldura (?:gateste|coace) oul|inmoaie [a-z ]*in ou\b/) && !has(all, /bine facut|galbenus(?:ul)? tare|fierte tari/))
     block("runny-egg", "Ou posibil negătit complet.", SOURCES.nhsAvoid);
   if (has(all, /crutoane/)) block("hard-croutons", "Crutoane tari (risc de înec).", SOURCES.cdcChoking);
   if (has(ing, /\bsuc(?:ul)? de (?:mere|portocal|struguri|fructe)\b/) && !has(all, /fierbe|gateste|sos/))
