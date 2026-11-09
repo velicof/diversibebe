@@ -5,8 +5,9 @@ const nextConfig: NextConfig = {
   // Vercel reads the build from .next. Locally, V2_DIST_DIR lets a second build (e.g. performance comparison)
   // run beside the default preview.
   distDir: process.env.VERCEL ? ".next" : process.env.V2_DIST_DIR || ".next-v2",
-  // As on main: photos are pre-generated responsive WebP, so Vercel's paid image optimisation is never used.
-  images: { unoptimized: true },
+  // No image-optimisation service (paid beyond the free quota): static V2 images have pre-generated widths;
+  // every other image, V1's included, is served as it is, as with main's unoptimized setting.
+  images: { loader: "custom", loaderFile: "./src/image-loader.ts" },
   // Attributing main-thread time to source modules in performance analysis; off in every normal build.
   productionBrowserSourceMaps: process.env.V2_SOURCE_MAPS === "1",
   experimental: { cpus: 1, webpackBuildWorker: false, webpackMemoryOptimizations: true },

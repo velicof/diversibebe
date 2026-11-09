@@ -1,0 +1,8 @@
+{
+  "STATIC_VARIANTS": {
+    "/v2/food-oats.webp": [400, 800, 1100],
+    "/v2/food-soup.webp": [400, 800, 1200],
+    "/v2/generated-piure-dovlecel.webp": [400, 800],
+    "/v2/generated-piure-morcov-cartof.webp": [400, 800]
+  }
+}
