@@ -2,8 +2,11 @@ import type { NextConfig } from "next";
 import { PRIVATE_ROUTE_PREFIXES } from "./src/app/lib/site";
 
 const nextConfig: NextConfig = {
-  // V2_DIST_DIR lets a second build (e.g. performance comparison) run beside the default preview.
-  distDir: process.env.V2_DIST_DIR || ".next-v2",
+  // Vercel reads the build from .next. Locally, V2_DIST_DIR lets a second build (e.g. performance comparison)
+  // run beside the default preview.
+  distDir: process.env.VERCEL ? ".next" : process.env.V2_DIST_DIR || ".next-v2",
+  // As on main: photos are pre-generated responsive WebP, so Vercel's paid image optimisation is never used.
+  images: { unoptimized: true },
   // Attributing main-thread time to source modules in performance analysis; off in every normal build.
   productionBrowserSourceMaps: process.env.V2_SOURCE_MAPS === "1",
   experimental: { cpus: 1, webpackBuildWorker: false, webpackMemoryOptimizations: true },
