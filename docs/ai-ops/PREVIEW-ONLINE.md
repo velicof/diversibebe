@@ -24,6 +24,10 @@ Adresa, după push: `https://diversibebe-git-release-v2-rc-velicofs-projects.ver
 - **De reparat înainte:** `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY` și `RESEND_API_KEY` sunt setate și pentru ținta Preview, iar Vercel le marchează „readable-secret”. Niciun cod din branch nu le folosește (`supabaseAdmin` nu e importat nicăieri), dar un Preview le-ar avea pe server. Pasul C de mai jos le scoate din Preview; Production rămâne neschimbat.
 - **Verificarea de după push:** cu sesiunea ta Vercel în Chrome. Nu folosesc linkurile de partajare Vercel, care ar deschide Preview-ul oricui are linkul, timp de 23 de ore.
 
+## Stare
+
+**9 nov.: A, B și C sunt făcute, cu aprobarea ta.** Cele trei chei secrete au acum doar țintele Production și Development, iar cele 6 variabile sunt legate doar de branch-ul `release/v2-rc`. Branch-ul e pe GitHub, fără PR. Primul build a pornit fără variabile (Vercel le acceptă doar după ce branch-ul există), iar al doilea le include. Rămân de făcut de tine: Redirect URLs și SMTP.
+
 ## Cere aprobarea ta (le face agentul, după „da”)
 
 | # | Acțiune | Efect | Înapoi |
