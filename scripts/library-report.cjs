@@ -93,7 +93,7 @@ const log = [
   '',
   '| Rețetă | Câmp | Înainte | După | Motiv | Sursă |',
   '|---|---|---|---|---|---|',
-  ...catalog.flatMap((r) => r.corrections.map((c) => `| \`${r.id}\` | ${c.field === 'ingredients' ? 'ingredient' : 'pas'} | ${c.before} | ${c.after || '*(eliminat)*'} | ${c.reason} | ${c.source} |`)),
+  ...catalog.flatMap((r) => r.corrections.map((c) => `| \`${r.id}\` | ${c.field === 'ingredients' ? 'ingredient' : c.field === 'name' ? 'nume' : 'pas'} | ${c.before} | ${c.after || '*(eliminat)*'} | ${c.reason} | ${c.source} |`)),
   '',
   '## Alergeni adăugați din ingrediente',
   '',

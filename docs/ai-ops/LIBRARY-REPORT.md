@@ -1,18 +1,18 @@
 # Biblioteca DiversiBebe 2.0 — raport
 
-Generat de `scripts/library-report.cjs` din catalogul folosit de aplicație (2026-11-03). Sursa: `src/app/lib/recipesDatabase.ts` (neschimbată); corecturile V2: `src/features/v2/content/corrections.ts`; regulile: `content/safety.ts`.
+Generat de `scripts/library-report.cjs` din catalogul folosit de aplicație (2026-11-09). Sursa: `src/app/lib/recipesDatabase.ts` (neschimbată); corecturile V2: `src/features/v2/content/corrections.ts`; regulile: `content/safety.ts`.
 
 ## Cifre
 
 | | Rețete |
 |---|---|
 | 1. Importate (toate ID-urile vechi, inventariate) | **291** (Mic dejun 74, Prânz 121, Cină 71, Gustare 25) |
-| 2. Corectate editorial | **32** — 13 cu modificări de conținut (siguranță/claritate) + 19 doar cu alergeni completați |
-| 3. Fără probleme identificate | **257** |
+| 2. Corectate editorial | **34** — 15 cu modificări de conținut (siguranță/claritate) + 19 doar cu alergeni completați |
+| 3. Fără probleme identificate | **255** |
 | 4. Necesită revizie de specialitate (nepublicate) | **2** |
 | 5. Gata pentru publicare editorială | **289** (Mic dejun 74, Prânz 119, Cină 71, Gustare 25) |
 | Aprobate de specialist (aviz semnat) | **0** — nicio aprobare medicală nu a fost atribuită |
-| 6. Fotografii | 0 aprobate · 8 ilustrații vechi generice · 12 pilot cerute · 271 lipsă (prompt pregătit) |
+| 6. Fotografii | 0 aprobate · 8 ilustrații vechi generice · 0 pilot cerute · 271 lipsă (prompt pregătit) |
 
 „Publicată” înseamnă: trece verificarea editorială și regulile de siguranță. **Nu înseamnă aviz medical.** Interfața spune asta explicit pe fiecare rețetă.
 
@@ -23,10 +23,12 @@ Auditul anterior raporta 77 de semnale (alergeni/sare) în lista scurtă: semnal
 - **Sare, zahăr, miere adăugate: 0.** Toate mențiunile de sare sunt „fără sare”; nu există miere sau zahăr adăugat.
 - **Struguri, popcorn, mezeluri, lapte de orez, pește cu mercur ridicat: 0.**
 - Laptele de vacă apare sub 12 luni doar la gătit (permis); nucile apar aproape mereu măcinate sau ca unt fin.
-- **Probleme reale de siguranță în textul vechi: 11 rețete**, toate corectate:
+- **Probleme reale de siguranță în textul vechi: 13 rețete**, toate corectate:
 
 | Rețetă | Problemă (înainte) |
 |---|---|
+| `paste-mic-dejun-branza-ou` | Ou posibil negătit complet. |
+| `ou-fiert-soldati-toast` | Ou posibil negătit complet. |
 | `cereale-casa-nuci-fructe-10` | Semințe întregi de floarea-soarelui sau dovleac (risc de înec). |
 | `clatite-clasice-fructe-12` | Fructe/legume mici și rotunde servite întregi (struguri, roșii cherry, afine). |
 | `paine-perdue-fructe-12` | Fructe/legume mici și rotunde servite întregi (struguri, roșii cherry, afine). |
@@ -64,8 +66,8 @@ Rămân vizibile pentru fondator și specialist în `/v2/revizie`, cu motivul af
 
 | Status | Rețete | Afișată familiilor |
 |---|---|---|
-| Importată, fără probleme identificate (`imported`) | 257 | da |
-| Corectată editorial (`editorially_corrected`) | 32 | da |
+| Fără probleme la verificările automate (`imported`) | 255 | da |
+| Corectată editorial (`editorially_corrected`) | 34 | da |
 | Necesită verificare de specialitate (`needs_specialist_review`) | 2 | nu |
 | Verificată și aprobată de specialist (`specialist_approved`) | 0 | da |
 

@@ -1,6 +1,6 @@
 # Release readiness — DiversiBebe 2.0
 
-Evaluare: 5 nov. 2026 · branch `release/v2-rc` · verificări automate: `node scripts/release-check.cjs` · jurnale: `outputs/release-2026-11-04/` și `outputs/release-2026-11-05/`.
+Evaluare: **9 nov. 2026** · branch `release/v2-rc` (conține `main`, nepublicat) · jurnale: `outputs/release-2026-11-09/` · ghidul Preview-ului: `PREVIEW-ONLINE.md`.
 
 Rețetele nu sunt validate medical: trec prin verificări automate și corecturi notate, fără revizie de specialitate.
 
@@ -9,7 +9,7 @@ Rețetele nu sunt validate medical: trec prin verificări automate și corecturi
 | Etapă | Decizie | Ce lipsește (doar blocaje reale) |
 |---|---|---|
 | **1. Test privat pe telefon, mediu local izolat, cu cont de test** | **GO** după un pas al tău | Testul tău pe iPhone (`PHONE-PREVIEW.md`). Agentul a rulat WebKit pe Windows, nu Safari real |
-| **2. Testare cu contul fondatorului** (Preview, proiectul comun) | **NO-GO** | backup verificat · migrații + postflight · Auth (Redirect URLs, SMTP, șablon) · push `release/v2-rc` + variabile Preview |
+| **2. Testare cu contul fondatorului** (Preview online, proiectul comun) | **GO după aprobările tale** | variabile Preview + push (aprobare) · Redirect URLs (tu). SMTP doar pentru recuperarea parolei |
 | **3. Beta restrânsă** (familii invitate, cod de invitație) | **NO-GO** | etapa 2 trecută · deciziile despre fotografii și BebeAsist · mențiunea din politica de confidențialitate · merge `release/v2-rc` → `main` |
 | **4. Lansare publică** | **NO-GO** | beta fără incidente · decizia despre revizia de specialitate · fotografii pentru rețetele principale · confirmarea performanței pe conturi reale |
 
@@ -25,8 +25,8 @@ Fiecare pas cere aprobarea ta și se oprește dacă verificarea lui pică.
 | 2 | **Backup** (`BACKUP-RUNBOOK.md`): baza de date și fișierele din Storage. **Făcut 7 nov., 19:17 UTC**, trecut | agent; parola tastată de tine într-o fereastră locală | „Storage: 7/7” și „restore check: all 12 tables” | — |
 | 3 | Preflight (`v2-preflight.sql`, read-only). **7 nov.: 0 anomalii**; se reia imediat înaintea migrațiilor | agent | 5 × 0 anomalii; numărul de rânduri notat | — |
 | 4 | **Făcut 7 nov., 21:03 UTC: postflight 9/9, rânduri identice, V1 verificat.** **Cele 8 migrații** (`supabase/v2-release.cjs`), în ordine, la oră cu trafic minim | agent, cu aprobare | postflight 9/9, același număr de rânduri, advisors fără ERROR, V1 smoke | L1 `v2-disable.sql` (testat); L3 backup |
-| 5 | **Auth** (`AUTH-SETUP.md`): Redirect URLs, SMTP Resend, șablon | tu, cu ghidaj. Nu activa „Confirm email” | email de recuperare primit | revii la setarea anterioară |
-| 6 | Push `release/v2-rc` + variabile Preview (etapele 1 și 2 din `PHONE-PREVIEW.md`) | agent, cu aprobare | build Vercel; cont real pe telefon: email, Google, recuperare, izolare între 2 conturi | ștergi deployment-ul |
+| 5 | **Auth** (`PREVIEW-ONLINE.md`, `AUTH-SETUP.md`): Redirect URLs, SMTP Resend, șablon. Stare 9 nov. (setări publice): email și Google active, „Confirm email” oprit, înregistrare deschisă; Redirect URLs și SMTP nu se pot citi automat | tu, cu ghidaj. Nu activa „Confirm email” | email de recuperare primit | revii la setarea anterioară |
+| 6 | Push `release/v2-rc` + variabile Preview (`PREVIEW-ONLINE.md`). **Pregătit 9 nov.:** branch sincronizat cu `main`, build verificat local cu mediul Preview, coduri generate | agent, cu aprobare | build Vercel; cont real pe telefon: email, Google, recuperare, izolare între 2 conturi | ștergi deployment-ul |
 | 7 | Deciziile tale: fotografii, BebeAsist, text confidențialitate | tu | `photos/VISUAL-REVIEW-20261104.md`; `PRIVACY-AND-MONITORING.md` | — |
 | 8 | `node scripts/release-check.cjs main` → merge `release/v2-rc` → `main`; `/v2` rămâne ascuns după cod | agent, cu aprobare | canary 48 h cu contul tău (`MIGRATION-V1-V2.md` §5); erori runtime 0; V1 neafectat | Instant Rollback; L1 |
 | 9 | Beta: 10–20 familii, coduri `scripts/invite-codes.cjs` | tu | `v2-product-metrics.sql`; zero incidente, 1–2 săpt. | scoți hash-urile |
@@ -36,11 +36,16 @@ Fiecare pas cere aprobarea ta și se oprește dacă verificarea lui pică.
 
 ## Blocaje reale
 
-**Migrațiile sunt aplicate (7 nov.).** **P0 înaintea conturilor V2 reale:** SMTP (65 de conturi numai cu Google nu au alternativă la buton, iar recuperarea nu e de încredere).
+**Migrațiile sunt aplicate (7 nov.).**
+
+**Pentru Preview-ul cu contul tău:** aprobarea variabilelor și a push-ului; Redirect URLs. **Recomandat înainte:** scoate `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY` și `RESEND_API_KEY` din ținta Preview (niciun cod nu le folosește; Vercel le marchează „readable-secret”) și marchează-le Sensitive.
+
+**P0 înaintea beta:** SMTP (65 de conturi numai cu Google nu au alternativă la buton, iar recuperarea nu e de încredere).
 
 **P1 (înainte de beta):**
 - testul pe iPhone real (WebKit verificat automat, Safari real nu);
-- un cont cu sesiune salvată, la o eroare trecătoare de sincronizare, vede „Explorezi fără cont” și poate salva doar local: mesaj greșit, de reparat împreună cu o reîncercare automată;
+- ~~eroarea trecătoare de sincronizare prezenta contul ca vizitator~~: **reparat 9 nov.** (reîncercare la 1, 3, 8 s și la revenirea rețelei; nimic salvat local între timp; `reconnect.spec` 3/3);
+- V1 afișează încă textele vechi ale celor două rețete cu ou (fiert moale; oul gătit de căldura pastelor). V2 le are corectate; în V1, corectura cere un PR separat;
 - măsurarea conversiei vizitator → cont: evenimentele vizitatorului rămân pe dispozitiv, deci rata nu se vede online. Un eveniment agregat ar cere o migrație și o decizie;
 - deciziile despre fotografii (3 de regenerat, 5 versiuni de ales);
 - mențiunea din politica de confidențialitate;
@@ -53,20 +58,20 @@ Fiecare pas cere aprobarea ta și se oprește dacă verificarea lui pică.
 - „Parolă uitată” din V1;
 - `login_events` din V1 crește la fiecare încărcare completă de pagină, nu doar la autentificare (9 rânduri într-un test de câteva minute), deci numărul de conectări e umflat. Problemă mai veche, în `src/lib/useUser.ts`, neatinsă de PR #2;
 - widgetul de chat V1 acoperă mijlocul butonului de salvare a profilului pe telefon (partea stângă rămâne activă);
-- secretele Vercel marcate Sensitive; lint-ul moștenit din V1 (46 de erori).
+- lint-ul moștenit din V1 (46 de erori).
 
 ## Performanță (laborator: cache rece, 4G 1,6 Mbps / 150 ms, CPU 4×, 390×844)
 
-Ținte: LCP < 2,5 s, TBT < 200 ms, CLS < 0,1. Mediane din 3 rulări (`outputs/release-2026-11-04/perf/`), vizitator.
+Ținte: LCP < 2,5 s, TBT < 200 ms, CLS < 0,1. Vizitator. Coloana „acum”: **9 nov.**, 2–3 rulări (`outputs/release-2026-11-09/perf-*.json`).
 
 | Pagină | LCP inițial → acum | TBT inițial → acum | CLS | JS |
 |---|---|---|---|---|
-| Acasă | 1,4 → **1,4 s** | 518 → **161 ms** | 0,012 | 313 → 257 KB |
-| Bibliotecă | 3,3 → **2,4 s** | 697 → **122 ms** | 0 | 313 → 251 KB |
-| Rețetă cu fotografie | 3,4 → **1,3 s** | 561 → **189 ms** | 0 | 313 → 251 KB |
-| Plan | 3,1 → **0,9 s** | 586 → **129 ms** | 0 | 313 → 250 KB |
+| Acasă | 1,4 → **1,4 s** | 518 → **155–169 ms** | 0,013 | 313 → 259 KB; imagini 87 KB |
+| Bibliotecă | 3,3 → **2,4 s** | 697 → **123–130 ms** | 0 | 313 → 253 KB |
+| Rețetă cu fotografie | 3,4 → **1,3 s** | 561 → **186–229 ms** | 0 | 313 → 253 KB |
+| Plan | 3,1 → **0,8–0,9 s** | 586 → **128–147 ms** | 0 | 313 → 252 KB |
 
-Transfer total pe bibliotecă: 474 → 327 KB. Navigare în aplicație: bibliotecă → rețetă 150–380 ms, schimbare de tab ~110 ms.
+Rețeta cu fotografie depășește o dată ținta TBT (229 ms), dar e sub ea în celelalte rulări. Imaginile statice au variante generate local (`scripts/static-image-variants.cjs`), fără serviciul plătit de optimizare Vercel. Transfer total pe bibliotecă: 474 → 329 KB. Navigare în aplicație: bibliotecă → rețetă 150–380 ms, schimbare de tab ~110 ms.
 
 **Cu cont** (GoTrue local): revenire, cu JS în cache: bibliotecă ~2,1 s, plan ~0,3 s. Încărcare rece: bibliotecă ~4,5 s, plan ~0,7 s. TBT ≤ 139 ms, CLS 0,007. Pe proiectul real trebuie remăsurat.
 
@@ -91,20 +96,20 @@ Ce a schimbat cifrele (dovezi: profil CPU atribuit prin source maps, `V2_SOURCE_
 | # | Condiție | Stare | Dovadă |
 |---|---|---|---|
 | G1 | Fără vulnerabilități critice | ✅ | `npm audit` 0; ruta de email și redirectul din callback corectate, live din 5 nov. (`/api/send-verification` răspunde 410) |
-| G2 | Izolare între familii | ✅ local | `scripts/access-attack.cjs` 46/46 pe adresa privată: anonim, fără credențiale, token fals, `alg none`, service role fals, token expirat, altă familie. Catalog: rolul anonim nu are niciun drept pe tabele sau funcții. Se repetă pe proiectul real după migrații |
-| G3 | Fluxuri E2E | ✅ local · ⏳ cont pe iPhone real | E2E 128/128 (5 nov.), inclusiv `guest.spec` și `guest-account.spec`; `phone.spec` 3/3 pe WebKit și pe Chromium, prin adresa reală. Fondatorul a folosit V2 pe iPhone real, ca vizitator. Instabilitate deschisă: `cloud.spec` a picat o dată („Nu am putut sincroniza datele”), apoi a trecut de 27 de ori din 27, inclusiv sub CPU plin. Cauză negăsită: în acel moment, `/user` a răspuns în 5,8 s, nu în ~0,5 s. Testele păstrează acum urma de rețea la eșec |
-| G4 | Backend online | ⏳ pasul 6 | — |
-| G5 | Migrații și rollback | ✅ local | repetiție pe stack real 38/38, 8 migrații |
-| G6 | Conținut | ✅ automat · ⏳ specialitate | 289 publicabile, 2 în coada de specialitate, 0 aprobări medicale |
+| G2 | Izolare între familii | ✅ local + producție | `access-attack` 46/46 (9 nov., local). Producție, după migrații: cu cheia publică, 9 tabele și funcția V2 răspund 401; contul de test vede 0 copii din alte familii; postflight 9/9 |
+| G3 | Fluxuri E2E | ✅ local · ⏳ cont pe iPhone real | **9 nov.: E2E 131 trecute, 3 sărite** (cele de telefon, doar cu adresa Tailscale); unit 131/131; `reconnect.spec` 3/3. `cloud.spec`: un eșec pe 5 nov., nereprodus de atunci; urma de rețea se păstrează la eșec |
+| G4 | Backend online | ✅ migrații · ⏳ Preview | producție migrată 7 nov.; Preview pregătit (`PREVIEW-ONLINE.md`), nepublicat |
+| G5 | Migrații și rollback | ✅ producție | aplicate 7 nov., text identic cu fișierele (MD5 8/8), postflight 9/9, rânduri identice; repetiție 38/38 cu rollback L1 |
+| G6 | Conținut | ✅ automat · ⏳ specialitate | 289 publicabile, 2 în coada de specialitate, 0 aprobări medicale. 9 nov.: cele 2 rețete cu ou corectate editorial (ou gătit complet), regula automată extinsă (`editorial-egg.test`) |
 | G7 | Afirmații | ✅ live pe V1 | testimonialul și afirmațiile fără dovezi eliminate; gardă în `library.test`; V2 descrie verificările ca automate |
 | G8 | Telefon | ⏳ pasul 0 | `PHONE-PREVIEW.md` |
 | G9 | Analytics și confidențialitate | ✅ cod · ⏳ text public | `monetization.test`; `PRIVACY-AND-MONITORING.md` |
 | G10 | Monitorizare | ✅ plan cost 0 | idem, §3 |
 | G11 | Costuri | ✅ 0 lei | — |
-| G12 | V1 după migrații | ✅ local · ⏳ după migrații | `v1-browser-check` 40/40 pe codul live, reluat înaintea merge-ului; codul vechi pică același test |
-| G13 | Acces controlat | ✅ | poartă fail-closed verificată prin HTTP în modul de producție: fără cod sau cu cod greșit → `/acces-beta`; codul de invitație nu deschide consola de revizie; `check-v2-boundary` (404 fără flag) |
+| G12 | V1 după migrații | ✅ producție | după migrații, cu un cont de test: profil (1 rând actualizat), „Am gătit” (`cooked_recipes` +1), jurnal; 0 erori Vercel |
+| G13 | Acces controlat | ✅ | Preview: Vercel Authentication activă pe toate Preview-urile; build cu mediul Preview (9 nov.): fără cod sau cu cod greșit → `/acces-beta`, cu cod → 200, codul de invitație nu deschide consola de revizie; `robots.txt` blochează tot; `X-Robots-Tag: noindex`. Bundle-ul din browser nu conține chei privilegiate |
 | G14 | Fotografii | ✅ pipeline · ⏳ decizia ta | versiuni `-vN`; `photos/VISUAL-REVIEW-20261104.md`; 0 aprobate automat |
-| G15 | Performanță mobil | ✅ vizitator · ⏳ cont real | tabelul de mai sus |
+| G15 | Performanță mobil | ✅ vizitator · ⏳ cont real | tabelul de mai sus (9 nov.) |
 
 ## Conturile (read-only, 3 nov., `v2-accounts-check.sql`)
 
