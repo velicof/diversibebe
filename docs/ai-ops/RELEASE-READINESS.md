@@ -9,7 +9,7 @@ Rețetele nu sunt validate medical: trec prin verificări automate și corecturi
 | Etapă | Decizie | Ce lipsește (doar blocaje reale) |
 |---|---|---|
 | **1. Test privat pe telefon, mediu local izolat, cu cont de test** | **GO** după un pas al tău | Testul tău pe iPhone (`PHONE-PREVIEW.md`). Agentul a rulat WebKit pe Windows, nu Safari real |
-| **2. Testare cu contul fondatorului** (Preview online, proiectul comun) | **Preview ONLINE (9 nov.)** · testul cu contul real așteaptă Redirect URLs | Redirect URLs (Google revine în V2) · testul tău pe iPhone · SMTP doar pentru recuperarea parolei |
+| **2. Testare cu contul fondatorului** (Preview online, proiectul comun) | **Preview ONLINE (9 nov.)** · Redirect URLs adăugate (10 nov.) · urmează testul tău pe iPhone | testul tău pe iPhone · SMTP doar pentru recuperarea parolei |
 | **3. Beta restrânsă** (familii invitate, cod de invitație) | **NO-GO** | etapa 2 trecută · deciziile despre fotografii și BebeAsist · mențiunea din politica de confidențialitate · merge `release/v2-rc` → `main` |
 | **4. Lansare publică** | **NO-GO** | beta fără incidente · decizia despre revizia de specialitate · fotografii pentru rețetele principale · confirmarea performanței pe conturi reale |
 
@@ -38,7 +38,7 @@ Fiecare pas cere aprobarea ta și se oprește dacă verificarea lui pică.
 
 **Migrațiile sunt aplicate (7 nov.).**
 
-**Pentru testul cu contul tău:** Redirect URLs în Supabase (instrumentele agentului nu pot modifica setările Auth) și testul pe iPhone. Cheile secrete sunt scoase din Preview (9 nov.); rămâne recomandat să le marchezi Sensitive și să le rotești.
+**Pentru testul cu contul tău:** doar testul pe iPhone (Redirect URLs adăugate pe 10 nov.). Cheile secrete sunt scoase din Preview (9 nov.); rămâne recomandat să le marchezi Sensitive și să le rotești.
 
 **P0 înaintea beta:** SMTP (65 de conturi numai cu Google nu au alternativă la buton, iar recuperarea nu e de încredere).
 
@@ -98,7 +98,7 @@ Ce a schimbat cifrele (dovezi: profil CPU atribuit prin source maps, `V2_SOURCE_
 | G1 | Fără vulnerabilități critice | ✅ | `npm audit` 0; ruta de email și redirectul din callback corectate, live din 5 nov. (`/api/send-verification` răspunde 410) |
 | G2 | Izolare între familii | ✅ local + producție | `access-attack` 46/46 (9 nov., local). Producție, după migrații: cu cheia publică, 9 tabele și funcția V2 răspund 401; contul de test vede 0 copii din alte familii; postflight 9/9 |
 | G3 | Fluxuri E2E | ✅ local · ⏳ cont pe iPhone real | **9 nov.: E2E 131 trecute, 3 sărite** (cele de telefon, doar cu adresa Tailscale); unit 131/131; `reconnect.spec` 3/3. `cloud.spec`: un eșec pe 5 nov., nereprodus de atunci; urma de rețea se păstrează la eșec |
-| G4 | Backend online | ✅ migrații · ✅ Preview online · ⏳ cont real | producție migrată 7 nov.; Preview online 9 nov. (`PREVIEW-ONLINE.md`). Lipsesc Redirect URLs și testul cu contul real |
+| G4 | Backend online | ✅ migrații · ✅ Preview online · ⏳ cont real | producție migrată 7 nov.; Preview online 9 nov. (`PREVIEW-ONLINE.md`). Redirect URLs adăugate 10 nov.; lipsește testul cu contul real |
 | G5 | Migrații și rollback | ✅ producție | aplicate 7 nov., text identic cu fișierele (MD5 8/8), postflight 9/9, rânduri identice; repetiție 38/38 cu rollback L1 |
 | G6 | Conținut | ✅ automat · ⏳ specialitate | 289 publicabile, 2 în coada de specialitate, 0 aprobări medicale. 9 nov.: cele 2 rețete cu ou corectate editorial (ou gătit complet), regula automată extinsă (`editorial-egg.test`) |
 | G7 | Afirmații | ✅ live pe V1 | testimonialul și afirmațiile fără dovezi eliminate; gardă în `library.test`; V2 descrie verificările ca automate |
