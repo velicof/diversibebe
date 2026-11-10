@@ -60,7 +60,12 @@ Fără ele, revenirea după Google și linkul de recuperare duc la site-ul V1.
 
 **2. Email (Resend Free, 0 lei).** Necesar pentru recuperarea parolei; nu și pentru login cu parolă sau Google.
 
-1. Cont Resend → **Domains** → adaugi `diversibebe.com` și pui în DNS (la registrar) înregistrările afișate (SPF, DKIM). Fără domeniu verificat, Resend trimite doar către adresa ta.
+1. Cont Resend → **Domains** → adaugi `diversibebe.com`, regiunea **eu-west-1**. Resend afișează 3 înregistrări; le pui la **Namecheap** → Domain List → `diversibebe.com` → Advanced DNS (DNS-ul domeniului e la Namecheap: `dns1/dns2.registrar-servers.com`):
+   - `TXT` cu host `resend._domainkey`: cheia DKIM afișată de Resend;
+   - `MX` cu host `send`: `feedback-smtp.eu-west-1.amazonses.com`, prioritate 10;
+   - `TXT` cu host `send`: `v=spf1 include:amazonses.com ~all`.
+
+   Toate sunt pe subdomenii: redirecționarea de email existentă (MX-urile `eforward*` și SPF-ul de pe domeniul principal) rămâne neatinsă. Verificat azi: nicio înregistrare Resend nu există încă. Fără domeniu verificat, Resend trimite doar către adresa ta.
 2. Resend → **API Keys** → o cheie nouă, „Sending access”. Nu o trimite agentului.
 3. Supabase → Authentication → **SMTP Settings**: host `smtp.resend.com`, port `465`, user `resend`, parola = cheia, expeditor `noreply@diversibebe.com`, nume `DiversiBebe`.
 4. Rate Limits → emailuri: 30/oră. Șablonul „Reset Password” în română: `AUTH-SETUP.md` §3.
