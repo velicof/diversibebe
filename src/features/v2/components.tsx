@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ArrowLeft,
   ArrowRight,
   Bookmark,
   CalendarDays,
@@ -57,7 +58,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { storageError, cloud } = usePreview();
   const landing = pathname === "/v2";
-  const marketing = landing || pathname === "/v2/onboarding" || pathname === "/v2/pregatire";
+  // The resources page keeps the app's navigation: it is reached from inside the app too.
+  const marketing = landing || pathname === "/v2/onboarding";
   // From the build setting, not the live state: the button is in the first HTML the phone receives.
   const offerConnect = accountsEnabled && !cloud.connected && !cloud.loading && !cloud.reconnecting && !pathname.startsWith("/v2/cont");
   return (
@@ -146,11 +148,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <footer className="v2-footer">
           <span>DiversiBebe · Cu grijă pentru mesele voastre</span>
           <Link href="/v2/profil#date" prefetch={false}>Datele acestei versiuni</Link>
-          <a
-            href="https://www.nhs.uk/baby/weaning-and-feeding/babys-first-solid-foods/"
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a href="https://www.nhs.uk/baby/weaning-and-feeding/babys-first-solid-foods/" rel="noreferrer">
             Resurse despre diversificare
           </a>
         </footer>
@@ -170,6 +168,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </nav>
       )}
     </div>
+  );
+}
+/**
+ * To the start page of the app, never back in the browser's history: a page opened from a message link has
+ * nothing before it, and going back would leave DiversiBebe.
+ */
+export function BackLink({ bottom = false }: { bottom?: boolean }) {
+  const { cloud, state } = usePreview();
+  const home = cloud.connected || state.onboarded ? "/v2/azi" : "/v2";
+  return (
+    <Link href={home} className={bottom ? "v2-button v2-button-secondary" : "v2-back-link"}>
+      <ArrowLeft size={16} /> Înapoi
+    </Link>
   );
 }
 export function PageHeading({

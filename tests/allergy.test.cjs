@@ -39,9 +39,10 @@ test('ingredients that may hide the allergen leave the recipe unverified, not sa
 });
 
 test('an unknown food (typed by hand in V1) never makes a recipe compatible',()=>{
-  const custom=[resolveAllergy(rec('custom-123','Fistic verde'))];
+  const custom=[resolveAllergy(rec('custom-123','Pitaya'))];
+  assert.equal(custom[0].known,false);
   assert.equal(assessRecipe(recipe('Piure de morcov',['1 morcov']),custom).status,'unverified');
-  assert.equal(assessRecipe(recipe('Cremă',['fistic verde măcinat']),custom).status,'contains');
+  assert.equal(assessRecipe(recipe('Cremă',['pitaya măcinată']),custom).status,'contains');
 });
 
 test('several allergies apply together; a non-EU food is matched by name and by the recipe foods',()=>{
@@ -65,10 +66,29 @@ test('on the real library, an egg allergy keeps most recipes recommendable and n
   assert.equal(ok.some(r=>r.allergens.includes('Ou')),false);
 });
 
-test('a hand-typed food is matched by its name, not by words that only describe it',()=>{
-  const custom=[resolveAllergy(rec('custom-9','Fistic verde'))];
-  assert.equal(assessRecipe(recipe('Fasole',['fasole verde']),custom).status,'unverified');
-  assert.equal(assessRecipe(recipe('Cremă',['fistic']),custom).status,'contains');
+test('a hand-typed food is matched by the foods it names, not by words that only describe it',()=>{
+  const nut=[resolveAllergy(rec('custom-9','Fistic verde'))];
+  assert.equal(nut[0].known,true);assert.equal(nut[0].label,'Fistic verde (fructe cu coajă)');
+  assert.equal(assessRecipe(recipe('Fasole',['fasole verde']),nut).status,'compatible');
+  assert.equal(assessRecipe(recipe('Cremă',['fistic']),nut).status,'contains');
+  assert.equal(assessRecipe(recipe('Biscuiți',['nuci'],['Fructe cu coajă']),nut).status,'contains');
+  // "Piure" names a dish, not a food: a banana allergy must not exclude every purée.
+  const banana=[resolveAllergy(rec('custom-8','Piure de banană'))];
+  assert.equal(banana[0].known,true);
+  assert.equal(assessRecipe(recipe('Piure de morcov',['1 morcov','apă']),banana).status,'compatible');
+  assert.equal(assessRecipe(recipe('Piure',['1 banană']),banana).status,'contains');
+  assert.equal(resolveAllergy(rec('custom-7','Lapte de vacă')).known,true);
+});
+
+test('a reaction recorded in the V1 journal for a recipe stands for all the foods and allergens of that recipe',()=>{
+  const a=resolveAllergy(rec('piure-banana','Piure de banană & avocado'));
+  assert.equal(a.source,'recipe');assert.equal(a.known,true);
+  assert.equal(a.label,'Piure de banană & avocado (rețetă: banana, avocado, lapte)');
+  assert.equal(assessRecipe(recipe('Piure de morcov',['1 morcov','apă']),[a]).status,'compatible');
+  assert.equal(assessRecipe(recipe('Toast',['½ avocado']),[a]).status,'contains');
+  assert.equal(assessRecipe(recipe('Iaurt',['iaurt'],['Lapte']),[a]).status,'contains');
+  const pub=catalog.filter(r=>r.published);
+  assert.ok(pub.filter(r=>recommendable(r,[a])).length>=20,'enough recipes remain for a plan');
 });
 
 test('the label says which allergen group a recorded food stands for',()=>{

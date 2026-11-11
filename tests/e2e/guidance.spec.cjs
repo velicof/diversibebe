@@ -110,7 +110,7 @@ test('several allergies and derivatives: butter counts as milk; all apply togeth
 test('an unknown food never counts as absent: nothing is planned, and the page says exactly why',async({page,request})=>{
  test.skip(!native,'Real GoTrue/PostgREST runtime only');test.setTimeout(150000);
  const a=await signup(page,request);
- await addAllergy(a,'custom-fistic','Fistic verde');
+ await addAllergy(a,'custom-pitaya','Pitaya');
  await page.goto('/v2/idei');
  await expect(markers(page,'unverified').first()).toContainText('Ingrediente insuficient verificate',{timeout:30000});
  await expect(markers(page,'compatible')).toHaveCount(0);
@@ -168,4 +168,37 @@ test('pausing personalisation is separate from allergy protection, and says how 
  const reason=page.locator('.v2-guidance-reason').first();
  await expect(reason).toContainText('Ai oprit sugestiile pentru această sesiune');
  await expect(reason.getByRole('link',{name:'Le poți porni din Profil'})).toHaveAttribute('href','/v2/profil');
+});
+
+test('a reaction recorded in V1 for a recipe excludes that recipe\'s foods, not the whole library: a full plan',async({page,request})=>{
+ test.skip(!native,'Real GoTrue/PostgREST runtime only');test.setTimeout(150000);
+ const a=await signup(page,request);
+ // As the V1 journal records a reaction to a cooked recipe: the recipe id and name, without a child.
+ await addAllergy(a,'piure-banana','Piure de banană & avocado');
+ await page.goto('/v2/profil');
+ await expect(page.locator('.v2-allergy-list')).toContainText('rețetă: banana, avocado, lapte',{timeout:30000});
+ await expect(page.locator('.v2-allergy-list')).toContainText('pentru o rețetă, nu pentru un aliment');
+ await page.goto('/v2/idei');
+ await expect(markers(page,'compatible').first()).toBeVisible({timeout:30000});
+ await makePlan(page);
+ await page.getByRole('button',{name:'Salvează planul'}).click();
+ await expect(page.getByText('5 zile de mese, gata',{exact:false})).toBeVisible({timeout:30000});
+ let ids=[];await expect.poll(async()=>(ids=await plannedIds(a)).length,{timeout:20000}).toBe(5);
+ const allergy=[resolveAllergy({id:'x',babyId:null,foodId:'piure-banana',foodName:'Piure de banană & avocado'})];
+ for(const id of ids)expect(assessRecipe(catalog.find(r=>r.id===id),allergy).status,id).toBe('compatible');
+});
+
+test('the resources page keeps the app navigation; Înapoi never leaves the app; sources open in the same tab',async({page})=>{
+ // Opened directly, as from a message link: nothing before it in the browser's history.
+ await page.goto('/v2/pregatire');
+ await expect(page.locator('.v2-bottom-nav')).toBeVisible();
+ for(const link of await page.locator('.gw-education-card a').all())expect(await link.getAttribute('target')).toBeNull();
+ await page.getByRole('link',{name:'Înapoi'}).last().click();
+ await expect(page).toHaveURL(/\/v2(\/azi)?$/);
+ await page.goto('/v2/pregatire');
+ await page.locator('.v2-bottom-nav').getByRole('link',{name:'Descoperă'}).click();
+ await expect(page).toHaveURL(/\/v2\/idei/);
+ // The phone's back gesture returns to the resources page, inside the app.
+ await page.goBack();
+ await expect(page).toHaveURL(/\/v2\/pregatire/);
 });

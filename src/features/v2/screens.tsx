@@ -1011,11 +1011,7 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
               și dată de revizie: neînregistrate.
             </p>
             <p>
-              <a
-                href="https://www.nhs.uk/baby/weaning-and-feeding/"
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a href="https://www.nhs.uk/baby/weaning-and-feeding/" rel="noreferrer">
                 Resurse generale NHS despre diversificare{" "}
                 <ArrowRight size={14} />
               </a>
@@ -1257,10 +1253,10 @@ function PlannerReady() {
     const why = next.length < 5 ? planShortfall(next.length, planCandidates, allergies) : "";
     setShortfall(why);
     if (!next.length) {
-      announce(why || "Nu am găsit idei potrivite. Încearcă mai mult timp sau alt tip de masă.");
+      announce(why ? "Nu am găsit idei pentru niciuna din cele 5 zile. Motivul e scris sub buton." : "Nu am găsit idei potrivite. Încearcă mai mult timp sau alt tip de masă.");
       return;
     }
-    if (why) announce(why);
+    if (why) announce(`Am găsit idei pentru ${next.length} din 5 zile. Motivul e scris în propunere.`);
     setProposal(next);
     setStartedAt((value) => value ?? Date.now());
     track("recommendation_results_shown", { count: next.length });
@@ -1753,7 +1749,13 @@ function ProfileAllergies() {
               <li key={a.id}>
                 <strong>{a.label}</strong>
                 <span>{a.babyId ? `doar pentru ${child?.label ?? "acest copil"}` : "înregistrată pentru tot contul (fără copil ales)"}</span>
-                {!a.known && <span>Aliment fără ingrediente cunoscute: rețetele rămân insuficient verificate.</span>}
+                {a.source === "recipe" && (
+                  <span>
+                    Înregistrată în jurnalul V1 pentru o rețetă, nu pentru un aliment. Până știi alimentul exact, excludem tot ce
+                    conține rețeta. Poți înregistra alimentul exact în V1, la Alergii.
+                  </span>
+                )}
+                {!a.known && <span>Nu recunoaștem toate cuvintele: rețetele fără alimentele numite rămân insuficient verificate.</span>}
                 {!a.babyId && child && pending?.id !== a.id && (
                   <button type="button" className="v2-text-button" disabled={busy || cloud.saving} onClick={() => { setFailed(false); setPending(a); }}>
                     Asociază cu {child.label}

@@ -2,7 +2,11 @@
 // A recipe is judged only on the ingredients written in it: "compatible" means none of the recorded allergens
 // was found in those ingredients, not that the dish is free of allergens or cross-contamination.
 // Nothing here changes a recipe or invents a substitution.
-import { normalizeText, type Allergen } from "./content/safety";
+import { EU_ALLERGENS, normalizeText, type Allergen } from "./content/safety";
+import { catalog } from "./catalog";
+
+/** What an allergy recorded for a V1 recipe is resolved from. */
+type RecipeSource = { id: string; relatedFoods: readonly string[]; allergens: readonly string[] };
 
 export type AllergyRecord = {
   id: string;
@@ -19,8 +23,12 @@ export type ResolvedAllergy = AllergyRecord & {
   pattern: RegExp | null;
   /** Generic ingredient lines that could hide this food without naming it. */
   hidden: RegExp | null;
-  /** A food DiversiBebe knows; an unknown one leaves every recipe unverified. */
+  /** Every word of it is understood; otherwise recipes without the named foods stay unverified. */
   known: boolean;
+  /** V1 food ids it stands for. */
+  foods: string[];
+  /** A V1 food, a V1 recipe (journal reaction) or a name typed by hand. */
+  source: "food" | "recipe" | "name";
 };
 export type AllergyStatus = "compatible" | "contains" | "unverified";
 export type AllergyAssessment = { status: AllergyStatus; contains: string[]; unverified: string[] };
@@ -75,40 +83,80 @@ const FOODS: Record<string, Food> = {
 export const KNOWN_ALLERGY_FOODS = Object.keys(FOODS);
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-// Words that describe a food without naming it ("fistic verde"): matching them would flag unrelated recipes.
-const DESCRIPTIVE = new Set(["verde", "verzi", "rosu", "rosie", "rosii", "alba", "albe", "negru", "neagra", "dulce", "dulci", "uscat", "uscate", "proaspat", "proaspete", "fiert", "fiarta", "macinat", "macinate", "pudra", "natural", "naturala", "copt", "coapta", "crud", "cruda", "bio"]);
-/** A food typed by hand (V1 custom food): matched by its own words, and never assumed absent. */
-function patternFromName(name: string): RegExp | null {
-  const words = normalizeText(name).split(/[^a-z]+/).filter((w) => w.length >= 4 && !DESCRIPTIVE.has(w));
-  return words.length ? new RegExp(words.map((w) => `\\b${escape(w.slice(0, Math.max(4, w.length - 2)))}`).join("|")) : null;
-}
+// Words that describe a food or name a dish without naming a food ("fistic verde", "piure de…"): matching
+// them would flag unrelated recipes (every purée, every soup).
+const DESCRIPTIVE = new Set(["verde", "verzi", "rosu", "rosie", "rosii", "alba", "albe", "negru", "neagra", "dulce", "dulci", "uscat", "uscate", "proaspat", "proaspete", "fiert", "fiarta", "macinat", "macinate", "pudra", "natural", "naturala", "copt", "coapta", "crud", "cruda", "bio",
+  "piure", "supa", "supica", "crema", "terci", "salata", "omleta", "briose", "chiftele", "chiftelute", "budinca", "smoothie", "mancare", "mancarica", "tocana", "ciorba", "galuste", "biscuiti", "batoane", "clatite", "sandvis", "bucati", "felii", "reteta", "cana", "lingura", "lingurita", "vaca", "capra", "oaie", "bivolita", "praji", "prajit", "prajita"]);
+// A hand-typed name that says an EU allergen group ("lapte de vacă", "alune").
+const GROUP_WORDS: Partial<Record<Allergen, RegExp>> = {
+  Lapte: /lapte|lacta|lactoz|iaurt|branz|\bunt\b|smantan|cascaval|chefir/, Ou: /\bou\b|\boua\b|\boul\b|\bouale\b/,
+  Gluten: /gluten|\bgrau\b|\bfaina\b|\bpaine\b|\bpaste\b|\bovaz\b|\borz\b|secara/, Pește: /\bpeste\b|\bsomon|\bton\b|\bcod\b|pastrav|sardin|hering/,
+  "Fructe cu coajă": /\bnuci?\b|\bnuca\b|migdal|alun[ae]?\b|caju|fistic|pecan|macadamia/, Arahide: /arahid/, Soia: /\bsoia\b|\btofu\b/,
+  Susan: /susan|tahini/, Țelină: /telin/, Muștar: /mustar/, Crustacee: /crevet|\bcrab|homar|langust/, Moluște: /\bmidii\b|scoic|calamar|caracati/,
+  Sulfiți: /sulfit/, Lupin: /lupin/,
+};
+const stem = (w: string) => `\\b${escape(w.slice(0, Math.max(4, w.length - 2)))}`;
 
 /** "Iaurt natural (lapte)": a recipe with butter is then understood to contain it. */
 function withGroup(name: string, categories: Allergen[]) {
   const extra = categories.filter((c) => normalizeText(c) !== normalizeText(name));
   return extra.length ? `${name} (${extra.map((c) => c.toLowerCase()).join(", ")})` : name;
 }
-export function resolveAllergy(record: AllergyRecord): ResolvedAllergy {
-  const food = record.foodId ? FOODS[record.foodId] : undefined;
-  const categories = food?.categories ?? [];
-  const hidden = categories.length
-    ? new RegExp(categories.map((c) => HIDDEN[c]?.source).filter(Boolean).join("|") || "$^")
-    : food
-      ? GENERIC
-      : null;
+/** One allergy, as the foods and allergen groups it stands for. Words not understood keep it unverified. */
+function build(record: AllergyRecord, label: string, foodIds: string[], groups: Allergen[], unknownWords: string[], source: ResolvedAllergy["source"]): ResolvedAllergy {
+  const foods = foodIds.map((id) => FOODS[id]).filter((f): f is Food => Boolean(f));
+  const categories = [...new Set([...groups, ...foods.flatMap((f) => f.categories ?? [])])];
+  const patterns = [
+    ...foods.map((f) => f.pattern?.source).filter(Boolean),
+    // Not a V1 food: the group's own words are searched in the ingredients too (the recipe's list may miss them).
+    ...(source === "food" ? [] : categories.map((c) => GROUP_WORDS[c]?.source).filter(Boolean)),
+    ...unknownWords.map(stem),
+  ];
+  const hidden = [
+    ...categories.map((c) => HIDDEN[c]?.source).filter(Boolean),
+    ...(foods.some((f) => f.pattern) || unknownWords.length ? [GENERIC.source] : []),
+  ];
   return {
     ...record,
-    label: withGroup(record.foodName || record.foodId || "aliment", categories),
+    label,
     categories,
-    pattern: food?.pattern ?? (food ? null : patternFromName(record.foodName)),
-    hidden,
-    known: Boolean(food),
+    pattern: patterns.length ? new RegExp(patterns.join("|")) : null,
+    hidden: hidden.length ? new RegExp(hidden.join("|")) : null,
+    known: unknownWords.length === 0 && (foods.length > 0 || categories.length > 0),
+    foods: foodIds,
+    source,
   };
+}
+const EU_GROUPS = new Set<string>(EU_ALLERGENS);
+const foodLabel = (id: string) => id.replaceAll("-", " ");
+
+export function resolveAllergy(record: AllergyRecord, recipes: readonly RecipeSource[] = catalog): ResolvedAllergy {
+  const name = record.foodName || record.foodId || "aliment";
+  // A food from the V1 list.
+  if (record.foodId && FOODS[record.foodId]) return build(record, withGroup(name, FOODS[record.foodId].categories ?? []), [record.foodId], [], [], "food");
+  // A reaction recorded in the V1 journal for a recipe: the recipe's foods and allergen groups, all of them.
+  const recipe = record.foodId ? recipes.find((r) => r.id === record.foodId) : undefined;
+  if (recipe) {
+    const foods = recipe.relatedFoods.filter((id) => FOODS[id]);
+    const groups = recipe.allergens.filter((a): a is Allergen => EU_GROUPS.has(a));
+    const unknown = recipe.relatedFoods.filter((id) => !FOODS[id]);
+    const parts = [...foods.map(foodLabel), ...unknown.map(foodLabel), ...groups.map((g) => g.toLowerCase())];
+    return build(record, `${name} (rețetă: ${[...new Set(parts)].join(", ")})`, foods, groups, unknown, "recipe");
+  }
+  // A food typed by hand: the known foods and groups it names; any other word stays unverified.
+  const text = normalizeText(name);
+  const foods = KNOWN_ALLERGY_FOODS.filter((id) => FOODS[id].pattern?.test(text));
+  const groups = (Object.keys(GROUP_WORDS) as Allergen[]).filter((g) => GROUP_WORDS[g]!.test(text));
+  const unknown = text
+    .split(/[^a-z]+/)
+    .filter((w) => w.length >= 4 && !DESCRIPTIVE.has(w))
+    .filter((w) => !foods.some((id) => FOODS[id].pattern!.test(w)) && !groups.some((g) => GROUP_WORDS[g]!.test(w)));
+  return build(record, withGroup(name, groups), foods, groups, unknown, "name");
 }
 
 /** The allergies that protect this child: its own, and those recorded for the whole account. */
 export function allergiesFor(records: AllergyRecord[], childId: string | null): ResolvedAllergy[] {
-  return records.filter((r) => r.babyId === null || r.babyId === childId).map(resolveAllergy);
+  return records.filter((r) => r.babyId === null || r.babyId === childId).map((r) => resolveAllergy(r));
 }
 
 type RecipeFacts = { name: string; ingredients: string[]; allergens: readonly string[]; ingredientIds: string[] };
