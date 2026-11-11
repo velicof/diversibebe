@@ -3483,3 +3483,6 @@
   .v2-root .v2-topbar .v2-brand i { display: none; }
   .v2-top-actions { gap: 4px; }
 }
+/* Why there are no suggestions: always said next to the block, with the way out. */
+.v2-guidance-reason { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--v2-accent-soft); color: var(--v2-ink); font-size: 14px; line-height: 1.55; }
+.v2-guidance-reason a { color: var(--v2-accent); text-decoration: underline; font-weight: 600; }

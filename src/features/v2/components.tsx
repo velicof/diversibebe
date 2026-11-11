@@ -288,6 +288,28 @@ export function RecipePhoto({
     </div>
   );
 }
+/**
+ * Why there are no meal suggestions, where the guidance block applies: an allergy recorded in the account
+ * (the safe default until a specialist is involved), or the parent's own choice for this session.
+ */
+export function GuidanceReason() {
+  const { cloud, clinicalGuidance } = usePreview();
+  if (!clinicalGuidance) return null;
+  if (cloud.requiresClinicalGuidance)
+    return (
+      <p className="v2-guidance-reason">
+        Contul tău are o alergie înregistrată în DiversiBebe. Din siguranță, nu propunem mese cât timp e înregistrată:
+        rețetele de aici nu sunt adaptate alergiilor.{" "}
+        <a href="/alergii">Vezi alergiile înregistrate</a>
+      </p>
+    );
+  return (
+    <p className="v2-guidance-reason">
+      Ai oprit sugestiile pentru această sesiune.{" "}
+      <Link href="/v2/profil" prefetch={false}>Le poți porni din Profil</Link>
+    </p>
+  );
+}
 /** A visitor's choices live only here: say so where they are saved, with the way to keep them. */
 export function DeviceOnlyNote() {
   const { cloud } = usePreview();

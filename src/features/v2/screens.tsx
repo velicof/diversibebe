@@ -37,6 +37,7 @@ import { SaveProgressInvite } from "./cloud/SaveProgressInvite";
 import {
   DeviceOnlyNote,
   EmptyState,
+  GuidanceReason,
   LoadingState,
   PageHeading,
   RecipeCard,
@@ -448,9 +449,12 @@ function DashboardReady() {
               }
             />
           ) : (
-            <EmptyState title="O pauză de la recomandări">
-              Pentru nevoi individuale este necesară îndrumarea unui specialist.
-            </EmptyState>
+            <>
+              <EmptyState title="O pauză de la recomandări">
+                Pentru nevoi individuale este necesară îndrumarea unui specialist.
+              </EmptyState>
+              <GuidanceReason />
+            </>
           )}
         </div>
         <div className="v2-quick-finder">
@@ -754,10 +758,13 @@ function DiscoverReady() {
           {state.stage === 0 && !clinicalGuidance && filters.months === 0 ? (
             <StagePrompt />
           ) : clinicalGuidance ? (
-            <EmptyState title="Aici e nevoie de îndrumare individuală">
-              Această versiune nu personalizează mese pentru alergii sau alte
-              nevoi medicale. Discută cu specialistul care cunoaște copilul.
-            </EmptyState>
+            <>
+              <EmptyState title="Aici e nevoie de îndrumare individuală">
+                Această versiune nu personalizează mese pentru alergii sau alte
+                nevoi medicale. Discută cu specialistul care cunoaște copilul.
+              </EmptyState>
+              <GuidanceReason />
+            </>
           ) : options.length ? (
             <>
               <div className="v2-recipe-grid">
@@ -1387,6 +1394,7 @@ function PlannerReady() {
                   ? "Planificarea meselor începe după alegerea etapei de diversificare. Pentru nevoi individuale este necesară îndrumarea unui specialist."
                   : reviewCopy.planCount(planEligible.length)}
               </p>
+              <GuidanceReason />
             </section>
           )}
           <div className="v2-plan-layout">
@@ -1688,11 +1696,16 @@ export function Profile() {
               </button>
             ))}
           </div>
+          {cloud.connected && (
+            <p className="v2-field-note">
+              Aici apar cele 8 ingrediente de bază după care ordonăm ideile. Istoricul complet rămâne în{" "}
+              <Link href="/alimente" prefetch={false}>Alimente încercate</Link>.
+            </p>
+          )}
           <div className="v2-allergen-note">
             <h3>Ai nevoie de adaptare medicală?</h3>
             <p>
-              Versiunea demonstrativă nu personalizează mese pentru alergii
-              diagnosticate sau alte nevoi medicale.
+              DiversiBebe nu personalizează mese pentru alergii diagnosticate sau alte nevoi medicale.
             </p>
             <label className="v2-checkbox-row">
               <input
@@ -1703,9 +1716,13 @@ export function Profile() {
               />
               Oprește sugestiile personalizate în această sesiune
             </label>
-            <small>
-              Această alegere nu este salvată și nu intră în analytics.
-            </small>
+            {cloud.requiresClinicalGuidance ? (
+              <GuidanceReason />
+            ) : (
+              <small>
+                Această alegere nu este salvată și nu intră în analytics.
+              </small>
+            )}
           </div>
         </section>
         <aside>
