@@ -30,7 +30,16 @@ V2 trata orice alergie din cont, pentru orice copil, ca „necesită îndrumare 
 - „Oprește personalizarea” e separat: oprește sugestiile în sesiune, nu și excluderea alergenilor.
 - Mesajul medical (`ALLERGY_NOTICE`) apare în Azi, Descoperă, Plan și Profil. Nu folosim „100% sigur”.
 
-## Migrație pregătită, NEAPLICATĂ în Supabase
+## Stare (11 nov. 2026, cu aprobarea fondatorului)
+
+- Migrația `v2_allergy_filtering` **aplicată în Supabase** (`smyimgvxlggggjeoajdo`). Înainte: corpurile instalate
+  conțineau exact o dată refuzul așteptat. După: refuzul lipsește din `v2_apply_action`, `v2_confirmation_clock`
+  și `v2_plan_owner`; verificările de proprietar, etapă și imutabilitate au rămas; drepturile neschimbate;
+  27 de rânduri în `allergy_records`, neatinse.
+- Preview reconstruit din `1f3d620` (`dpl_451tesg878pim4ditwb7m9EGmcGU`, READY), pe
+  `diversibebe-git-release-v2-rc-velicofs-projects.vercel.app`. Producția V1 și `main` neschimbate.
+
+## Migrația
 
 `supabase/migrations/20261111100000_v2_allergy_filtering.sql` (adăugată în `supabase/v2-release.cjs`):
 scoate doar refuzul pe alergie din `v2_apply_action`, `v2_confirmation_clock` și politica `v2_plan_owner`.
