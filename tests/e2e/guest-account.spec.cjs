@@ -163,7 +163,7 @@ test('the invitation creates an account, and a plan that does not suit the child
  await page.getByRole('button',{name:'Creează și salvează în cont',exact:true}).click();
  await expect(page).toHaveURL(/\/v2\/azi/,{timeout:30000});
  // Under 6 months nothing suits: said plainly, instead of a plan that seems to vanish, and nothing to accept.
- await expect(importRegion(page)).toContainText('nu se potrivesc etapei copilului din cont');
+ await expect(importRegion(page)).toContainText('nu se potrivesc etapei sau alergiilor copilului din cont');
  await expect(page.getByRole('button',{name:'Adaugă în cont',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Am înțeles',exact:true}).click();
  await expect(importRegion(page)).toHaveCount(0);

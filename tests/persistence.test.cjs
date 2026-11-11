@@ -25,8 +25,20 @@ test('current schema upgrade persists all six models and isolates accounts and s
   await asUser(db,USERS.A,d=>call(d,CHILDREN.A,'profile',{stage:0,introduced:[]}));
   await assert.rejects(asUser(db,USERS.A,d=>call(d,CHILDREN.A,'plan',{slot:'2026-10-29',recipeId:'piure-dovlecel'})),/preparation/);
   await assert.rejects(asUser(db,USERS.A,d=>d.query("INSERT INTO public.cooked_recipes(user_id,baby_id,recipe_id,source) VALUES($1,$2,'piure-dovlecel','v2_confirmed')",[USERS.A,CHILDREN.A])),/preparation/);
+  // An allergy filters recipes on the device (src/features/v2/allergy.ts); it no longer refuses the whole family.
+  // Product decision of 11 Nov 2026; the record is kept and still reported, ownership is still enforced.
   await db.query("INSERT INTO public.allergy_records(user_id,baby_id,food_name) VALUES($1,$2,'SYNTHETIC')",[USERS.B,CHILDREN.B]);
-  await assert.rejects(asUser(db,USERS.B,d=>call(d,CHILDREN.B,'plan',{slot:'2026-10-28',recipeId:'piure-dovlecel'})),/individual guidance/);
+  await db.query("INSERT INTO public.allergy_records(user_id,baby_id,food_name) VALUES($1,NULL,'SYNTHETIC-ACCOUNT')",[USERS.B]);
+  await asUser(db,USERS.B,async d=>{
+   await call(d,CHILDREN.B,'profile',{stage:8,introduced:[]});
+   await call(d,CHILDREN.B,'plan',{slot:'2026-10-28',recipeId:'piure-dovlecel'});
+   await call(d,CHILDREN.B,'confirm',{id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',recipeId:'piure-dovlecel'});
+   const value=(await d.query('SELECT public.v2_load_state($1) AS value',[CHILDREN.B])).rows[0].value;
+   assert.equal(value.requiresClinicalGuidance,true,'the allergy is still reported');
+   assert.equal(value.plan.length,1);assert.equal(value.uses.length,1);
+  });
+  assert.equal((await db.query("SELECT count(*)::int AS n FROM public.allergy_records WHERE user_id=$1",[USERS.B])).rows[0].n,2,'allergy records are kept');
+  await assert.rejects(asUser(db,USERS.B,d=>call(d,CHILDREN.A,'plan',{slot:'2026-10-30',recipeId:'piure-dovlecel'})),/child unavailable/);
  }finally{await db.close();}
 });
 test('analytics uses server timestamps, deduplicates IDs and excludes sensitive payloads',async()=>{

@@ -35,6 +35,10 @@ const PAGE = 12;
 import { usePreview } from "./Provider";
 import { SaveProgressInvite } from "./cloud/SaveProgressInvite";
 import {
+  AllergyMarker,
+  AllergyNotice,
+  allergyMarkerText,
+  useAllergyAssessment,
   DeviceOnlyNote,
   EmptyState,
   GuidanceReason,
@@ -62,9 +66,13 @@ import type { Stage } from "./model";
 import { weeklyUsage } from "./analytics";
 import { DashboardFocus, useDashboardMatches } from "./growth/PersonalizedDashboard";
 import { emitGrowth, journeyScope, journeyStore } from "./growth/browser";
+import { ALLERGY_NOTICE, assessRecipe, type AllergyStatus, type ResolvedAllergy } from "./allergy";
 
-function useEligible(filters?: Filters, month?: number) {
-  const { state, clinicalGuidance } = usePreview();
+const allergyRank: Record<AllergyStatus, number> = { compatible: 0, unverified: 1, contains: 2 };
+
+/** Suggestions and plans ("recommend") use only recipes in which no recorded allergen was found. */
+function useEligible(filters?: Filters, month?: number, allergyScope: "recommend" | "browse" | "all" = "recommend") {
+  const { state, clinicalGuidance, allergies } = usePreview();
   const chosen = filters ?? { ...initialFilters, months: state.stage };
   const key = JSON.stringify(chosen);
   return useMemo(
@@ -76,11 +84,13 @@ function useEligible(filters?: Filters, month?: number) {
         used: state.uses.map((u) => u.recipeId),
         excludedIngredients: [],
         requiresClinicalGuidance: clinicalGuidance,
+        allergies,
+        allergyScope,
         month,
       }),
     // `chosen` is compared through its serialized form: callers pass a new object on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [key, month, state.favorites, state.introduced, state.uses, clinicalGuidance],
+    [key, month, state.favorites, state.introduced, state.uses, clinicalGuidance, allergies, allergyScope],
   );
 }
 // False in the server HTML and during hydration: controls rendered on the server stay disabled until they work.
@@ -372,7 +382,7 @@ export function Dashboard() {
   return show ? <DashboardReady /> : <LoadingState />;
 }
 function DashboardReady() {
-  const { state, ready, clinicalGuidance } = usePreview();
+  const { state, ready, clinicalGuidance, allergies } = usePreview();
   const matches = useDashboardMatches();
   const days = useDays();
   const [month] = useState(() => monthIn());
@@ -425,6 +435,7 @@ function DashboardReady() {
           )}
         </section>
       )}
+      {!blocked && <AllergyNotice />}
       <SeasonStrip month={month} />
       <div className="v2-dashboard-primary">
         <div className="v2-featured-area">
@@ -449,12 +460,25 @@ function DashboardReady() {
               }
             />
           ) : (
-            <>
-              <EmptyState title="O pauză de la recomandări">
-                Pentru nevoi individuale este necesară îndrumarea unui specialist.
+            clinicalGuidance ? (
+              <>
+                <EmptyState title="O pauză de la recomandări">
+                  Pentru nevoi individuale este necesară îndrumarea unui specialist.
+                </EmptyState>
+                <GuidanceReason />
+              </>
+            ) : allergies.length ? (
+              <EmptyState title="Nicio idee potrivită alergiilor înregistrate">
+                Pentru etapa aceasta nu am găsit o rețetă în care ingredientele scrise să nu conțină alergenii
+                înregistrați. Biblioteca rămâne deschisă în Descoperă, cu fiecare rețetă marcată.
+                <Link className="v2-button v2-button-secondary" href="/v2/idei">Deschide Descoperă</Link>
               </EmptyState>
-              <GuidanceReason />
-            </>
+            ) : (
+              <EmptyState title="Nicio idee pentru etapa aceasta">
+                Biblioteca rămâne deschisă în Descoperă.
+                <Link className="v2-button v2-button-secondary" href="/v2/idei">Deschide Descoperă</Link>
+              </EmptyState>
+            )
           )}
         </div>
         <div className="v2-quick-finder">
@@ -545,7 +569,8 @@ export function Discover() {
   );
 }
 function DiscoverReady() {
-  const { state, ready, track, clinicalGuidance } = usePreview();
+  const { state, ready, track, clinicalGuidance, allergies } = usePreview();
+  const [showContains, setShowContains] = useState(false);
   const [filters, setFilters] = useState<Filters>(() => ({
     ...initialFilters,
     months: state.stage,
@@ -563,7 +588,23 @@ function DiscoverReady() {
     started.current = performance.now();
   }, []);
   // One pass over the catalog: the moment of the meal does not change the order.
-  const anyMeal = useEligible({ ...filters, meal: "all" }, month);
+  // With allergies the library still opens: recipes in which no allergen was found come first, then the
+  // unverified ones; recipes that contain one are listed only on request, for reading.
+  const library = useEligible({ ...filters, meal: "all" }, month, "all");
+  const statuses = useMemo(
+    () => new Map(allergies.length ? library.map((r) => [r.id, assessRecipe(r, allergies).status] as const) : []),
+    [library, allergies],
+  );
+  const containsCount = useMemo(() => [...statuses.values()].filter((s) => s === "contains").length, [statuses]);
+  const anyMeal = useMemo(() => {
+    if (!allergies.length) return library;
+    const rank = (r: Recipe) => allergyRank[statuses.get(r.id) ?? "compatible"];
+    return library
+      .filter((r) => showContains || statuses.get(r.id) !== "contains")
+      .map((r, i) => [r, i] as const)
+      .sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1])
+      .map(([r]) => r);
+  }, [library, statuses, showContains, allergies.length]);
   const options = useMemo(() => (filters.meal === "all" ? anyMeal : anyMeal.filter((r) => r.mealType === filters.meal)), [anyMeal, filters.meal]);
   const byMeal = useMemo(() => {
     const counts: Record<string, number> = { all: anyMeal.length };
@@ -755,13 +796,21 @@ function DiscoverReady() {
               </button>
             ))}
           </div>
+          <AllergyNotice compact />
+          {allergies.length > 0 && containsCount > 0 && (
+            <label className="v2-checkbox-row v2-allergy-toggle">
+              <input type="checkbox" checked={showContains} onChange={(e) => { setVisible(PAGE); setShowContains(e.target.checked); }} />
+              Arată și {containsCount === 1 ? "rețeta care conține" : `cele ${containsCount} rețete care conțin`} un alergen declarat (doar
+              pentru informare; nu se propun și nu intră în plan)
+            </label>
+          )}
           {state.stage === 0 && !clinicalGuidance && filters.months === 0 ? (
             <StagePrompt />
           ) : clinicalGuidance ? (
             <>
-              <EmptyState title="Aici e nevoie de îndrumare individuală">
-                Această versiune nu personalizează mese pentru alergii sau alte
-                nevoi medicale. Discută cu specialistul care cunoaște copilul.
+              <EmptyState title="Sugestiile sunt oprite">
+                Ai ales să oprești sugestiile personalizate în această sesiune, de exemplu până discuți cu
+                specialistul care cunoaște copilul.
               </EmptyState>
               <GuidanceReason />
             </>
@@ -773,9 +822,11 @@ function DiscoverReady() {
                     key={r.id}
                     recipe={r}
                     reason={
-                      filters.ingredientIds.length
-                        ? "Include un ingredient ales de tine"
-                        : "Se încadrează în timpul ales"
+                      statuses.get(r.id) === "contains"
+                        ? undefined
+                        : filters.ingredientIds.length
+                          ? "Include un ingredient ales de tine"
+                          : "Se încadrează în timpul ales"
                     }
                     onSelect={() => choose(r)}
                   />
@@ -814,6 +865,8 @@ function DiscoverReady() {
 export function RecipeDetail({ recipe }: { recipe: Recipe }) {
   const { state, ready, dispatch, announce, track, clinicalGuidance, cloud } =
     usePreview();
+  const allergy = useAllergyAssessment(recipe);
+  const containsAllergen = allergy?.status === "contains";
   const days = useDays();
   const [checked, setChecked] = useState<number[]>([]);
   const [step, setStep] = useState(0);
@@ -865,6 +918,7 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
               diagnosticate.
             </small>
           </div>
+          <AllergyMarker recipe={recipe} />
           <div className="v2-serving-panel">
             <strong>Cum servești</strong>
             <p>{recipe.servingGuidance}</p>
@@ -1028,13 +1082,25 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
             <span>{MEAL_LABELS[recipe.mealType]} · {recipe.servings} {Number(recipe.servings) === 1 ? "porție" : "porții"}</span>
             {ready && recipe.seasonMonths.includes(new Date().getMonth() + 1) && <span><Leaf size={18} />De sezon acum</span>}
           </div>
+          {ready && allergy && (
+            <div className={`v2-allergy-detail v2-allergy-${allergy.status}`} role="note">
+              <strong>{allergyMarkerText[allergy.status]}</strong>
+              <p>
+                {allergy.status === "contains"
+                  ? `Ingredientele scrise conțin: ${allergy.contains.join(", ")}. O poți citi, dar nu o propunem și nu se poate adăuga în plan pentru acest copil.`
+                  : allergy.status === "unverified"
+                    ? `Nu putem stabili din ingredientele scrise dacă rețeta conține: ${allergy.unverified.join(", ")}. Nu o propunem automat; verifică ingredientele și etichetele înainte să o alegi.`
+                    : "Nu am găsit alergenii înregistrați în ingredientele scrise. Asta nu exclude urme sau contaminarea încrucișată."}
+              </p>
+            </div>
+          )}
           {ready ? (
             <div className="v2-action-row">
               <SaveButton recipe={recipe} />
               <button
                 className="v2-button v2-button-primary"
                 onClick={addToPlan}
-                disabled={state.stage === 0 || clinicalGuidance || cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
+                disabled={state.stage === 0 || clinicalGuidance || containsAllergen || cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
               >
                 <CalendarDays size={18} />
                 Adaugă în plan
@@ -1082,7 +1148,7 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
         </div>
         <button
           className="v2-button v2-button-primary"
-          disabled={!ready || state.stage === 0 || alreadyConfirmed || clinicalGuidance || cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
+          disabled={!ready || state.stage === 0 || alreadyConfirmed || clinicalGuidance || containsAllergen || cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
           onClick={confirm}
         >
           {alreadyConfirmed ? <CheckCircle2 size={18} /> : <Check size={18} />}
@@ -1112,8 +1178,27 @@ export function Planner() {
   const show = useDeferredValue(ready);
   return show ? <PlannerReady /> : <>{plannerHeading}<LoadingState /></>;
 }
+/** Why a plan has fewer than 5 days: the recipes the allergies left out are counted, never used to fill it. */
+function planShortfall(found: number, candidates: Recipe[], allergies: ReturnType<typeof usePreview>["allergies"]) {
+  let contains = 0, unverified = 0;
+  for (const r of candidates) {
+    const status = assessRecipe(r, allergies).status;
+    if (status === "contains") contains++;
+    else if (status === "unverified") unverified++;
+  }
+  const parts = [`Am găsit idei pentru ${found} din 5 zile.`];
+  if (contains || unverified) {
+    const left = [
+      contains ? `${contains} ${contains === 1 ? "conține" : "conțin"} un alergen înregistrat (${allergies.map((a) => a.label).join(", ")})` : "",
+      unverified ? `${unverified} ${unverified === 1 ? "are" : "au"} ingrediente insuficient verificate` : "",
+    ].filter(Boolean);
+    parts.push(`Dintre rețetele potrivite etapei și preferințelor alese, ${left.join(" și ")}; nu le folosim ca să completăm planul.`);
+  } else parts.push("Nu mai sunt alte rețete potrivite etapei și preferințelor alese.");
+  parts.push("Poți alege mai mult timp, alt tip de masă sau adăuga manual o idee din Descoperă.");
+  return parts.join(" ");
+}
 function PlannerReady() {
-  const { state, ready, dispatch, announce, track, cloud, clinicalGuidance } = usePreview();
+  const { state, ready, dispatch, announce, track, cloud, clinicalGuidance, allergies } = usePreview();
   const eligible = useEligible();
   const days = useDays();
   const [month] = useState(() => monthIn());
@@ -1127,10 +1212,12 @@ function PlannerReady() {
   const [saved, setSaved] = useState<{ count: number; seconds: number } | null>(null);
   const [interested, setInterested] = useState(false);
   const listUsed = useRef(false);
-  const planEligible = useEligible(
-    { ...initialFilters, months: state.stage, maxMinutes: prefs.maxMinutes, meal: prefs.meal, ingredientIds: prefs.ingredientIds },
-    month,
-  );
+  const [shortfall, setShortfall] = useState("");
+  const planFilters = { ...initialFilters, months: state.stage, maxMinutes: prefs.maxMinutes, meal: prefs.meal, ingredientIds: prefs.ingredientIds };
+  const planEligible = useEligible(planFilters, month);
+  // Same preferences without the allergy filter: only to say how many recipes the allergies left out.
+  const planCandidates = useEligible(planFilters, month, "all");
+  const leftOut = planCandidates.length - planEligible.length;
   const fiveDays = days.slice(0, 5);
   const activePlan = state.plan
     .filter((p) => days.some((d) => d.key === p.slot))
@@ -1167,11 +1254,13 @@ function PlannerReady() {
     }
     const next = proposePlan(planEligible, fiveDays.map((d) => d.key), { reuseIngredients: prefs.reuse, kept });
     setSaved(null);
+    const why = next.length < 5 ? planShortfall(next.length, planCandidates, allergies) : "";
+    setShortfall(why);
     if (!next.length) {
-      announce("Nu am găsit idei potrivite. Încearcă mai mult timp sau alt tip de masă.");
+      announce(why || "Nu am găsit idei potrivite. Încearcă mai mult timp sau alt tip de masă.");
       return;
     }
-    if (next.length < 5) announce(`Am găsit idei pentru ${next.length} din 5 zile.`);
+    if (why) announce(why);
     setProposal(next);
     setStartedAt((value) => value ?? Date.now());
     track("recommendation_results_shown", { count: next.length });
@@ -1282,6 +1371,8 @@ function PlannerReady() {
                 <h2 id="v2-proposal-title">Propunerea pentru 5 zile</h2>
                 <span className="v2-small-label">EXPLORARE DEMO</span>
               </div>
+              {shortfall && <p className="v2-plan-shortfall" role="status">{shortfall}</p>}
+              <AllergyNotice compact />
               {reuse.length > 0 && (
                 <p className="v2-reuse-note">
                   <Leaf size={16} /> Refolosești: {reuse.map((r) => `${r.name.toLowerCase()} (${r.recipes} mese)`).join(", ")}
@@ -1386,14 +1477,18 @@ function PlannerReady() {
                 <input type="checkbox" checked={prefs.reuse} onChange={(e) => setPrefs({ ...prefs, reuse: e.target.checked })} />
                 Refolosește ingredientele între zile (mai puține cumpărături)
               </label>
-              <button className="v2-button v2-button-primary" disabled={blocked || planEligible.length === 0} onClick={generate}>
+              <button className="v2-button v2-button-primary" disabled={blocked} onClick={generate}>
                 <Sparkles size={17} /> Arată 5 zile de mese
               </button>
               <p className="v2-field-note">
                 {blocked
                   ? "Planificarea meselor începe după alegerea etapei de diversificare. Pentru nevoi individuale este necesară îndrumarea unui specialist."
                   : reviewCopy.planCount(planEligible.length)}
+                {!blocked && allergies.length > 0 && leftOut > 0 &&
+                  ` Din cauza alergiilor înregistrate, ${leftOut === 1 ? "o rețetă nu este folosită" : `${leftOut} rețete nu sunt folosite`} în plan.`}
               </p>
+              {!blocked && shortfall && !proposal && <p className="v2-plan-shortfall" role="status">{shortfall}</p>}
+              {!blocked && <AllergyNotice compact />}
               <GuidanceReason />
             </section>
           )}
@@ -1418,6 +1513,7 @@ function PlannerReady() {
                               <Clock3 size={13} />
                               {recipe.minutes} min · {reviewCopy.recipeBadge}
                             </span>
+                            <AllergyMarker recipe={recipe} problemsOnly />
                           </div>
                         </Link>
                         <div className="v2-plan-actions">
@@ -1634,6 +1730,108 @@ export function Journal() {
   );
 }
 
+/**
+ * The allergies that protect the active child. One recorded for the whole account (as V1 records them) stays
+ * active for every child until the parent links it, explicitly, to one child. Nothing is deleted here.
+ */
+function ProfileAllergies() {
+  const { cloud, allergies, announce } = usePreview();
+  const [pending, setPending] = useState<ResolvedAllergy | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  if (!cloud.connected) return null;
+  const child = cloud.children.find((c) => c.id === cloud.selectedBabyId);
+  const others = cloud.children.filter((c) => c.id !== cloud.selectedBabyId);
+  return (
+    <section className="v2-allergy-section" aria-labelledby="v2-allergies-title">
+      <h2 id="v2-allergies-title">Alergii înregistrate{child ? ` pentru ${child.label}` : ""}</h2>
+      {allergies.length ? (
+        <>
+          <p>Rețetele în care ingredientele scrise conțin aceste alimente nu sunt propuse și nu intră în plan. Protecția nu se poate opri din această pagină.</p>
+          <ul className="v2-allergy-list">
+            {allergies.map((a) => (
+              <li key={a.id}>
+                <strong>{a.label}</strong>
+                <span>{a.babyId ? `doar pentru ${child?.label ?? "acest copil"}` : "înregistrată pentru tot contul (fără copil ales)"}</span>
+                {!a.known && <span>Aliment fără ingrediente cunoscute: rețetele rămân insuficient verificate.</span>}
+                {!a.babyId && child && pending?.id !== a.id && (
+                  <button type="button" className="v2-text-button" disabled={busy || cloud.saving} onClick={() => { setFailed(false); setPending(a); }}>
+                    Asociază cu {child.label}
+                  </button>
+                )}
+                {pending?.id === a.id && child && (
+                  <div className="v2-allergy-confirm" role="group" aria-label={`Asociază ${a.label} cu ${child.label}`}>
+                    <p>
+                      Alergia la {a.label.toLowerCase()} va fi înregistrată pentru {child.label}.{" "}
+                      {others.length
+                        ? `Pentru ${others.map((c) => c.label).join(", ")} nu se mai aplică automat; o poți înregistra separat dacă e cazul.`
+                        : "Rămâne activă și filtrează în continuare rețetele."}{" "}
+                      Nu se șterge nimic.
+                    </p>
+                    <div className="v2-action-row">
+                      <button
+                        type="button"
+                        className="v2-button v2-button-primary"
+                        disabled={busy}
+                        onClick={async () => {
+                          setBusy(true);
+                          setFailed(false);
+                          try {
+                            await cloudStore.assignAllergy(a.id);
+                            setPending(null);
+                            announce(`Alergia este acum înregistrată pentru ${child.label}.`);
+                          } catch {
+                            setFailed(true);
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                      >
+                        {busy ? "Se salvează…" : `Da, pentru ${child.label}`}
+                      </button>
+                      <button type="button" className="v2-button v2-button-secondary" disabled={busy} onClick={() => setPending(null)}>
+                        Renunță
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          {failed && <p role="alert">Nu am putut asocia alergia. Nimic nu s-a schimbat; reîncearcă.</p>}
+          <p className="v2-field-note">{ALLERGY_NOTICE}</p>
+        </>
+      ) : (
+        <p>Nicio alergie înregistrată pentru acest profil.</p>
+      )}
+      <a className="v2-text-link" href="/alergii">Adaugă sau modifică alergiile <ArrowRight size={16} /></a>
+    </section>
+  );
+}
+/** The full V1 history of tried foods, apart from the 8 base ingredients used to order ideas. */
+function ProfileHistory() {
+  const { cloud } = usePreview();
+  if (!cloud.connected) return null;
+  const foods = cloud.history.filter((h) => h.babyId === null || h.babyId === cloud.selectedBabyId);
+  return (
+    <section className="v2-history-section" aria-labelledby="v2-history-title">
+      <h2 id="v2-history-title">Istoricul complet al alimentelor încercate</h2>
+      {foods.length ? (
+        <>
+          <p>{foods.length === 1 ? "Un aliment înregistrat" : `${foods.length} alimente înregistrate`} în contul tău. Doar le afișăm; nu le modificăm aici.</p>
+          <ul className="v2-history-list">
+            {foods.map((h) => (
+              <li key={`${h.babyId ?? ""}:${h.foodId}`}>{h.foodName}</li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p>Nu există încă alimente încercate în cont.</p>
+      )}
+      <Link className="v2-text-link" href="/alimente" prefetch={false}>Deschide istoricul complet <ArrowRight size={16} /></Link>
+    </section>
+  );
+}
 export function Profile() {
   const {
     state,
@@ -1646,6 +1844,7 @@ export function Profile() {
   } = usePreview();
   const [resetConfirm, setResetConfirm] = useState(false);
   if (!ready) return <LoadingState />;
+  const activeChild = cloud.connected ? cloud.children.find((c) => c.id === cloud.selectedBabyId) : undefined;
   return (
     <>
       <PageHeading
@@ -1656,6 +1855,23 @@ export function Profile() {
       </PageHeading>
       <div className="v2-profile-grid">
         <section className="v2-profile-section">
+          {cloud.connected && (
+            <div className="v2-active-child">
+              <p className="v2-eyebrow">PROFILUL ACTIV</p>
+              {cloud.children.length > 1 ? (
+                <label className="v2-builder-field">
+                  Copilul pentru care vezi ideile
+                  <select value={cloud.selectedBabyId ?? ""} disabled={cloud.saving} onChange={(e) => void cloudStore.selectChild(e.target.value)}>
+                    {cloud.children.map((c) => (
+                      <option key={c.id} value={c.id}>{c.label}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <h2>{activeChild?.label ?? "Niciun copil ales"}</h2>
+              )}
+            </div>
+          )}
           <Link className="v2-text-link" href="/v2/onboarding">Schimbă preferințele de explorare <ArrowRight size={16} /></Link>
           <h2>Etapa din catalog</h2>
           <StageSelect
@@ -1673,8 +1889,8 @@ export function Profile() {
           <p className="v2-field-note">
             Nu cerem numele copilului, data nașterii, greutatea sau diagnostice.
           </p>
-          <h2>Ingrediente deja cunoscute</h2>
-          <p>Influențează ordinea, fără să confirme toleranța.</p>
+          <h2>Ingrediente folosite pentru personalizare</h2>
+          <p>Cele 8 ingrediente de bază după care ordonăm ideile. Influențează ordinea, fără să confirme toleranța.</p>
           <div className="v2-ingredient-cloud">
             {ingredients.map((i) => (
               <button
@@ -1696,33 +1912,25 @@ export function Profile() {
               </button>
             ))}
           </div>
-          {cloud.connected && (
-            <p className="v2-field-note">
-              Aici apar cele 8 ingrediente de bază după care ordonăm ideile. Istoricul complet rămâne în{" "}
-              <Link href="/alimente" prefetch={false}>Alimente încercate</Link>.
-            </p>
-          )}
+          <ProfileHistory />
+          <ProfileAllergies />
           <div className="v2-allergen-note">
-            <h3>Ai nevoie de adaptare medicală?</h3>
+            <h3>Oprește personalizarea</h3>
             <p>
-              DiversiBebe nu personalizează mese pentru alergii diagnosticate sau alte nevoi medicale.
+              Poți opri sugestiile și planul automat pentru această sesiune, de exemplu cât aștepți sfatul medicului.
+              Excluderea alergenilor înregistrați nu depinde de această opțiune și rămâne activă oricum.
             </p>
             <label className="v2-checkbox-row">
               <input
                 type="checkbox"
                 checked={clinicalGuidance}
-                disabled={cloud.requiresClinicalGuidance}
                 onChange={(e) => setClinicalGuidance(e.target.checked)}
               />
               Oprește sugestiile personalizate în această sesiune
             </label>
-            {cloud.requiresClinicalGuidance ? (
-              <GuidanceReason />
-            ) : (
-              <small>
-                Această alegere nu este salvată și nu intră în analytics.
-              </small>
-            )}
+            <small>
+              Această alegere nu este salvată și nu intră în analytics.
+            </small>
           </div>
         </section>
         <aside>

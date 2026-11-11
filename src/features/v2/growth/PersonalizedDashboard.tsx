@@ -9,9 +9,9 @@ import { challenges, personalizedResult } from "./journey";
 import { monthIn } from "../season";
 
 export function useDashboardMatches(){
-  const {state,cloud,clinicalGuidance}=usePreview();
+  const {state,cloud,clinicalGuidance,allergies}=usePreview();
   const j=useJourney(journeyScope(cloud.userId,cloud.selectedBabyId));
-  return j.ready&&j.data.completed?personalizedResult(j.data,state,clinicalGuidance,cloud.connected).recipes:recommend(activeCatalog,{...initialFilters,months:state.stage},{mode:contentMode,favorites:state.favorites,introduced:state.introduced,used:state.uses.map(u=>u.recipeId),excludedIngredients:[],requiresClinicalGuidance:clinicalGuidance,month:monthIn()});
+  return j.ready&&j.data.completed?personalizedResult(j.data,state,clinicalGuidance,cloud.connected,undefined,undefined,allergies).recipes:recommend(activeCatalog,{...initialFilters,months:state.stage},{mode:contentMode,favorites:state.favorites,introduced:state.introduced,used:state.uses.map(u=>u.recipeId),excludedIngredients:[],requiresClinicalGuidance:clinicalGuidance,allergies,month:monthIn()});
 }
 export function DashboardFocus(){
   const {cloud,state,clinicalGuidance}=usePreview();

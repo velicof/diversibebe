@@ -1,4 +1,5 @@
 import type { AppState, Stage } from "../model";
+import type { ResolvedAllergy } from "../allergy";
 import { activeCatalog, contentMode, ingredients, type Recipe } from "../catalog";
 import { initialFilters, recommend } from "../recommendations";
 
@@ -74,11 +75,11 @@ export function journeyStage(j: Journey): Stage {
   return (ageBands.find(a=>a.id===j.ageBand)?.stage ?? 0) as Stage;
 }
 export function journeyMinutes(j: Journey) { return j.context==="under15"?14:j.context==="over30"?90:30; }
-export function personalizedResult(j: Journey, state: AppState, blocked: boolean, authenticated=false, recipes: Recipe[]=activeCatalog, mode:"preview"|"live"=contentMode) {
+export function personalizedResult(j: Journey, state: AppState, blocked: boolean, authenticated=false, recipes: Recipe[]=activeCatalog, mode:"preview"|"live"=contentMode, allergies: ResolvedAllergy[]=[]) {
   const stage = authenticated || state.onboarded ? Math.min(state.stage, journeyStage(j)) : journeyStage(j);
   const guide = stage===0 || j.context==="readiness" || j.context==="safety" || j.context==="serving" || j.context==="no-pressure";
   const matches = guide || blocked ? [] : recommend(recipes,{...initialFilters,months:stage,maxMinutes:journeyMinutes(j),ingredientIds:j.context==="fridge"?j.pantry:[]},{
-    mode,favorites:state.favorites,introduced:state.introduced,used:state.uses.map(u=>u.recipeId),excludedIngredients:[],requiresClinicalGuidance:blocked,
+    mode,favorites:state.favorites,introduced:state.introduced,used:state.uses.map(u=>u.recipeId),excludedIngredients:[],requiresClinicalGuidance:blocked,allergies,
   });
   const selected = j.completed && j.resultIds.length ? j.resultIds.flatMap(id=>matches.filter(r=>r.id===id)) : matches.slice(0,3);
   return {kind:blocked?"blocked":guide?"guide":selected.length?"demo":"empty",recipes:selected,stage,maxMinutes:journeyMinutes(j)} as const;

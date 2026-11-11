@@ -17,11 +17,11 @@ import { headlines } from "./funnel";
 const accountsEnabled=Boolean(process.env.NEXT_PUBLIC_V2_SUPABASE_URL);
 export function GrowthHome(){
   const experiment=useExperiment();
-  const {state,cloud,clinicalGuidance}=usePreview();
+  const {state,cloud,clinicalGuidance,allergies}=usePreview();
   const scope=journeyScope(cloud.userId,cloud.selectedBabyId);
   const draft=useJourney(scope);
   const [minutes,setMinutes]=useState(30);
-  const demo=useMemo(()=>recommend(activeCatalog,{...initialFilters,months:state.stage,maxMinutes:minutes},{mode:contentMode,favorites:state.favorites,introduced:state.introduced,used:[],excludedIngredients:[],requiresClinicalGuidance:clinicalGuidance}).filter(r=>["piure-dovlecel","piure-morcov"].includes(r.id)),[state.stage,minutes,state.favorites,state.introduced,clinicalGuidance]);
+  const demo=useMemo(()=>recommend(activeCatalog,{...initialFilters,months:state.stage,maxMinutes:minutes},{mode:contentMode,favorites:state.favorites,introduced:state.introduced,used:[],excludedIngredients:[],requiresClinicalGuidance:clinicalGuidance,allergies}).filter(r=>["piure-dovlecel","piure-morcov"].includes(r.id)),[state.stage,minutes,state.favorites,state.introduced,clinicalGuidance,allergies]);
   const headline=headlines[experiment.message];
   const resume=draft.ready && Boolean(draft.data.challenge) && !draft.data.completed;
   // Same element while nothing in it changed: store updates at start do not re-render the whole page.

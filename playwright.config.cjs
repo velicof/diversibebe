@@ -4,7 +4,8 @@ const base = `http://127.0.0.1:${process.env.V2_PORT || 3100}`;
 module.exports = defineConfig({
   testDir: './tests/e2e', timeout: process.env.V2_NATIVE==='1'?90000:40000, expect: { timeout: 7000 },
   fullyParallel: false, workers: 1, retries: 0,
-  use: { baseURL: base, browserName: 'chromium', headless: true, viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
+  // V2_BROWSER=webkit runs the same suite in the engine of Safari on iPhone.
+  use: { baseURL: base, browserName: process.env.V2_BROWSER || 'chromium', headless: true, viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
   reporter: [['list'], ['json', { outputFile: process.env.V2_QA_REPORT_FILE || '../finalization/playwright-results.json' }]],
   webServer: [
     ...(!process.env.V2_TEST_API_URL || process.env.V2_TEST_API_URL === 'http://127.0.0.1:54329' ? [{

@@ -1,6 +1,7 @@
 import { normalize } from "./review";
 import type { Recipe } from "./catalog";
 import { seasonalScore } from "./season";
+import { assessRecipe, type ResolvedAllergy } from "./allergy";
 
 export type Filters = {
   months: number;
@@ -21,6 +22,14 @@ export type RecommendationContext = {
   used: string[];
   excludedIngredients: string[];
   requiresClinicalGuidance: boolean;
+  /** Allergies of the active child. They are never relaxed by a filter or a preference. */
+  allergies?: ResolvedAllergy[];
+  /**
+   * "recommend" (default): only recipes whose ingredients show none of the allergens, as for suggestions and plans.
+   * "browse": the library may also show recipes left unverified, marked as such; never one that contains an allergen.
+   * "all": also recipes that contain an allergen, for reading only (marked, never suggested or planned).
+   */
+  allergyScope?: "recommend" | "browse" | "all";
   /** Month 1-12 (Europe/Bucharest). When set, in-season produce breaks ties only. */
   month?: number;
 };
@@ -53,6 +62,10 @@ export function recommend(
     )
       return false;
     if (filters.excludedAllergens.some((a) => r.allergens.includes(a as never))) return false;
+    if (context.allergies?.length && context.allergyScope !== "all") {
+      const status = assessRecipe(r, context.allergies).status;
+      if (status === "contains" || (status === "unverified" && context.allergyScope !== "browse")) return false;
+    }
     if (filters.inSeason && context.month && !r.seasonMonths.includes(context.month)) return false;
     if (context.excludedIngredients.some((id) => r.ingredientIds.includes(id)))
       return false;

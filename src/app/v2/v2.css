@@ -3486,3 +3486,24 @@
 /* Why there are no suggestions: always said next to the block, with the way out. */
 .v2-guidance-reason { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--v2-accent-soft); color: var(--v2-ink); font-size: 14px; line-height: 1.55; }
 .v2-guidance-reason a { color: var(--v2-accent); text-decoration: underline; font-weight: 600; }
+/* Allergies filter suggestions and plans; every recipe says how it stands against them. */
+.v2-allergy-marker { margin: 6px 0 0; padding: 4px 9px; border-radius: 8px; font-size: 12.5px; line-height: 1.45; width: fit-content; max-width: 100%; }
+.v2-allergy-compatible { background: var(--v2-sage); color: var(--v2-green); }
+.v2-allergy-unverified { background: #f7efd9; color: #6b5212; }
+.v2-allergy-contains { background: #f8e1dc; color: #8a2e1b; font-weight: 600; }
+.v2-allergy-notice { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: var(--v2-paper); border: 1px solid var(--v2-line); font-size: 14px; line-height: 1.55; }
+.v2-allergy-notice p { margin: 0 0 6px; }
+.v2-allergy-toggle { margin: 0 0 14px; font-size: 14px; line-height: 1.45; align-items: flex-start; }
+.v2-allergy-detail { margin: 12px 0; padding: 12px 14px; border-radius: 12px; font-size: 14px; line-height: 1.55; }
+.v2-allergy-detail p { margin: 4px 0 0; font-weight: 400; }
+.v2-plan-shortfall { margin: 10px 0; padding: 12px 14px; border-radius: 12px; background: #f7efd9; color: var(--v2-ink); font-size: 14px; line-height: 1.55; }
+.v2-active-child { margin: 0 0 18px; padding-bottom: 14px; border-bottom: 1px solid var(--v2-line); }
+.v2-active-child h2 { margin: 2px 0 0; }
+.v2-allergy-section, .v2-history-section { margin: 22px 0 0; padding-top: 18px; border-top: 1px solid var(--v2-line); }
+.v2-allergy-list, .v2-history-list { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 8px; }
+.v2-allergy-list li { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: #f8e1dc; }
+.v2-allergy-list li span { font-size: 13.5px; color: var(--v2-muted); }
+.v2-allergy-list .v2-text-button { justify-self: start; }
+.v2-allergy-confirm p { margin: 6px 0; font-size: 14px; }
+.v2-history-list { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+.v2-history-list li { padding: 6px 10px; border-radius: 999px; background: var(--v2-sage); font-size: 13.5px; overflow-wrap: anywhere; }

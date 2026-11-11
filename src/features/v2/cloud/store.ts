@@ -12,6 +12,8 @@ import { accountCopy } from "../content/copy";
 import { catalog } from "../catalog";
 import { nextDays } from "../planning";
 import { importableFromGuest } from "./guest-import";
+import { allergiesFor, recommendable, type AllergyRecord } from "../allergy";
+import type { TriedFood } from "./repository";
 
 type Snapshot = CloudState & {
   available: boolean;
@@ -23,6 +25,9 @@ type Snapshot = CloudState & {
   email: string | null;
   /** A stored account session whose data is not loaded yet, or failed to load: never shown as a visitor. */
   reconnecting: boolean;
+  /** Recorded allergies (all children and the whole account) and the full tried-foods history, as in V1. */
+  allergies: AllergyRecord[];
+  history: TriedFood[];
 };
 const initial: Snapshot = {
   journey: null,
@@ -38,6 +43,8 @@ const initial: Snapshot = {
   userId: null,
   email: null,
   reconnecting: false,
+  allergies: [],
+  history: [],
 };
 let snapshot = initial,
   initialized = false,
@@ -151,6 +158,9 @@ async function connect() {
     // Both round trips at once on a phone connection. The data is used only if the user is confirmed.
     const loading = repository.load();
     void loading.catch(() => {});
+    // Allergies are part of loading the account: without them nothing could be filtered, so a failure retries.
+    const family = repository.loadFamilyRecords();
+    void family.catch(() => {});
     const {
       data: { user },
       error,
@@ -171,9 +181,11 @@ async function connect() {
         connected: false,
       });
     const value = await loading;
+    const records = await family;
     if (run === generation)
       update({
         ...value,
+        ...records,
         loading: false,
         saving: false,
         connected: true,
@@ -418,6 +430,13 @@ export const cloudStore = {
         });
     }
   },
+  async assignAllergy(id: string) {
+    if (!repository || !snapshot.connected || !snapshot.selectedBabyId) throw new Error("Alege un profil conectat.");
+    const run = generation, child = snapshot.selectedBabyId;
+    await repository.assignAllergy(id, child);
+    const records = await repository.loadFamilyRecords();
+    if (run === generation) update(records);
+  },
   async createChild(label: string, stage: number) {
     if (!repository || !snapshot.connected) throw new Error("Test environment unavailable");
     const run = generation, owner = snapshot.userId;
@@ -443,7 +462,9 @@ export const cloudStore = {
     if (!repository || !snapshot.connected || !snapshot.selectedBabyId) return { favorites: 0, plan: 0, skipped: 0 };
     // Explicit, additive import only. Meals/clinical choices/history are never imported, and a planned
     // meal enters only if it suits the stage of the child in this account.
-    const { favorites, plan, skipped } = importableFromGuest(local, snapshot.state, snapshot.requiresClinicalGuidance, catalog, nextDays(new Date())[0].key);
+    const allergies = allergiesFor(snapshot.allergies, snapshot.selectedBabyId);
+    const unsuitable = (id: string) => { const r = catalog.find((x) => x.id === id); return !r || !recommendable(r, allergies); };
+    const { favorites, plan, skipped } = importableFromGuest(local, snapshot.state, false, catalog, nextDays(new Date())[0].key, unsuitable);
     const owner = snapshot.userId,
       child = snapshot.selectedBabyId,
       run = generation;

@@ -8,14 +8,15 @@ import { usePreview } from "../Provider";
 import { previewStore } from "../store";
 import { importableFromGuest } from "./guest-import";
 import { cloudStore } from "./store";
+import { recommendable } from "../allergy";
 
 const DISMISSED_KEY = "diversibebe:v2:guest-import-dismissed";
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
-const notSuited = (count: number) => `${plural(count, "alegere nu se potrivește", "alegeri nu se potrivesc")} etapei copilului din cont și nu se adaugă.`;
+const notSuited = (count: number) => `${plural(count, "alegere nu se potrivește", "alegeri nu se potrivesc")} etapei sau alergiilor copilului din cont și nu se adaugă.`;
 
 /** Connecting must not look like losing what a visitor saved: the account offers to take it, explicitly. */
 export function GuestImportPrompt() {
-  const { cloud } = usePreview();
+  const { cloud, allergies } = usePreview();
   const pathname = usePathname();
   const local = useSyncExternalStore(previewStore.subscribe, previewStore.getSnapshot, previewStore.getServerSnapshot);
   const [dismissed, setDismissed] = useState(() => {
@@ -37,7 +38,10 @@ export function GuestImportPrompt() {
     }
     setDismissed(true);
   };
-  const pending = importableFromGuest(local.state, cloud.state, cloud.requiresClinicalGuidance, catalog, nextDays(new Date())[0].key);
+  const pending = importableFromGuest(local.state, cloud.state, false, catalog, nextDays(new Date())[0].key, (id) => {
+    const recipe = catalog.find((r) => r.id === id);
+    return !recipe || !recommendable(recipe, allergies);
+  });
   if (result)
     return (
       <div className="v2-guest-import" role="status">

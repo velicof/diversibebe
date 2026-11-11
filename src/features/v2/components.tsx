@@ -24,6 +24,7 @@ import { usePreview } from "./Provider";
 import { SyncStatus } from "./cloud/SyncStatus";
 import { GuestImportPrompt } from "./cloud/GuestImportPrompt";
 import { GrowthTelemetry } from "./growth/Telemetry";
+import { ALLERGY_NOTICE, assessRecipe, type AllergyAssessment } from "./allergy";
 
 const accountsEnabled = Boolean(process.env.NEXT_PUBLIC_V2_SUPABASE_URL);
 const buildStamp = process.env.NEXT_PUBLIC_V2_BUILD;
@@ -288,26 +289,53 @@ export function RecipePhoto({
     </div>
   );
 }
-/**
- * Why there are no meal suggestions, where the guidance block applies: an allergy recorded in the account
- * (the safe default until a specialist is involved), or the parent's own choice for this session.
- */
+/** Why there are no meal suggestions when the parent paused them for this session. Allergies never pause them. */
 export function GuidanceReason() {
-  const { cloud, clinicalGuidance } = usePreview();
+  const { clinicalGuidance } = usePreview();
   if (!clinicalGuidance) return null;
-  if (cloud.requiresClinicalGuidance)
-    return (
-      <p className="v2-guidance-reason">
-        Contul tău are o alergie înregistrată în DiversiBebe. Din siguranță, nu propunem mese cât timp e înregistrată:
-        rețetele de aici nu sunt adaptate alergiilor.{" "}
-        <a href="/alergii">Vezi alergiile înregistrate</a>
-      </p>
-    );
   return (
     <p className="v2-guidance-reason">
       Ai oprit sugestiile pentru această sesiune.{" "}
       <Link href="/v2/profil" prefetch={false}>Le poți porni din Profil</Link>
     </p>
+  );
+}
+export const allergyMarkerText = {
+  compatible: "Compatibilitate verificată pe baza ingredientelor disponibile",
+  contains: "Conține un alergen declarat",
+  unverified: "Ingrediente insuficient verificate",
+} as const;
+/** How a recipe stands against the active child's recorded allergies; nothing is shown without allergies. */
+export function useAllergyAssessment(recipe: Pick<Recipe, "name" | "ingredients" | "allergens" | "ingredientIds">): AllergyAssessment | null {
+  const { allergies } = usePreview();
+  return allergies.length ? assessRecipe(recipe, allergies) : null;
+}
+export function AllergyMarker({ recipe, problemsOnly = false }: { recipe: Recipe; problemsOnly?: boolean }) {
+  const assessment = useAllergyAssessment(recipe);
+  if (!assessment || (problemsOnly && assessment.status === "compatible")) return null;
+  const names = assessment.status === "contains" ? assessment.contains : assessment.unverified;
+  return (
+    <p className={`v2-allergy-marker v2-allergy-${assessment.status}`} data-allergy={assessment.status}>
+      {allergyMarkerText[assessment.status]}
+      {names.length > 0 && <span>: {names.join(", ")}</span>}
+    </p>
+  );
+}
+/** The medical context, shown wherever suggestions or plans are filtered by allergies. */
+export function AllergyNotice({ compact = false }: { compact?: boolean }) {
+  const { allergies } = usePreview();
+  if (!allergies.length) return null;
+  return (
+    <aside className="v2-allergy-notice" aria-label="Alergii înregistrate">
+      <p>
+        <strong>Alergii înregistrate: {allergies.map((a) => a.label).join(", ")}.</strong> {ALLERGY_NOTICE}
+      </p>
+      {!compact && (
+        <Link href="/v2/profil" prefetch={false} className="v2-text-link">
+          Vezi alergiile în Profil <ArrowRight size={16} />
+        </Link>
+      )}
+    </aside>
   );
 }
 /** A visitor's choices live only here: say so where they are saved, with the way to keep them. */
@@ -408,6 +436,7 @@ export function RecipeCard({
         <p className="v2-card-meta">
           {recipe.age} · {recipe.allergens.length ? recipe.allergens.join(", ") : "fără alergeni majori identificați"}
         </p>
+        <AllergyMarker recipe={recipe} />
         {reason && (
           <p className="v2-reason">
             <Check size={13} />

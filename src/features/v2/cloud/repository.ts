@@ -7,6 +7,9 @@ import {
   type LocalEvent,
 } from "../model";
 import { readJourney, newJourney, type Journey } from "../growth/journey";
+import type { AllergyRecord } from "../allergy";
+
+export type TriedFood = { foodId: string; foodName: string; babyId: string | null };
 
 export type CloudState = {
   journey: Journey | null;
@@ -58,6 +61,28 @@ function parse(value: unknown): CloudState {
 }
 export class V2Repository {
   constructor(readonly client: SupabaseClient) {}
+  /** Allergies and tried foods as V1 records them; row-level security returns this family's rows only. */
+  async loadFamilyRecords(): Promise<{ allergies: AllergyRecord[]; history: TriedFood[] }> {
+    const [allergies, tried] = await Promise.all([
+      this.client.from("allergy_records").select("id,baby_id,food_id,food_name").abortSignal(AbortSignal.timeout(12000)),
+      this.client.from("tried_foods").select("food_id,food_name,baby_id").abortSignal(AbortSignal.timeout(12000)),
+    ]);
+    if (allergies.error) throw allergies.error;
+    if (tried.error) throw tried.error;
+    const seen = new Set<string>();
+    return {
+      allergies: (allergies.data ?? []).map((r) => ({ id: String(r.id), babyId: r.baby_id ?? null, foodId: r.food_id ?? null, foodName: String(r.food_name ?? "") })),
+      history: (tried.data ?? [])
+        .filter((r) => { const key = `${r.baby_id ?? ""}:${r.food_id}`; if (seen.has(key)) return false; seen.add(key); return true; })
+        .map((r) => ({ foodId: String(r.food_id), foodName: String(r.food_name ?? r.food_id), babyId: r.baby_id ?? null })),
+    };
+  }
+  /** Explicit choice of the parent: an allergy recorded for the whole account now belongs to one child. Nothing is deleted. */
+  async assignAllergy(id: string, babyId: string) {
+    const { data, error } = await this.client.from("allergy_records").update({ baby_id: babyId }).eq("id", id).is("baby_id", null).select("id");
+    if (error) throw error;
+    if (!data?.length) throw new Error("allergy not updated");
+  }
   async load(babyId: string | null = null): Promise<CloudState> {
     const { data, error } = await this.client
       .rpc("v2_load_state", { p_baby_id: babyId })

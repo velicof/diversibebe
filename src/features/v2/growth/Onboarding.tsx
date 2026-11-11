@@ -22,13 +22,13 @@ export function Preparation(){return <div className="gw-journey gw-resource-page
 
 export function GrowthOnboarding(){
   const exp=useExperiment();
-  const {state,ready,cloud,clinicalGuidance,dispatch}=usePreview();
+  const {state,ready,cloud,clinicalGuidance,allergies,dispatch}=usePreview();
   const scope=journeyScope(cloud.userId,cloud.selectedBabyId);
   const snapshot=useJourney(scope);
   const heading=useRef<HTMLHeadingElement>(null);
   const previousStep=useRef<number|null>(null);
   const j=snapshot.data;
-  const result=personalizedResult(j,state,clinicalGuidance,cloud.connected);
+  const result=personalizedResult(j,state,clinicalGuidance,cloud.connected,undefined,undefined,allergies);
   useEffect(()=>{
     if(!nativeAuth && snapshot.ready && !cloud.loading && cloud.connected)journeyStore.claimHandoff(scope);
   },[snapshot.ready,cloud.connected,cloud.loading,scope]);
@@ -49,7 +49,7 @@ export function GrowthOnboarding(){
     if(j.step<2){update({step:j.step+1});return;}
     const completed={...j,context:skip?null:j.context,pantry:skip?[]:j.pantry};
     const candidateState=cloud.connected?state:{...state,stage:journeyStage(j)};
-    const selected=personalizedResult(completed,candidateState,clinicalGuidance,cloud.connected);
+    const selected=personalizedResult(completed,candidateState,clinicalGuidance,cloud.connected,undefined,undefined,allergies);
     update({step:3,completed:true,context:completed.context,pantry:completed.pantry,resultIds:selected.recipes.map(r=>r.id)});
     // The UX age band never changes the selected child's stored clinical profile.
     if(!cloud.connected)dispatch({type:"onboard",stage:journeyStage(j),introduced:state.introduced});

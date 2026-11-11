@@ -21,9 +21,12 @@ export function importableFromGuest(
   requiresClinicalGuidance: boolean,
   recipes: RecipeFacts[],
   today: string,
+  /** Recipes this child must not get automatically (recorded allergies, or doubt about them). */
+  unsuitable: (recipeId: string) => boolean = () => false,
 ): GuestImport {
   const byId = new Map(recipes.map((r) => [r.id, r]));
-  const suits = (recipe: RecipeFacts) => !requiresClinicalGuidance && account.stage >= 6 && recipe.published && recipe.minimumMonths <= account.stage;
+  const suits = (recipe: RecipeFacts) =>
+    !requiresClinicalGuidance && account.stage >= 6 && recipe.published && recipe.minimumMonths <= account.stage && !unsuitable(recipe.id);
   const favorites: string[] = [];
   let skipped = 0;
   for (const id of local.favorites) {
