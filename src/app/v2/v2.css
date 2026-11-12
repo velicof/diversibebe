@@ -2373,9 +2373,6 @@
     font-size: 11px;
     padding: 13px 17px;
   }
-  .v2-shell-landing .v2-toast {
-    bottom: 22px;
-  }
   .v2-landing-hero {
     grid-template-columns: 1fr;
     gap: 30px;
@@ -2465,9 +2462,6 @@
   }
   .v2-mini-plan b {
     font-size: 10px;
-  }
-  .v2-shell-landing .v2-footer {
-    padding-bottom: 30px;
   }
   .v2-discover-layout {
     gap: 26px;

@@ -202,3 +202,22 @@ test('the resources page keeps the app navigation; Înapoi never leaves the app;
  await page.goBack();
  await expect(page).toHaveURL(/\/v2\/pregatire/);
 });
+
+test('the bottom menu is there from the first page, for visitors too, and covers nothing',async({page})=>{
+ for(const path of ['/v2','/v2/onboarding','/v2/pregatire']){
+  await page.goto(path);
+  const nav=page.locator('.v2-bottom-nav');
+  await expect(nav,path).toBeVisible();
+  for(const name of ['Azi','Descoperă','Planul meu','Profil'])await expect(nav.getByRole('link',{name}),`${path} ${name}`).toBeVisible();
+  // The end of the page can scroll above the menu.
+  const footer=page.locator('.v2-footer');
+  await footer.scrollIntoViewIfNeeded();await page.mouse.wheel(0,4000);
+  const [f,n]=await Promise.all([footer.boundingBox(),nav.boundingBox()]);
+  expect(f.y+f.height,`${path}: footer above the menu`).toBeLessThanOrEqual(n.y+n.height+1);
+  const link=footer.getByRole('link').last();const box=await link.boundingBox();
+  expect(box.y+box.height,`${path}: last footer link not under the menu`).toBeLessThanOrEqual(n.y);
+ }
+ await page.goto('/v2');
+ await page.locator('.v2-bottom-nav').getByRole('link',{name:'Planul meu'}).click();
+ await expect(page).toHaveURL(/\/v2\/plan/);
+});

@@ -153,20 +153,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </a>
         </footer>
       </div>
-      {!marketing && (
-        <nav className="v2-bottom-nav" aria-label="Navigare mobilă">
-          {navItems.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              aria-current={pathname.startsWith(href) ? "page" : undefined}
-            >
-              <Icon size={22} strokeWidth={1.7} />
-              <span>{label}</span>
-            </Link>
-          ))}
-        </nav>
-      )}
+      {/* On every page, visitors included: the start page and onboarding must not be dead ends on a phone. */}
+      <nav className="v2-bottom-nav" aria-label="Navigare mobilă">
+        {navItems.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            aria-current={pathname.startsWith(href) ? "page" : undefined}
+          >
+            <Icon size={22} strokeWidth={1.7} />
+            <span>{label}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }

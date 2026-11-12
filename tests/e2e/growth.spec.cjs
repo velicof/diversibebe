@@ -27,7 +27,8 @@ test('growth: first visit demonstrates the product before any account request',a
  await expect(page.locator('.gw-demo-recipes .v2-recipe-card')).toHaveCount(2);
  await page.getByRole('button',{name:'15 minute',exact:true}).click();await expect(page.getByRole('button',{name:'15 minute',exact:true})).toHaveAttribute('aria-pressed','true');await expect(page.locator('.gw-demo-recipes .v2-recipe-card')).toHaveCount(1);
  await page.locator('.gw-demo-recipes').getByRole('link',{name:'Vezi rețeta',exact:true}).first().click();await expect(page).toHaveURL(/\/v2\/retete\//);
- const events=await diagnostics(page);expect(events.some(e=>e.name==='homepage_view')).toBe(true);expect(events.some(e=>e.name==='recipe_opened')).toBe(true);
+ // Events are written by an effect just after the page changes: wait for them instead of reading once.
+ await expect.poll(async()=>(await diagnostics(page)).some(e=>e.name==='homepage_view')).toBe(true);await expect.poll(async()=>(await diagnostics(page)).some(e=>e.name==='recipe_opened')).toBe(true);
 });
 test('growth: full journey survives back, refresh, save and repeated result views',async({page})=>{
  await page.goto('/v2/onboarding');await page.getByRole('button',{name:/^Nu am suficient timp/}).click();await page.getByRole('button',{name:'Continuă',exact:true}).click();
@@ -85,7 +86,7 @@ test('growth: keyboard selection, focus progression and safety resource work wit
  await page.getByRole('link',{name:/Resurse de siguranță/}).click();await expect(page).toHaveURL('/v2/pregatire');await expect(page.locator('.gw-education-card')).toHaveCount(3);await expect(page.locator('input[type=email]')).toHaveCount(0);
 });
 test('growth: classic comparison is inspectable and has its own funnel dimension',async({page})=>{
- await page.goto('/v2?parcurs=clasic&mesaj=B');await expect(page.getByRole('heading',{level:1})).toContainText('Mese mici.');await page.getByRole('link',{name:/Personalizează explorarea/}).click();await expect(page.getByRole('button',{name:/Primele descoperiri/})).toBeVisible();await page.getByRole('button',{name:/Primele descoperiri/}).click();await page.getByRole('button',{name:'Continuă',exact:true}).click();await page.getByRole('button',{name:'Să descoperim idei',exact:true}).click();await expect(page).toHaveURL('/v2/azi');expect((await diagnostics(page)).some(e=>e.name==='personalized_result_viewed'&&e.properties.flow==='classic')).toBe(true);
+ await page.goto('/v2?parcurs=clasic&mesaj=B');await expect(page.getByRole('heading',{level:1})).toContainText('Mese mici.');await page.getByRole('link',{name:/Personalizează explorarea/}).click();await expect(page.getByRole('button',{name:/Primele descoperiri/})).toBeVisible();await page.getByRole('button',{name:/Primele descoperiri/}).click();await page.getByRole('button',{name:'Continuă',exact:true}).click();await page.getByRole('button',{name:'Să descoperim idei',exact:true}).click();await expect(page).toHaveURL('/v2/azi');await expect.poll(async()=>(await diagnostics(page)).some(e=>e.name==='personalized_result_viewed'&&e.properties.flow==='classic')).toBe(true);
 });
 test('growth: a return after two days is recorded locally without simulating a real cohort',async({page})=>{
  await page.addInitScript(()=>localStorage.setItem('diversibebe:v2:last-visit:1',JSON.stringify({at:Date.now()-2*86400000})));await page.goto('/v2');await expect.poll(async()=>(await diagnostics(page)).filter(e=>e.name==='return_visit').length).toBe(1);expect((await diagnostics(page)).find(e=>e.name==='return_visit').properties.daysSinceLastVisit).toBe(2);
