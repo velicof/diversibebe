@@ -203,8 +203,21 @@ test('the resources page keeps the app navigation; Înapoi never leaves the app;
  await expect(page).toHaveURL(/\/v2\/pregatire/);
 });
 
-test('the bottom menu is there from the first page, for visitors too, and covers nothing',async({page})=>{
- for(const path of ['/v2','/v2/onboarding','/v2/pregatire']){
+test('navigation by page type: app pages always have the menu, onboarding has its own way out, the start page shows it once the app is in use',async({page})=>{
+ // A first visit: one clear next step on the start page; onboarding is a focused flow.
+ await page.goto('/v2');
+ await expect(page.getByRole('link',{name:'Hai să găsim o idee de masă',exact:true})).toBeVisible();
+ await expect(page.locator('.v2-bottom-nav')).toHaveCount(0);
+ await page.goto('/v2/onboarding');
+ await expect(page.locator('.v2-bottom-nav')).toHaveCount(0);
+ await expect(page.locator('.gw-journey-top').getByRole('link',{name:'Pagina de început'})).toBeVisible();
+ // Once the app is in use on this device (a stage chosen), the start page has the menu and onboarding leads back to Azi.
+ await page.goto('/v2/profil');
+ await page.getByRole('button',{name:/Primele descoperiri/}).click();
+ await page.goto('/v2/onboarding');
+ await expect(page.locator('.gw-journey-top').getByRole('link',{name:'Înapoi la Azi'})).toBeVisible();
+ await expect(page.locator('.v2-bottom-nav')).toHaveCount(0);
+ for(const path of ['/v2','/v2/pregatire','/v2/azi','/v2/idei','/v2/plan','/v2/profil']){
   await page.goto(path);
   const nav=page.locator('.v2-bottom-nav');
   await expect(nav,path).toBeVisible();

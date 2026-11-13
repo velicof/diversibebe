@@ -3480,6 +3480,8 @@
 /* Why there are no suggestions: always said next to the block, with the way out. */
 .v2-guidance-reason { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--v2-accent-soft); color: var(--v2-ink); font-size: 14px; line-height: 1.55; }
 .v2-guidance-reason a { color: var(--v2-accent); text-decoration: underline; font-weight: 600; }
+/* Without the bottom menu (first visit on the start page, onboarding), the footer needs no room for it. */
+@media (max-width: 760px) { .v2-shell-no-nav .v2-footer { padding-bottom: 30px; } .v2-shell-no-nav .v2-toast { bottom: 22px; } }
 /* Allergies filter suggestions and plans; every recipe says how it stands against them. */
 .v2-allergy-marker { margin: 6px 0 0; padding: 4px 9px; border-radius: 8px; font-size: 12.5px; line-height: 1.45; width: fit-content; max-width: 100%; }
 .v2-allergy-compatible { background: var(--v2-sage); color: var(--v2-green); }

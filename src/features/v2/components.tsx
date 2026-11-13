@@ -56,14 +56,18 @@ export function Brand() {
 }
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { storageError, cloud } = usePreview();
+  const { storageError, cloud, state } = usePreview();
   const landing = pathname === "/v2";
+  // Navigation by page type: the app's pages always have the menu; onboarding is a focused flow with its own
+  // way out; the start page shows it to someone who already uses the app, and one clear next step to a newcomer.
+  const returning = state.onboarded || cloud.connected || cloud.reconnecting;
+  const showNav = pathname !== "/v2/onboarding" && (!landing || returning);
   // The resources page keeps the app's navigation: it is reached from inside the app too.
   const marketing = landing || pathname === "/v2/onboarding";
   // From the build setting, not the live state: the button is in the first HTML the phone receives.
   const offerConnect = accountsEnabled && !cloud.connected && !cloud.loading && !cloud.reconnecting && !pathname.startsWith("/v2/cont");
   return (
-    <div className={`v2-shell ${landing ? "v2-shell-landing" : ""} ${marketing ? "v2-shell-marketing" : ""}`}>
+    <div className={`v2-shell ${landing ? "v2-shell-landing" : ""} ${marketing ? "v2-shell-marketing" : ""} ${showNav ? "" : "v2-shell-no-nav"}`}>
       <a className="v2-skip" href="#v2-content">
         Sari la conținut
       </a>
@@ -153,8 +157,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </a>
         </footer>
       </div>
-      {/* On every page, visitors included: the start page and onboarding must not be dead ends on a phone. */}
-      <nav className="v2-bottom-nav" aria-label="Navigare mobilă">
+      {showNav && <nav className="v2-bottom-nav" aria-label="Navigare mobilă">
         {navItems.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
@@ -165,7 +168,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span>{label}</span>
           </Link>
         ))}
-      </nav>
+      </nav>}
     </div>
   );
 }

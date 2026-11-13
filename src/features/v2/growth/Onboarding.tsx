@@ -56,7 +56,7 @@ export function GrowthOnboarding(){
   };
   const title=j.step===0?"Care e cea mai mare provocare la mesele celui mic?":j.step===1?"În ce etapă este copilul tău?":j.step===2?context.title:result.kind==="guide"?"Un început mai liniștit, în ritmul vostru.":result.kind==="blocked"?"Începem cu informații, nu cu sugestii.":result.kind==="empty"?"Nu am găsit idei în alegerile de acum.":"Un punct de pornire pentru mesele voastre.";
   return <div className={`gw-journey ${j.step===3?"gw-result-page":""}`}>
-    <div className="gw-journey-top"><Link href="/v2" className="v2-back-link"><ArrowLeft size={16}/> Pagina de început</Link><Link href="/v2/pregatire" className="gw-safety-link"><ShieldCheck size={15}/> Resurse de siguranță</Link></div>
+    <div className="gw-journey-top">{cloud.connected||state.onboarded?<Link href="/v2/azi" className="v2-back-link"><ArrowLeft size={16}/> Înapoi la Azi</Link>:<Link href="/v2" className="v2-back-link"><ArrowLeft size={16}/> Pagina de început</Link>}<Link href="/v2/pregatire" className="gw-safety-link"><ShieldCheck size={15}/> Resurse de siguranță</Link></div>
     <div className="gw-progress" role="progressbar" aria-valuemin={0} aria-valuemax={3} aria-valuenow={Math.min(3,j.step+1)} aria-label={j.step===3?"Rezultatul tău":`Pasul ${j.step+1} din 3`}><span style={{width:`${j.step===3?100:(j.step+1)*100/3}%`}}/></div>
     <p className="gw-eyebrow">{j.step<3?`CÂTEVA ALEGERI PENTRU VOI · ${j.step+1} DIN 3`:"REZULTATUL TĂU · FĂRĂ CONT OBLIGATORIU"}</p>
     <h1 ref={heading} tabIndex={-1}>{title}</h1>
