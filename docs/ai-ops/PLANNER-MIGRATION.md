@@ -71,6 +71,8 @@ Ordinea 3 → 5 contează: migrația merge cu clientul vechi, dar clientul nou n
 | V1 | niciun fișier V1 schimbat; codul V1 nu folosește `meal_plans`, `user_preferences`, `product_events` sau funcțiile V2 |
 | Clientul de pe Preview (`1c46088`) pe baza migrată (local) | 31/32 din propriile teste de cont; singurul eșec e limita de tranziție știută: clientul vechi nu poate elimina mesele cu tip create de clientul nou (nu le strică, nu le șterge) |
 | Preflight producție (read-only) | 7/7 `true`; `meal_plans` 1, `user_preferences` 1, `product_events` 19, `allergy_records` 27, `tried_foods` 4.704 |
-| Backup nou cu restaurare de test + copie externă | **în așteptare (fondator)** |
+| Backup nou cu restaurare de test | **Trecut**, 14 nov. 19:47 UTC (`diversibebe-2026-11-14T19-46-55-081Z`): 15/15 tabele, 7/7 fișiere Storage, restaurare cu aceleași numere de rânduri |
+| Copie externă cu hash identic | confirmare a fondatorului: `.dump.enc` sha256 `052353164d5a…4fd5a`, `.storage.enc` sha256 `db26cda65cb2…588e4` |
+| Preflight repetat (14 nov., după backup) | 7/7 `true`, aceleași numere; nicio migrație nouă în producție de la 11 nov. |
 
 **Decizie: GO tehnic pentru migrație, condiționat de backupul verificat și de aprobarea explicită a fondatorului.**
