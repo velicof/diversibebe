@@ -76,3 +76,19 @@ Ordinea 3 → 5 contează: migrația merge cu clientul vechi, dar clientul nou n
 | Preflight repetat (14 nov., după backup) | 7/7 `true`, aceleași numere; nicio migrație nouă în producție de la 11 nov. |
 
 **Decizie: GO tehnic pentru migrație, condiționat de backupul verificat și de aprobarea explicită a fondatorului.**
+
+## Aplicată în producție (14 nov. 2026, cu aprobarea explicită a fondatorului)
+
+- Ordinea: backup verificat (19:47 UTC, 15/15 + 7/7, copie externă cu hash identic confirmată de fondator)
+  → preflight imediat înainte (toate `true`) → migrația `v2_flexible_planner` (versiunea `20261114195724`,
+  fișierul identic cu commitul, md5 `1c7d8e9c…f3dd`) → postflight.
+- Postflight: toate `true` — coloana `meal` (NOT NULL, implicit `oricare`), unicitate pe copil/zi/masă,
+  vechea unicitate eliminată, singurul rând existent a devenit `oricare`, politica `v2_plan_owner`
+  neschimbată (o singură politică), funcțiile noi, drepturi doar pentru `authenticated`, evenimentele noi.
+- Numere identice înainte/după: `meal_plans` 1 (1 familie), `user_preferences` 1, `product_events` 19,
+  `allergy_records` 27, `tried_foods` 4.704, `food_journal` 1.198, `babies` 440, `cooked_recipes` 30,
+  `favorite_recipes` 38.
+- Security advisor: aceleași 3 observații de dinainte, fără legătură cu planificatorul
+  (`app_private.ai_usage` fără politici — INFO; `consume_bebeasist_quota` SECURITY DEFINER; protecția
+  parolelor compromise oprită în Auth). Nimic nou.
+- Preview rulează încă clientul anterior (`1c46088`), compatibil. Push-ul cere aprobare separată.
