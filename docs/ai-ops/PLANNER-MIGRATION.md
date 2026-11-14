@@ -59,3 +59,18 @@ Ordinea 3 → 5 contează: migrația merge cu clientul vechi, dar clientul nou n
 4. Azi: „Mesele de azi” cu „Am pregătit”.
 5. Deconectare/reconectare: planul și alegerile (zile, mese) rămân.
 6. Eduard: valorile inițiale ale meselor corespund etapei; schimbă-le și verifică că sunt reținute.
+
+## GO / NO-GO (14 nov. 2026)
+
+| Criteriu | Rezultat |
+|---|---|
+| Branch | 3 commituri peste Preview (`1c46088`), doar V2, teste, documentație, `supabase/`, `scripts/prod-backup.cjs`; **niciun fișier V1** |
+| Teste unitare + DB (PGlite) | 160/160 |
+| E2E Chromium (toată suita) | 146 trec, 3 omise (aceleași ca înainte) |
+| E2E WebKit (toată suita) | 144 trec, 3 omise; 2 eșecuri analizate: (a) test cu reîncărcare imediat după schimbarea copilului — corectat, apoi 4/4 pe ambele motoare; (b) eșec cunoscut de motor: navigarea cu Tab pe linkuri (Safari nu o face implicit), test neatins |
+| V1 | niciun fișier V1 schimbat; codul V1 nu folosește `meal_plans`, `user_preferences`, `product_events` sau funcțiile V2 |
+| Clientul de pe Preview (`1c46088`) pe baza migrată (local) | 31/32 din propriile teste de cont; singurul eșec e limita de tranziție știută: clientul vechi nu poate elimina mesele cu tip create de clientul nou (nu le strică, nu le șterge) |
+| Preflight producție (read-only) | 7/7 `true`; `meal_plans` 1, `user_preferences` 1, `product_events` 19, `allergy_records` 27, `tried_foods` 4.704 |
+| Backup nou cu restaurare de test + copie externă | **în așteptare (fondator)** |
+
+**Decizie: GO tehnic pentru migrație, condiționat de backupul verificat și de aprobarea explicită a fondatorului.**
