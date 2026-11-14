@@ -6,6 +6,8 @@ const { test, expect, devices } = require('@playwright/test'), crypto = require(
 const { buildStamp } = require('../../scripts/build-stamp.cjs');
 const url = process.env.V2_PHONE_URL;
 const browserName = process.env.V2_PHONE_BROWSER || 'chromium';
+// The planner asks for days and meals: these tests keep their original shape, 5 days of lunch.
+async function fiveLunches(page){const pick=page.locator('.v2-meal-choices');for(const m of ['Mic dejun','Prânz','Cină','Gustare']){const b=pick.getByRole('button',{name:m,exact:true});if(((await b.getAttribute('aria-pressed'))==='true')!==(m==='Prânz'))await b.click();}await page.getByRole('button',{name:'5 zile',exact:true}).click();await page.getByRole('button',{name:'Arată planul',exact:true}).click();}
 test.skip(!url, 'Needs a phone build behind scripts/phone-gateway.cjs');
 const { defaultBrowserType, ...iphone } = devices['iPhone 13'];
 const host = url ? new URL(url).hostname : '';
@@ -64,9 +66,9 @@ test('phone: account, library, recommendation, 5-day plan, shopping list, favori
 
   // 4. Plan for five days, then the shopping list.
   await page.goto('/v2/plan');
-  await page.getByRole('button', { name: 'Arată 5 zile de mese', exact: true }).click();
-  await expect(page.locator('.v2-proposal-day')).toHaveCount(5);
-  const chosen = await page.locator('.v2-proposal-day h3').allTextContents();
+  await fiveLunches(page);
+  await expect(page.locator('.v2-proposal-meal')).toHaveCount(5);
+  const chosen = await page.locator('.v2-proposal-meal h3').allTextContents();
   await page.getByRole('button', { name: 'Salvează planul', exact: true }).click();
   await expect.poll(() => planned(page), { timeout: 30000 }).toEqual(chosen);
   await page.getByRole('button', { name: /De cumpărat/ }).click();
@@ -143,9 +145,9 @@ test('phone: a visitor sees the way in, is invited, and reaches an account only 
 
   // 2. Free use, with no server, up to the invitation.
   await page.goto('/v2/plan');
-  await page.getByRole('button', { name: 'Arată 5 zile de mese', exact: true }).click();
-  await expect(page.locator('.v2-proposal-day')).toHaveCount(5);
-  const chosen = await page.locator('.v2-proposal-day h3').allTextContents();
+  await fiveLunches(page);
+  await expect(page.locator('.v2-proposal-meal')).toHaveCount(5);
+  const chosen = await page.locator('.v2-proposal-meal h3').allTextContents();
   await page.getByRole('button', { name: 'Salvează planul', exact: true }).click();
   const card = page.locator('.v2-save-invite');
   await expect(card.getByRole('heading', { name: 'Salvează-ți progresul într-un cont gratuit' })).toBeVisible();

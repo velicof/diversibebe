@@ -1,9 +1,9 @@
-import type { AppState } from "../model";
+import { planKey, type AppState, type PlanEntry } from "../model";
 
 type RecipeFacts = { id: string; published: boolean; minimumMonths: number };
 export type GuestImport = {
   favorites: string[];
-  plan: { slot: string; recipeId: string }[];
+  plan: PlanEntry[];
   /** Ideas and planned meals left out because they do not suit the child of this account. */
   skipped: number;
   /** Days that already hold another meal in the account: the account keeps its own. */
@@ -35,14 +35,16 @@ export function importableFromGuest(
     if (suits(recipe)) favorites.push(id);
     else skipped++;
   }
-  const taken = new Map(account.plan.map((p) => [p.slot, p.recipeId]));
+  // A day and meal already planned in the account stays the account's; other meals of that day can be added.
+  const taken = new Map(account.plan.map((p) => [planKey(p), p.recipeId]));
   const plan: GuestImport["plan"] = [];
   let kept = 0;
-  for (const { slot, recipeId } of local.plan) {
+  for (const { slot, meal, recipeId } of local.plan) {
     if (slot < today) continue;
     const recipe = byId.get(recipeId);
     if (!recipe) continue;
-    const existing = taken.get(slot);
+    const key = planKey({ slot, meal });
+    const existing = taken.get(key);
     if (existing !== undefined) {
       if (existing !== recipeId) kept++;
       continue;
@@ -51,8 +53,8 @@ export function importableFromGuest(
       skipped++;
       continue;
     }
-    taken.set(slot, recipeId);
-    plan.push({ slot, recipeId });
+    taken.set(key, recipeId);
+    plan.push({ slot, meal, recipeId });
   }
   return { favorites, plan, skipped, kept };
 }

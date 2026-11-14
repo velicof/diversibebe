@@ -14,5 +14,6 @@ const INCREMENTAL = [
   '20261103100000_v2_legacy_history.sql',
   '20261104100000_v2_shopping_event.sql',
   '20261111100000_v2_allergy_filtering.sql',
+  '20261113100000_v2_flexible_planner.sql',
 ];
 module.exports = { BASELINE, INCREMENTAL, RELEASE: [...BASELINE, ...INCREMENTAL] };

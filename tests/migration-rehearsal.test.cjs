@@ -80,7 +80,8 @@ test('rehearsal: V1 production-shaped data survives the V2 release, V1 and V2 bo
       await d.query(`SELECT public.v2_apply_action($1,'confirm','{"id":"${uuid(rand)}","recipeId":"terci-ovaz"}')`,[kid]);
     });
     const s=(await asUser(db,single.id,d=>d.query('SELECT public.v2_load_state($1) s',[kid]))).rows[0].s;
-    assert.deepEqual(s.plan,[{slot,recipeId:'terci-ovaz'}]);
+    // Written as the deployed client does (no meal): stored and returned as the untyped meal "oricare".
+    assert.deepEqual(s.plan,[{slot,meal:'oricare',recipeId:'terci-ovaz'}]);
     assert.ok(s.introduced.includes('morcov'));
     assert.ok(s.uses.some(u=>u.recipeId==='terci-ovaz'&&u.source==='v2_confirmed'));
     assert.ok(s.uses.some(u=>u.recipeId==='piure-dovlecel'&&u.source==='legacy'));

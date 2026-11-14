@@ -100,11 +100,11 @@ export class V2Repository {
     before: AppState,
   ): Promise<CloudState> {
     if (action.type === "plan-many") {
-      // The server keeps one plan row per child and day; writes are idempotent, so a retry is safe.
-      let state: CloudState | null = null;
-      for (const entry of action.entries)
-        state = await this.call(babyId, "plan", { slot: entry.slot, recipeId: entry.recipeId });
-      return state ?? this.load(babyId);
+      // One transaction on the server: the whole plan is saved, or nothing (a retry is then safe).
+      if (!action.entries.length) return this.load(babyId);
+      return this.call(babyId, "plan-many", {
+        entries: action.entries.map(({ slot, meal, recipeId }) => ({ slot, meal, recipeId })),
+      });
     }
     let name: string;
     let payload: Record<string, unknown>;
@@ -122,11 +122,15 @@ export class V2Repository {
         break;
       case "plan":
         name = "plan";
-        payload = { slot: action.slot, recipeId: action.recipeId };
+        payload = { slot: action.slot, meal: action.meal, recipeId: action.recipeId };
         break;
       case "remove-plan":
         name = "remove-plan";
-        payload = { slot: action.slot };
+        payload = { slot: action.slot, meal: action.meal };
+        break;
+      case "planner-settings":
+        name = "planner-settings";
+        payload = { meals: action.settings.meals, days: action.settings.days };
         break;
       case "confirm":
         name = "confirm";

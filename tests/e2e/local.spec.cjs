@@ -101,7 +101,7 @@ test("three core flows persist across reload with optional confirmation", async 
     page.getByRole("heading", { name: "Piure de dovlecel", exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: /Înlocuiește masa/ })
+    .getByRole("button", { name: /^Înlocuiește/ })
     .first()
     .click();
   await expect(

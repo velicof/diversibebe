@@ -32,7 +32,7 @@ test('authenticated persistence, second device and sibling isolation', async ({p
   const call = async (id,action,payload) => { const r=await sdk.rpc('v2_apply_action',{p_baby_id:id,p_action:action,p_payload:payload}); if(r.error) throw r.error; return r.data; };
   for(const id of [childA,sibling]){
     const loaded=await call(id,'select-child',{});
-    for(const p of loaded.plan) await call(id,'remove-plan',{slot:p.slot});
+    for(const p of loaded.plan) await call(id,'remove-plan',{slot:p.slot,meal:p.meal});
     for(const u of loaded.uses) await call(id,'remove-use',{id:u.id});
     await call(id,'profile',{stage:8,introduced:[]});
   }

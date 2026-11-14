@@ -479,10 +479,10 @@ export const cloudStore = {
       if (!stillCurrent()) throw new Error("Session changed");
       update(value);
     }
-    for (const entry of plan) {
-      if (!stillCurrent())
-        throw new Error("Session changed");
-      const value = await repository.call(child, "plan", entry);
+    if (plan.length) {
+      if (!stillCurrent()) throw new Error("Session changed");
+      // One transaction: the visitor's meals enter together, or none of them does.
+      const value = await repository.call(child, "plan-many", { entries: plan });
       if (!stillCurrent()) throw new Error("Session changed");
       update(value);
     }

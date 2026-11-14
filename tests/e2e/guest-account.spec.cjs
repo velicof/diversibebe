@@ -2,6 +2,8 @@
 // only what it is told to take, and a guest can change nobody's data.
 const {test,expect}=require('@playwright/test'),crypto=require('node:crypto');
 const native=process.env.V2_NATIVE==='1';
+// The planner asks for days and meals: these tests keep their original shape, 5 days of lunch.
+async function fiveLunches(page){const pick=page.locator('.v2-meal-choices');for(const m of ['Mic dejun','Prânz','Cină','Gustare']){const b=pick.getByRole('button',{name:m,exact:true});if(((await b.getAttribute('aria-pressed'))==='true')!==(m==='Prânz'))await b.click();}await page.getByRole('button',{name:'5 zile',exact:true}).click();await page.getByRole('button',{name:'Arată planul',exact:true}).click();}
 test.setTimeout(150000);
 test.use({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
 
@@ -16,12 +18,12 @@ const credentials=label=>({email:`${label}-${crypto.randomUUID()}@example.test`,
 
 async function propose(page){
  await page.goto('/v2/plan');
- await page.getByRole('button',{name:'Arată 5 zile de mese',exact:true}).click();
- await expect(page.locator('.v2-proposal-day')).toHaveCount(5);
+ await fiveLunches(page);
+ await expect(page.locator('.v2-proposal-meal')).toHaveCount(5);
 }
 async function planFive(page){
  await propose(page);
- const chosen=await page.locator('.v2-proposal-day h3').allTextContents();
+ const chosen=await page.locator('.v2-proposal-meal h3').allTextContents();
  await page.getByRole('button',{name:'Salvează planul',exact:true}).click();
  await expect(page.locator('.v2-plan-saved')).toBeVisible({timeout:30000});
  await expect.poll(()=>planned(page),{timeout:30000}).toEqual(chosen);
@@ -111,7 +113,7 @@ test('the build is named on screen, so a phone can say which code it runs',async
 test('after the first plan the invitation appears in the page, explains the risk, and "no" is remembered',async({page})=>{
  const backend=backendCalls(page);
  await page.goto('/v2/plan');
- await expect(page.getByRole('button',{name:'Arată 5 zile de mese',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Arată planul',exact:true})).toBeVisible();
  await expect(invite(page),'nothing is asked before there is something to keep').toHaveCount(0);
  const chosen=await planFive(page);
  const card=page.locator('.v2-save-invite');
@@ -202,7 +204,7 @@ test('import adds without replacing: a day already planned in the account keeps 
  await login(page,account);
  const offer=importRegion(page);
  await expect(offer).toContainText('1 idee salvată');
- await expect(offer).toContainText(/deja o masă în cont/);
+ await expect(offer).toContainText(/deja altă rețetă în cont/);
  await page.goto('/v2/plan');
  await synced(page);
  expect(await planned(page),'nothing moved before the answer').toEqual(own);

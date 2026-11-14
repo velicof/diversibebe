@@ -54,15 +54,27 @@ import {
   formatAmounts,
   nextAvailableSlot,
   nextDays,
-  proposePlan,
+  proposeMeals,
+  fitsMeal,
+  defaultMeals,
   reusedIngredients,
   weekRange,
   swapRecipe,
-  type ProposedDay,
+  type ProposedMeal,
 } from "./planning";
 import { calendar, monthIn, seasonalHighlights } from "./season";
 import { cloudStore } from "./cloud/store";
-import type { Stage } from "./model";
+import {
+  PLAN_DAYS,
+  PLANNABLE_MEALS,
+  byDayAndMeal,
+  planKey,
+  type MealSlot,
+  type PlanDays,
+  type PlannableMeal,
+  type PlannerSettings,
+  type Stage,
+} from "./model";
 import { weeklyUsage } from "./analytics";
 import { DashboardFocus, useDashboardMatches } from "./growth/PersonalizedDashboard";
 import { emitGrowth, journeyScope, journeyStore } from "./growth/browser";
@@ -381,6 +393,46 @@ export function Dashboard() {
   const show = useDeferredValue(ready);
   return show ? <DashboardReady /> : <LoadingState />;
 }
+/** The meals planned for today, each with "Am pregătit": what to cook and what was cooked, on one screen. */
+function TodayMeals() {
+  const { state, dispatch, track, announce, cloud } = usePreview();
+  const days = useDays();
+  const today = days[0].key;
+  const entries = state.plan.filter((p) => p.slot === today).sort(byDayAndMeal);
+  if (!entries.length) return null;
+  return (
+    <section className="v2-today-meals" aria-labelledby="v2-today-title">
+      <h2 id="v2-today-title">Mesele de azi</h2>
+      <ul>
+        {entries.map((entry) => {
+          const recipe = activeCatalog.find((r) => r.id === entry.recipeId);
+          if (!recipe) return null;
+          const done = state.uses.some((u) => u.recipeId === recipe.id && u.day === today);
+          return (
+            <li key={planKey(entry)} data-meal={entry.meal}>
+              <span className="v2-meal-label">{MEAL_ROW_LABEL[entry.meal]}</span>
+              <Link href={`/v2/retete/${recipe.id}`} prefetch={false}>{recipe.name}</Link>
+              <button
+                type="button"
+                className="v2-button v2-button-secondary"
+                aria-label={done ? `${recipe.name}: pregătită azi` : `Am pregătit ${recipe.name}`}
+                disabled={done || state.stage === 0 || cloud.saving || cloud.loading || (cloud.connected && !cloud.selectedBabyId)}
+                onClick={() => {
+                  dispatch({ type: "confirm", use: { id: `${today}:${recipe.id}`, recipeId: recipe.id, day: today, confirmedAt: new Date().toISOString() } });
+                  track("meal_confirmed", { recipeId: recipe.id });
+                  announce("Notat: ați pregătit-o azi.");
+                }}
+              >
+                {done ? <><CheckCircle2 size={16} /> Pregătită</> : <><Check size={16} /> Am pregătit</>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <Link className="v2-text-link" href="/v2/plan">Tot planul <ArrowRight size={16} /></Link>
+    </section>
+  );
+}
 function DashboardReady() {
   const { state, ready, clinicalGuidance, allergies } = usePreview();
   const matches = useDashboardMatches();
@@ -435,6 +487,7 @@ function DashboardReady() {
           )}
         </section>
       )}
+      {!blocked && <TodayMeals />}
       {!blocked && <AllergyNotice />}
       <SeasonStrip month={month} />
       <div className="v2-dashboard-primary">
@@ -1023,17 +1076,20 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
   const alreadyConfirmed = state.uses.some(
     (u) => u.recipeId === recipe.id && u.day === days[0].key,
   );
+  // Added as the meal it is (a breakfast as breakfast), on the first day where that meal is still free.
+  const recipeMeal: MealSlot = (PLANNABLE_MEALS as readonly string[]).includes(recipe.mealType) ? (recipe.mealType as MealSlot) : "oricare";
   function addToPlan() {
-    const slot = nextAvailableSlot(state.plan, days);
+    const slot = nextAvailableSlot(state.plan, days, recipeMeal);
     if (!slot) {
       announce(
-        "Planul pentru următoarele 7 zile este complet. Poți înlocui o masă din Plan.",
+        "Masa aceasta e deja planificată în fiecare din următoarele 7 zile. Poți înlocui una din Plan.",
       );
       return;
     }
-    dispatch({ type: "plan", slot, recipeId: recipe.id });
+    dispatch({ type: "plan", slot, meal: recipeMeal, recipeId: recipe.id });
     track("plan_slot_saved", { recipeId: recipe.id });
-    announce("Ideea a fost adăugată în planul tău.");
+    const i = days.findIndex((d) => d.key === slot);
+    announce(`Adăugată în plan: ${MEAL_LABELS[recipeMeal]?.toLowerCase() ?? "masă"}, ${i === 0 ? "azi" : `${days[i].label} ${days[i].number}`}.`);
   }
   function confirm() {
     if (alreadyConfirmed) return;
@@ -1155,43 +1211,48 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
   );
 }
 
-const planMeals = [
-  { id: "all", label: "Oricare" },
-  { id: "mic-dejun", label: "Mic dejun" },
-  { id: "pranz", label: "Prânz" },
-  { id: "cina", label: "Cină" },
-];
 const planTimes = [15, 20, 30];
-type PlanPrefs = { meal: string; maxMinutes: number; ingredientIds: string[]; reuse: boolean };
+const MEAL_ROW_LABEL: Record<MealSlot, string> = { "mic-dejun": "Mic dejun", pranz: "Prânz", cina: "Cină", gustare: "Gustare", oricare: "Masă" };
+type PlanPrefs = { maxMinutes: number; ingredientIds: string[]; reuse: boolean };
 const plannerHeading = (
   <PageHeading eyebrow="UN PIC DE ORGANIZARE. MAI MULTĂ LINIȘTE." title="Micul vostru plan">
-    Alege preferințele, primești 5 zile de mese și o listă de cumpărături. Schimbi orice, oricând.
+    Alegi câte zile și ce mese, primești rețete potrivite și lista de cumpărături. Schimbi orice, oricând.
   </PageHeading>
 );
 
 export function Planner() {
-  const { ready } = usePreview();
+  const { ready, cloud } = usePreview();
   const show = useDeferredValue(ready);
-  return show ? <PlannerReady /> : <>{plannerHeading}<LoadingState /></>;
+  // A new child (or account) starts the planner from its own saved choices.
+  return show ? <PlannerReady key={cloud.selectedBabyId ?? "device"} /> : <>{plannerHeading}<LoadingState /></>;
 }
-/** Why a plan has fewer than 5 days: the recipes the allergies left out are counted, never used to fill it. */
-function planShortfall(found: number, candidates: Recipe[], allergies: ReturnType<typeof usePreview>["allergies"]) {
-  let contains = 0, unverified = 0;
-  for (const r of candidates) {
-    const status = assessRecipe(r, allergies).status;
-    if (status === "contains") contains++;
-    else if (status === "unverified") unverified++;
-  }
-  const parts = [`Am găsit idei pentru ${found} din 5 zile.`];
-  if (contains || unverified) {
-    const left = [
-      contains ? `${contains} ${contains === 1 ? "conține" : "conțin"} un alergen înregistrat (${allergies.map((a) => a.label).join(", ")})` : "",
-      unverified ? `${unverified} ${unverified === 1 ? "are" : "au"} ingrediente insuficient verificate` : "",
-    ].filter(Boolean);
-    parts.push(`Dintre rețetele potrivite etapei și preferințelor alese, ${left.join(" și ")}; nu le folosim ca să completăm planul.`);
-  } else parts.push("Nu mai sunt alte rețete potrivite etapei și preferințelor alese.");
-  parts.push("Poți alege mai mult timp, alt tip de masă sau adăuga manual o idee din Descoperă.");
-  return parts.join(" ");
+/**
+ * Why some meals stay empty, per meal type: the recipes the allergies left out are counted, never used to
+ * fill the plan.
+ */
+function planShortfall(missing: { meal: MealSlot; count: number }[], candidates: Recipe[], allergies: ResolvedAllergy[]) {
+  if (!missing.length) return "";
+  const parts = missing.map(({ meal, count }) => {
+    const ofType = candidates.filter((r) => fitsMeal(r, meal));
+    let contains = 0, unverified = 0;
+    for (const r of ofType) {
+      const status = allergies.length ? assessRecipe(r, allergies).status : "compatible";
+      if (status === "contains") contains++;
+      else if (status === "unverified") unverified++;
+    }
+    const empty = `${MEAL_ROW_LABEL[meal]}: ${count === 1 ? "o masă rămâne liberă" : `${count} mese rămân libere`}`;
+    if (contains || unverified) {
+      const left = [
+        contains ? `${contains} ${contains === 1 ? "conține" : "conțin"} un alergen înregistrat (${allergies.map((a) => a.label).join(", ")})` : "",
+        unverified ? `${unverified} ${unverified === 1 ? "are" : "au"} ingrediente insuficient verificate` : "",
+      ].filter(Boolean);
+      return `${empty}. Dintre rețetele de acest tip potrivite etapei și preferințelor, ${left.join(" și ")}; nu le folosim ca să completăm planul.`;
+    }
+    return ofType.length
+      ? `${empty}. Nu mai sunt alte rețete de acest tip potrivite, fără să le repetăm la rând.`
+      : `${empty}. Nu există rețete de acest tip pentru etapa și timpul alese.`;
+  });
+  return `${parts.join(" ")} Poți alege mai mult timp, alte mese sau adăuga manual o idee din Descoperă.`;
 }
 function PlannerReady() {
   const { state, ready, dispatch, announce, track, cloud, clinicalGuidance, allergies } = usePreview();
@@ -1202,22 +1263,23 @@ function PlannerReady() {
   const [tab, setTab] = useState<"plan" | "shopping">(() =>
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("lista") === "1" ? "shopping" : "plan",
   );
-  const [prefs, setPrefs] = useState<PlanPrefs>({ meal: "all", maxMinutes: 30, ingredientIds: [], reuse: true });
-  const [proposal, setProposal] = useState<ProposedDay[] | null>(null);
+  // The parent's last choices for this child, or a starting point that suits the stage (never three meals at 6 months).
+  const settings: PlannerSettings = state.planner ?? { meals: defaultMeals(state.stage), days: 5 };
+  const [meals, setMeals] = useState<PlannableMeal[]>(settings.meals);
+  const [dayCount, setDayCount] = useState<PlanDays>(settings.days);
+  const [prefs, setPrefs] = useState<PlanPrefs>({ maxMinutes: 30, ingredientIds: [], reuse: true });
+  const [proposal, setProposal] = useState<ProposedMeal[] | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
-  const [saved, setSaved] = useState<{ count: number; seconds: number } | null>(null);
+  const [saved, setSaved] = useState<{ count: number; days: number; seconds: number } | null>(null);
   const [interested, setInterested] = useState(false);
   const listUsed = useRef(false);
   const [shortfall, setShortfall] = useState("");
-  const planFilters = { ...initialFilters, months: state.stage, maxMinutes: prefs.maxMinutes, meal: prefs.meal, ingredientIds: prefs.ingredientIds };
+  const planFilters = { ...initialFilters, months: state.stage, maxMinutes: prefs.maxMinutes, meal: "all", ingredientIds: prefs.ingredientIds };
   const planEligible = useEligible(planFilters, month);
   // Same preferences without the allergy filter: only to say how many recipes the allergies left out.
   const planCandidates = useEligible(planFilters, month, "all");
   const leftOut = planCandidates.length - planEligible.length;
-  const fiveDays = days.slice(0, 5);
-  const activePlan = state.plan
-    .filter((p) => days.some((d) => d.key === p.slot))
-    .sort((a, b) => a.slot.localeCompare(b.slot));
+  const activePlan = state.plan.filter((p) => days.some((d) => d.key === p.slot)).sort(byDayAndMeal);
   const { toBuy, atHome } = buildShoppingList(activePlan, activeCatalog, state.pantry);
   const checkedCount = toBuy.filter((r) => state.shoppingChecked.includes(r.key)).length;
   if (!ready) return <>{plannerHeading}<LoadingState /></>;
@@ -1226,71 +1288,91 @@ function PlannerReady() {
     const i = days.findIndex((d) => d.key === slot);
     return i === 0 ? "Azi" : `${days[i]?.label} ${days[i]?.number}`;
   };
-  const add = (slot: string) => {
-    const candidate = swapRecipe(eligible, state.plan, slot);
+  const mealName = (slot: string, meal: MealSlot) => `${MEAL_ROW_LABEL[meal].toLowerCase()} ${dayLabel(slot) === "Azi" ? "de azi" : dayLabel(slot)}`;
+  /** One meal of the saved plan: another eligible recipe of the same meal type, or a first one. */
+  const replaceMeal = (slot: string, meal: MealSlot, replacing: boolean) => {
+    const candidate = swapRecipe(eligible, state.plan, slot, meal);
     if (!candidate) {
-      announce("Nu există o altă idee eligibilă cu filtrele curente.");
+      announce(`Nu există o altă rețetă potrivită pentru ${MEAL_ROW_LABEL[meal].toLowerCase()} cu filtrele curente.`);
       return;
     }
-    dispatch({ type: "plan", slot, recipeId: candidate.id });
-    track("plan_slot_saved", { recipeId: candidate.id });
-    announce("Planul a fost actualizat.");
+    dispatch({ type: "plan", slot, meal, recipeId: candidate.id });
+    track(replacing ? "plan_meal_replaced" : "plan_slot_saved");
+    announce(replacing ? "Rețeta a fost înlocuită." : "Masa a fost adăugată în plan.");
   };
   const openShopping = () => {
     setTab("shopping");
     if (toBuy.length + atHome.length > 0)
       track("shopping_list_generated", { count: toBuy.length });
   };
+  const toggleMeal = (meal: PlannableMeal) =>
+    setMeals((current) => (current.includes(meal) ? current.filter((m) => m !== meal) : PLANNABLE_MEALS.filter((m) => m === meal || current.includes(m))));
   const generate = () => {
-    const kept = new Map<string, Recipe>();
-    for (const day of fiveDays) {
-      const entry = state.plan.find((p) => p.slot === day.key);
-      const recipe = entry && planEligible.find((r) => r.id === entry.recipeId);
-      if (recipe) kept.set(day.key, recipe);
-    }
-    const next = proposePlan(planEligible, fiveDays.map((d) => d.key), { reuseIngredients: prefs.reuse, kept });
-    setSaved(null);
-    const why = next.length < 5 ? planShortfall(next.length, planCandidates, allergies) : "";
-    setShortfall(why);
-    if (!next.length) {
-      announce(why ? "Nu am găsit idei pentru niciuna din cele 5 zile. Motivul e scris sub buton." : "Nu am găsit idei potrivite. Încearcă mai mult timp sau alt tip de masă.");
+    if (!meals.length) {
+      announce("Alege cel puțin o masă.");
       return;
     }
-    if (why) announce(`Am găsit idei pentru ${next.length} din 5 zile. Motivul e scris în propunere.`);
+    // Remembered for this child (in the account when connected), so next time starts from the same choices.
+    if (!state.planner || state.planner.days !== dayCount || state.planner.meals.join() !== meals.join())
+      dispatch({ type: "planner-settings", settings: { meals, days: dayCount } });
+    const requests = days.slice(0, dayCount).flatMap((d) => meals.map((meal) => ({ slot: d.key, meal })));
+    const kept = new Map<string, Recipe>();
+    for (const req of requests) {
+      const entry = state.plan.find((p) => planKey(p) === planKey(req));
+      const recipe = entry && planEligible.find((r) => r.id === entry.recipeId);
+      if (recipe) kept.set(planKey(req), recipe);
+    }
+    const next = proposeMeals(planEligible, requests, { reuseIngredients: prefs.reuse, kept });
+    const missing = meals
+      .map((meal) => ({ meal: meal as MealSlot, count: requests.filter((r) => r.meal === meal && !next.some((p) => planKey(p) === planKey(r))).length }))
+      .filter((m) => m.count > 0);
+    const why = planShortfall(missing, planCandidates, allergies);
+    setSaved(null);
+    setShortfall(why);
+    track("plan_generated", { count: next.length, days: dayCount, meals: meals.length });
+    if (!next.length) {
+      announce(why ? "Nu am găsit nicio rețetă potrivită. Motivul e scris sub buton." : "Nu am găsit idei potrivite. Încearcă mai mult timp sau alte mese.");
+      return;
+    }
+    if (why) announce(`Am găsit rețete pentru ${next.length} din ${requests.length} mese. Motivul e scris în propunere.`);
     setProposal(next);
     setStartedAt((value) => value ?? Date.now());
     track("recommendation_results_shown", { count: next.length });
   };
-  const choose = (slot: string, recipeId: string) =>
+  const choose = (key: string, recipeId: string) =>
     setProposal((current) =>
-      current?.map((day) =>
-        day.slot === slot
-          ? { ...day, recipeId, kept: false, alternatives: day.alternatives.map((id) => (id === recipeId ? day.recipeId : id)) }
-          : day,
+      current?.map((m) =>
+        planKey(m) === key
+          ? { ...m, recipeId, kept: false, repeated: false, alternatives: m.alternatives.map((id) => (id === recipeId ? m.recipeId : id)) }
+          : m,
       ) ?? null,
     );
-  const another = (slot: string) => {
-    if (!proposal) return;
-    const used = new Set(proposal.flatMap((d) => [d.recipeId, ...d.alternatives]));
-    const candidate = planEligible.find((r) => !used.has(r.id));
+  const another = (key: string) => {
+    const target = proposal?.find((m) => planKey(m) === key);
+    if (!proposal || !target) return;
+    const used = new Set(proposal.flatMap((m) => [m.recipeId, ...m.alternatives]));
+    const candidate = planEligible.find((r) => fitsMeal(r, target.meal) && !used.has(r.id));
     if (!candidate) {
-      announce("Nu mai sunt alte idei cu aceste preferințe.");
+      announce(`Nu mai sunt alte rețete pentru ${MEAL_ROW_LABEL[target.meal].toLowerCase()} cu aceste preferințe.`);
       return;
     }
-    setProposal((current) =>
-      current?.map((day) => (day.slot === slot ? { ...day, recipeId: candidate.id, kept: false } : day)) ?? null,
-    );
+    track("plan_meal_replaced");
+    setProposal((current) => current?.map((m) => (planKey(m) === key ? { ...m, recipeId: candidate.id, kept: false, repeated: false } : m)) ?? null);
   };
+  const leaveOut = (key: string) => setProposal((current) => current?.filter((m) => planKey(m) !== key) ?? null);
   const save = () => {
     if (!proposal?.length) return;
-    dispatch({ type: "plan-many", entries: proposal.map(({ slot, recipeId }) => ({ slot, recipeId })) });
-    for (const day of proposal) track("plan_slot_saved", { recipeId: day.recipeId });
+    const entries = proposal.map(({ slot, meal, recipeId }) => ({ slot, meal, recipeId }));
+    dispatch({ type: "plan-many", entries });
+    const savedDays = new Set(entries.map((e) => e.slot)).size;
+    track("plan_saved", { count: entries.length, days: savedDays, meals: new Set(entries.map((e) => e.meal)).size });
+    track("plan_slot_saved");
     const seconds = startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 1000)) : 0;
     track("first_relevant_choice", { elapsedMs: seconds * 1000 });
-    setSaved({ count: proposal.length, seconds });
+    setSaved({ count: entries.length, days: savedDays, seconds });
     setProposal(null);
     setStartedAt(null);
-    announce("Planul pentru 5 zile a fost salvat.");
+    announce("Planul a fost salvat.");
   };
   const copyList = async () => {
     const text = toBuy
@@ -1329,11 +1411,14 @@ function PlannerReady() {
       </div>
       {tab === "plan" ? (
         <>
-          {saved && (
+          {saved && !cloud.error && !cloud.saving && (
             <section className="v2-plan-saved" aria-live="polite">
               <CheckCircle2 size={26} />
               <div>
-                <h2>{saved.count} zile de mese, gata{saved.seconds ? ` în ${saved.seconds === 1 ? "o secundă" : `${saved.seconds} secunde`}` : ""}.</h2>
+                <h2>
+                  {saved.count === 1 ? "O masă" : `${saved.count} mese`} pentru {saved.days === 1 ? "o zi" : `${saved.days} zile`}, gata
+                  {saved.seconds ? ` în ${saved.seconds === 1 ? "o secundă" : `${saved.seconds} secunde`}` : ""}.
+                </h2>
                 <p>Lista de cumpărături este pregătită din aceste mese.</p>
                 <button className="v2-button v2-button-primary" onClick={openShopping}>
                   Vezi lista de cumpărături <ArrowRight size={17} />
@@ -1364,7 +1449,9 @@ function PlannerReady() {
           {proposal ? (
             <section className="v2-proposal" aria-labelledby="v2-proposal-title">
               <div className="v2-section-top">
-                <h2 id="v2-proposal-title">Propunerea pentru 5 zile</h2>
+                <h2 id="v2-proposal-title">
+                  Propunerea pentru {dayCount === 1 ? "o zi" : `${dayCount} zile`}
+                </h2>
                 <span className="v2-small-label">EXPLORARE DEMO</span>
               </div>
               {shortfall && <p className="v2-plan-shortfall" role="status">{shortfall}</p>}
@@ -1375,43 +1462,59 @@ function PlannerReady() {
                 </p>
               )}
               <ol className="v2-proposal-days">
-                {proposal.map((day) => {
-                  const recipe = recipeById(day.recipeId);
-                  if (!recipe) return null;
-                  const local = seasonalHighlights(recipe.ingredients, month);
-                  return (
-                    <li key={day.slot} className="v2-proposal-day">
-                      <span className="v2-proposal-label">{dayLabel(day.slot)}</span>
-                      <div className="v2-plan-recipe">
-                        <Image src={recipe.image} alt="" width={72} height={72} />
-                        <div>
-                          <h3>{recipe.name}</h3>
-                          <span>
-                            <Clock3 size={13} /> {recipe.minutes} min
-                            {day.kept ? " · deja în plan" : ""}
-                            {local.length ? ` · în sezon: ${local.join(", ").toLowerCase()}` : ""}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="v2-proposal-actions">
-                        {day.alternatives.map((id) => {
-                          const alt = recipeById(id);
-                          return alt ? (
-                            <button key={id} type="button" className="v2-alt-chip" aria-label={`Alege ${alt.name} pentru ${dayLabel(day.slot)}`} onClick={() => choose(day.slot, id)}>
-                              sau {alt.name}
-                            </button>
-                          ) : null;
-                        })}
-                        <button type="button" className="v2-text-button" aria-label={`Altă idee pentru ${dayLabel(day.slot)}`} onClick={() => another(day.slot)}>
-                          <RefreshCw size={14} /> Altă idee
-                        </button>
-                      </div>
+                {days
+                  .filter((d) => proposal.some((m) => m.slot === d.key))
+                  .map((d) => (
+                    <li key={d.key} className="v2-proposal-day">
+                      <span className="v2-proposal-label">{dayLabel(d.key)}</span>
+                      <ul className="v2-proposal-meals">
+                        {proposal
+                          .filter((m) => m.slot === d.key)
+                          .map((m) => {
+                            const recipe = recipeById(m.recipeId);
+                            if (!recipe) return null;
+                            const key = planKey(m);
+                            const local = seasonalHighlights(recipe.ingredients, month);
+                            return (
+                              <li key={key} className="v2-proposal-meal" data-meal={m.meal}>
+                                <span className="v2-meal-label">{MEAL_ROW_LABEL[m.meal]}</span>
+                                <div className="v2-plan-recipe">
+                                  <Image src={recipe.image} alt="" width={64} height={64} />
+                                  <div>
+                                    <h3>{recipe.name}</h3>
+                                    <span>
+                                      <Clock3 size={13} /> {recipe.minutes} min
+                                      {m.kept ? " · deja în plan" : ""}
+                                      {m.repeated ? " · se repetă" : ""}
+                                      {local.length ? ` · în sezon: ${local.join(", ").toLowerCase()}` : ""}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="v2-proposal-actions">
+                                  {m.alternatives.slice(0, 1).map((id) => {
+                                    const alt = recipeById(id);
+                                    return alt ? (
+                                      <button key={id} type="button" className="v2-alt-chip" aria-label={`Alege ${alt.name} pentru ${mealName(m.slot, m.meal)}`} onClick={() => choose(key, id)}>
+                                        sau {alt.name}
+                                      </button>
+                                    ) : null;
+                                  })}
+                                  <button type="button" className="v2-text-button" aria-label={`Altă rețetă pentru ${mealName(m.slot, m.meal)}`} onClick={() => another(key)}>
+                                    <RefreshCw size={14} /> Altă rețetă
+                                  </button>
+                                  <button type="button" className="v2-text-button" aria-label={`Scoate ${mealName(m.slot, m.meal)} din propunere`} onClick={() => leaveOut(key)}>
+                                    <X size={14} /> Scoate
+                                  </button>
+                                </div>
+                              </li>
+                            );
+                          })}
+                      </ul>
                     </li>
-                  );
-                })}
+                  ))}
               </ol>
               <div className="v2-proposal-footer">
-                <button className="v2-button v2-button-primary" disabled={cloud.saving} onClick={save}>
+                <button className="v2-button v2-button-primary" disabled={cloud.saving || !proposal.length} onClick={save}>
                   <Check size={17} /> Salvează planul
                 </button>
                 <button className="v2-button v2-button-secondary" onClick={() => setProposal(null)}>
@@ -1421,7 +1524,7 @@ function PlannerReady() {
             </section>
           ) : (
             <section className="v2-planner-builder" aria-labelledby="v2-builder-title">
-              <h2 id="v2-builder-title">Planifică următoarele 5 zile</h2>
+              <h2 id="v2-builder-title">Fă planul</h2>
               {cloud.connected && cloud.children.length > 1 && (
                 <label className="v2-builder-field">
                   Pentru
@@ -1437,14 +1540,27 @@ function PlannerReady() {
                 <Link href="/v2/profil" className="v2-text-link">schimbă</Link>
               </p>
               <fieldset className="v2-builder-field">
-                <legend>Ce masă planificăm?</legend>
+                <legend>Pentru câte zile?</legend>
                 <div className="v2-segmented">
-                  {planMeals.map((m) => (
-                    <button key={m.id} type="button" aria-pressed={prefs.meal === m.id} onClick={() => setPrefs({ ...prefs, meal: m.id })}>
-                      {m.label}
+                  {PLAN_DAYS.map((n) => (
+                    <button key={n} type="button" aria-pressed={dayCount === n} onClick={() => setDayCount(n)}>
+                      {n === 1 ? "1 zi" : `${n} zile`}
                     </button>
                   ))}
                 </div>
+              </fieldset>
+              <fieldset className="v2-builder-field">
+                <legend>Ce mese planificăm?</legend>
+                <div className="v2-segmented v2-meal-choices">
+                  {PLANNABLE_MEALS.map((m) => (
+                    <button key={m} type="button" aria-pressed={meals.includes(m)} onClick={() => toggleMeal(m)}>
+                      {meals.includes(m) && <Check size={14} />} {MEAL_ROW_LABEL[m]}
+                    </button>
+                  ))}
+                </div>
+                <small className="v2-field-note">
+                  Un punct de pornire după etapă, nu o recomandare medicală. Alege mesele pe care le gătești tu.
+                </small>
               </fieldset>
               <fieldset className="v2-builder-field">
                 <legend>Cât timp ai pentru gătit?</legend>
@@ -1473,13 +1589,15 @@ function PlannerReady() {
                 <input type="checkbox" checked={prefs.reuse} onChange={(e) => setPrefs({ ...prefs, reuse: e.target.checked })} />
                 Refolosește ingredientele între zile (mai puține cumpărături)
               </label>
-              <button className="v2-button v2-button-primary" disabled={blocked} onClick={generate}>
-                <Sparkles size={17} /> Arată 5 zile de mese
+              <button className="v2-button v2-button-primary" disabled={blocked || !meals.length} onClick={generate}>
+                <Sparkles size={17} /> Arată planul
               </button>
               <p className="v2-field-note">
                 {blocked
                   ? "Planificarea meselor începe după alegerea etapei de diversificare. Pentru nevoi individuale este necesară îndrumarea unui specialist."
-                  : reviewCopy.planCount(planEligible.length)}
+                  : meals.length
+                    ? `${dayCount === 1 ? "O zi" : `${dayCount} zile`} × ${meals.length === 1 ? "o masă" : `${meals.length} mese`}. ${reviewCopy.planCount(planEligible.length)}`
+                    : "Alege cel puțin o masă."}
                 {!blocked && allergies.length > 0 && leftOut > 0 &&
                   ` Din cauza alergiilor înregistrate, ${leftOut === 1 ? "o rețetă nu este folosită" : `${leftOut} rețete nu sunt folosite`} în plan.`}
               </p>
@@ -1491,50 +1609,63 @@ function PlannerReady() {
           <div className="v2-plan-layout">
             <section className="v2-plan-days" aria-label="Planul pentru 7 zile">
               {days.map((day, i) => {
-                const entry = activePlan.find((p) => p.slot === day.key);
-                const recipe = activeCatalog.find((r) => r.id === entry?.recipeId);
+                const entries = activePlan.filter((p) => p.slot === day.key);
+                const free = blocked ? [] : meals.filter((m) => !entries.some((e) => e.meal === m));
                 return (
-                  <article className={`v2-plan-day ${i === 0 ? "is-today" : ""}`} key={day.key}>
+                  <article className={`v2-plan-day v2-plan-day-meals ${i === 0 ? "is-today" : ""}`} key={day.key}>
                     <div className="v2-day-label">
                       <span>{i === 0 ? "Azi" : day.label}</span>
                       <strong>{day.number}</strong>
                     </div>
-                    {recipe ? (
-                      <>
-                        <Link className="v2-plan-recipe" href={`/v2/retete/${recipe.id}`}>
-                          <Image src={recipe.image} alt="" width={100} height={100} />
-                          <div>
-                            <h2>{recipe.name}</h2>
-                            <span>
-                              <Clock3 size={13} />
-                              {recipe.minutes} min · {reviewCopy.recipeBadge}
-                            </span>
-                            <AllergyMarker recipe={recipe} problemsOnly />
+                    <div className="v2-day-meals">
+                      {entries.map((entry) => {
+                        const recipe = activeCatalog.find((r) => r.id === entry.recipeId);
+                        if (!recipe) return null;
+                        const name = mealName(entry.slot, entry.meal);
+                        return (
+                          <div className="v2-meal-row" key={planKey(entry)} data-meal={entry.meal}>
+                            <span className="v2-meal-label">{MEAL_ROW_LABEL[entry.meal]}</span>
+                            <Link className="v2-plan-recipe" href={`/v2/retete/${recipe.id}`}>
+                              <Image src={recipe.image} alt="" width={100} height={100} />
+                              <div>
+                                <h2>{recipe.name}</h2>
+                                <span>
+                                  <Clock3 size={13} />
+                                  {recipe.minutes} min · {reviewCopy.recipeBadge}
+                                </span>
+                                <AllergyMarker recipe={recipe} problemsOnly />
+                              </div>
+                            </Link>
+                            <div className="v2-plan-actions">
+                              <button className="v2-icon-button" aria-label={`Înlocuiește ${name}`} disabled={cloud.saving || blocked} onClick={() => replaceMeal(entry.slot, entry.meal, true)}>
+                                <RefreshCw size={17} />
+                              </button>
+                              <button
+                                className="v2-icon-button"
+                                aria-label={`Elimină ${name}`}
+                                disabled={cloud.saving}
+                                onClick={() => {
+                                  dispatch({ type: "remove-plan", slot: entry.slot, meal: entry.meal });
+                                  announce("Masa a fost eliminată din plan.");
+                                }}
+                              >
+                                <X size={18} />
+                              </button>
+                            </div>
                           </div>
-                        </Link>
-                        <div className="v2-plan-actions">
-                          <button className="v2-icon-button" aria-label={`Înlocuiește masa pentru ${day.label} ${day.number}`} disabled={cloud.saving} onClick={() => add(day.key)}>
-                            <RefreshCw size={17} />
-                          </button>
-                          <button
-                            className="v2-icon-button"
-                            aria-label={`Elimină masa pentru ${day.label} ${day.number}`}
-                            disabled={cloud.saving}
-                            onClick={() => {
-                              dispatch({ type: "remove-plan", slot: day.key });
-                              announce("Masa a fost eliminată din plan.");
-                            }}
-                          >
-                            <X size={18} />
-                          </button>
+                        );
+                      })}
+                      {!entries.length && !free.length && <p className="v2-day-empty">Nicio masă planificată.</p>}
+                      {free.length > 0 && (
+                        <div className="v2-day-add">
+                          {free.map((m) => (
+                            <button key={m} type="button" className="v2-plan-add-meal" aria-label={`Adaugă ${mealName(day.key, m)}`} disabled={cloud.saving} onClick={() => replaceMeal(day.key, m, false)}>
+                              <Plus size={15} /> {MEAL_ROW_LABEL[m]}
+                            </button>
+                          ))}
                         </div>
-                      </>
-                    ) : (
-                      <button className="v2-plan-add" disabled={cloud.saving || blocked} onClick={() => add(day.key)}>
-                        <Plus size={19} />
-                        <span>{i < 3 ? "Alege o idee pentru această zi" : "Lasă loc pentru spontaneitate"}</span>
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </article>
                 );
               })}

@@ -6,6 +6,8 @@ const {load}=require(path.join(__dirname,'..','load-ts.cjs'));
 const {catalog}=load('src/features/v2/catalog.ts');
 const {resolveAllergy,assessRecipe}=load('src/features/v2/allergy.ts');
 const native=process.env.V2_NATIVE==='1';
+// The planner asks for days and meals: these tests keep their original shape, 5 days of lunch.
+async function fiveLunches(page){const pick=page.locator('.v2-meal-choices');for(const m of ['Mic dejun','Prânz','Cină','Gustare']){const b=pick.getByRole('button',{name:m,exact:true});if(((await b.getAttribute('aria-pressed'))==='true')!==(m==='Prânz'))await b.click();}await page.getByRole('button',{name:'5 zile',exact:true}).click();await page.getByRole('button',{name:'Arată planul',exact:true}).click();}
 test.use({viewport:{width:390,height:844}});
 const NOTICE='Verifică întotdeauna ingredientele și etichetele';
 const api=()=>process.env.V2_TEST_API_URL,key=()=>process.env.V2_TEST_ANON_KEY;
@@ -29,9 +31,9 @@ const addAllergy=(a,food_id,food_name,baby_id=null)=>a.rest('POST','allergy_reco
 const markers=(page,kind)=>page.locator(`.v2-recipe-grid [data-allergy="${kind}"]`);
 async function makePlan(page){
  await page.goto('/v2/plan');
- const show=page.getByRole('button',{name:'Arată 5 zile de mese',exact:true});
+ const show=page.getByRole('button',{name:'Arată planul',exact:true});
  await expect(show).toBeEnabled({timeout:30000});
- await show.click();
+ await fiveLunches(page);
 }
 const plannedIds=async a=>(await a.rest('GET',`meal_plans?select=recipe_id,baby_id&user_id=eq.${a.userId}`)).map(r=>r.recipe_id);
 
@@ -44,7 +46,7 @@ test('no allergy: no markers, no notice, a full 5-day plan',async({page,request}
  await expect(page.getByText(NOTICE)).toHaveCount(0);
  await makePlan(page);
  await page.getByRole('button',{name:'Salvează planul'}).click();
- await expect(page.getByText('5 zile de mese, gata',{exact:false})).toBeVisible({timeout:30000});
+ await expect(page.getByText('mese pentru 5 zile, gata',{exact:false})).toBeVisible({timeout:30000});
  await expect.poll(async()=>(await plannedIds(a)).length,{timeout:20000}).toBe(5);
 });
 
@@ -74,7 +76,7 @@ test('one allergy recorded in V1: the library stays open, marked; the plan leave
  await makePlan(page);
  await expect(page.locator('.v2-proposal').getByText(NOTICE)).toBeVisible();
  await page.getByRole('button',{name:'Salvează planul'}).click();
- await expect(page.getByText('5 zile de mese, gata',{exact:false})).toBeVisible({timeout:30000});
+ await expect(page.getByText('mese pentru 5 zile, gata',{exact:false})).toBeVisible({timeout:30000});
  let ids=[];await expect.poll(async()=>(ids=await plannedIds(a)).length,{timeout:20000}).toBe(5);
  const egg=[resolveAllergy({id:'x',babyId:null,foodId:'ou',foodName:'Ou'})];
  for(const id of ids)expect(assessRecipe(catalog.find(r=>r.id===id),egg).status,id).toBe('compatible');
@@ -116,7 +118,7 @@ test('an unknown food never counts as absent: nothing is planned, and the page s
  await expect(markers(page,'compatible')).toHaveCount(0);
  await makePlan(page);
  const why=page.locator('.v2-plan-shortfall');
- await expect(why).toContainText('Am găsit idei pentru 0 din 5 zile');
+ await expect(why).toContainText('Prânz: 5 mese rămân libere');
  await expect(why).toContainText('insuficient verificate');
  await expect(why).toContainText('nu le folosim ca să completăm planul');
  expect((await plannedIds(a)).length).toBe(0);
@@ -182,7 +184,7 @@ test('a reaction recorded in V1 for a recipe excludes that recipe\'s foods, not 
  await expect(markers(page,'compatible').first()).toBeVisible({timeout:30000});
  await makePlan(page);
  await page.getByRole('button',{name:'Salvează planul'}).click();
- await expect(page.getByText('5 zile de mese, gata',{exact:false})).toBeVisible({timeout:30000});
+ await expect(page.getByText('mese pentru 5 zile, gata',{exact:false})).toBeVisible({timeout:30000});
  let ids=[];await expect.poll(async()=>(ids=await plannedIds(a)).length,{timeout:20000}).toBe(5);
  const allergy=[resolveAllergy({id:'x',babyId:null,foodId:'piure-banana',foodName:'Piure de banană & avocado'})];
  for(const id of ids)expect(assessRecipe(catalog.find(r=>r.id===id),allergy).status,id).toBe('compatible');

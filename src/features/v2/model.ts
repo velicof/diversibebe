@@ -1,5 +1,18 @@
 export type Stage = 0 | 6 | 8 | 10 | 12;
-export type PlanEntry = { slot: string; recipeId: string };
+/** A meal of the day. "oricare": a plan saved before meals had types (one meal that day, any kind). */
+export type MealSlot = "mic-dejun" | "pranz" | "cina" | "gustare" | "oricare";
+export const MEAL_ORDER: MealSlot[] = ["mic-dejun", "pranz", "cina", "gustare", "oricare"];
+export const PLANNABLE_MEALS = ["mic-dejun", "pranz", "cina", "gustare"] as const;
+export type PlannableMeal = (typeof PLANNABLE_MEALS)[number];
+export const PLAN_DAYS = [1, 3, 5, 7] as const;
+export type PlanDays = (typeof PLAN_DAYS)[number];
+export type PlanEntry = { slot: string; meal: MealSlot; recipeId: string };
+/** The parent's planner choices for one child. */
+export type PlannerSettings = { meals: PlannableMeal[]; days: PlanDays };
+// A meal left out (an older caller) is the untyped "oricare", exactly as the server reads it.
+export const planKey = (e: { slot: string; meal?: MealSlot }) => `${e.slot}|${e.meal ?? "oricare"}`;
+export const byDayAndMeal = (a: PlanEntry, b: PlanEntry) =>
+  a.slot.localeCompare(b.slot) || MEAL_ORDER.indexOf(a.meal) - MEAL_ORDER.indexOf(b.meal);
 export type MealUse = {
   id: string;
   recipeId: string;
@@ -31,7 +44,10 @@ export type EventName =
   | "return_session"
   | "recipe_viewed"
   | "shopping_list_generated"
-  | "shopping_item_checked";
+  | "shopping_item_checked"
+  | "plan_generated"
+  | "plan_saved"
+  | "plan_meal_replaced";
 export type AppState = {
   version: 1;
   onboarded: boolean;
@@ -43,6 +59,8 @@ export type AppState = {
   events: LocalEvent[];
   shoppingChecked: string[];
   pantry: string[];
+  /** Null until the parent chooses; the planner then starts from values that suit the stage. */
+  planner: PlannerSettings | null;
 };
 export const emptyState: AppState = {
   version: 1,
@@ -55,13 +73,16 @@ export const emptyState: AppState = {
   events: [],
   shoppingChecked: [],
   pantry: [],
+  planner: null,
 };
 export type Action =
   | { type: "onboard"; stage: Stage; introduced: string[] }
   | { type: "favorite"; recipeId: string }
-  | { type: "plan"; slot: string; recipeId: string }
+  | { type: "plan"; slot: string; meal: MealSlot; recipeId: string }
+  /** Saved together or not at all. */
   | { type: "plan-many"; entries: PlanEntry[] }
-  | { type: "remove-plan"; slot: string }
+  | { type: "remove-plan"; slot: string; meal: MealSlot }
+  | { type: "planner-settings"; settings: PlannerSettings }
   | { type: "confirm"; use: MealUse }
   | { type: "remove-use"; id: string }
   | { type: "event"; event: LocalEvent }
@@ -84,29 +105,32 @@ export function appReducer(state: AppState, action: Action): AppState {
       };
     case "favorite":
       return { ...state, favorites: toggle(state.favorites, action.recipeId) };
-    case "plan":
+    case "plan": {
+      const key = planKey(action);
       return {
         ...state,
         plan: [
-          ...state.plan.filter((p) => p.slot !== action.slot),
-          { slot: action.slot, recipeId: action.recipeId },
-        ],
-      };
-    case "plan-many": {
-      const slots = new Set(action.entries.map((e) => e.slot));
-      return {
-        ...state,
-        plan: [
-          ...state.plan.filter((p) => !slots.has(p.slot)),
-          ...action.entries.map(({ slot, recipeId }) => ({ slot, recipeId })),
-        ],
+          ...state.plan.filter((p) => planKey(p) !== key),
+          { slot: action.slot, meal: action.meal ?? "oricare", recipeId: action.recipeId },
+        ].sort(byDayAndMeal),
       };
     }
-    case "remove-plan":
+    case "plan-many": {
+      const keys = new Set(action.entries.map(planKey));
       return {
         ...state,
-        plan: state.plan.filter((p) => p.slot !== action.slot),
+        plan: [
+          ...state.plan.filter((p) => !keys.has(planKey(p))),
+          ...action.entries.map(({ slot, meal, recipeId }) => ({ slot, meal: meal ?? "oricare", recipeId })),
+        ].sort(byDayAndMeal),
       };
+    }
+    case "remove-plan": {
+      const key = planKey(action);
+      return { ...state, plan: state.plan.filter((p) => planKey(p) !== key) };
+    }
+    case "planner-settings":
+      return { ...state, planner: action.settings };
     case "confirm":
       return state.uses.some(
         (u) =>
@@ -131,6 +155,15 @@ export function appReducer(state: AppState, action: Action): AppState {
     case "reset":
       return { ...emptyState };
   }
+}
+function readPlanner(value: unknown): PlannerSettings | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const meals = Array.isArray(v.meals) ? v.meals.filter((m): m is PlannableMeal => (PLANNABLE_MEALS as readonly string[]).includes(m)) : [];
+  const days = Number(v.days);
+  return meals.length && (PLAN_DAYS as readonly number[]).includes(days)
+    ? { meals: PLANNABLE_MEALS.filter((m) => meals.includes(m)), days: days as PlanDays }
+    : null;
 }
 /** Import only the current demo schema; never read the legacy account store. */
 export function readState(
@@ -161,20 +194,19 @@ export function readState(
             ),
           ].slice(0, 100)
         : [];
-    const plan = Array.isArray(value.plan)
-      ? value.plan
-          .filter((x): x is PlanEntry =>
-            Boolean(
-              x &&
-                typeof x === "object" &&
-                typeof x.slot === "string" &&
-                /^\d{4}-\d{2}-\d{2}$/.test(x.slot) &&
-                allowedRecipes.has(x.recipeId),
-            ),
-          )
-          .slice(0, 31)
-          .map(({ slot, recipeId }) => ({ slot, recipeId }))
-      : [];
+    // Plans saved before meals had types ({slot, recipeId}) are kept as "oricare": nothing is dropped.
+    // On a repeated day and meal the later entry wins, as when it was saved.
+    const planned = new Map<string, PlanEntry>();
+    if (Array.isArray(value.plan))
+      for (const x of value.plan as Record<string, unknown>[]) {
+        if (!x || typeof x !== "object" || typeof x.slot !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(x.slot)) continue;
+        if (typeof x.recipeId !== "string" || !allowedRecipes.has(x.recipeId)) continue;
+        const meal = (MEAL_ORDER as string[]).includes(String(x.meal)) ? (x.meal as MealSlot) : "oricare";
+        const entry = { slot: x.slot, meal, recipeId: x.recipeId };
+        planned.delete(planKey(entry));
+        planned.set(planKey(entry), entry);
+      }
+    const plan = [...planned.values()].slice(-140).sort(byDayAndMeal);
     const uses = Array.isArray(value.uses)
       ? value.uses
           .filter((x): x is MealUse =>
@@ -204,6 +236,7 @@ export function readState(
       shoppingChecked: strings(value.shoppingChecked, allowedShopping),
       plan,
       uses,
+      planner: readPlanner(value.planner),
     };
   } catch {
     return { ...emptyState };

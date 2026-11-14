@@ -70,7 +70,7 @@ export function GuestImportPrompt() {
       <p>
         <strong>Ai pe acest dispozitiv {parts.join(" și ")}.</strong> {accountCopy.guestImportQuestion}
         {pending.skipped > 0 && ` ${notSuited(pending.skipped)}`}
-        {pending.kept > 0 && ` ${plural(pending.kept, "zi are", "zile au")} deja o masă în cont și ${pending.kept === 1 ? "rămâne neschimbată" : "rămân neschimbate"}.`}
+        {pending.kept > 0 && ` ${plural(pending.kept, "masă din zilele planificate are", "mese din zilele planificate au")} deja altă rețetă în cont, care ${pending.kept === 1 ? "rămâne neschimbată" : "rămân neschimbate"}.`}
       </p>
       {failed && <p role="alert">Nu am putut adăuga totul. Datele de pe acest dispozitiv au rămas neschimbate; reîncearcă.</p>}
       <div className="v2-action-row">

@@ -3503,3 +3503,26 @@
 .v2-allergy-confirm p { margin: 6px 0; font-size: 14px; }
 .v2-history-list { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 .v2-history-list li { padding: 6px 10px; border-radius: 999px; background: var(--v2-sage); font-size: 13.5px; overflow-wrap: anywhere; }
+/* Flexible planner: several meals per day. */
+.v2-day-meals { flex: 1; min-width: 0; display: grid; gap: 10px; }
+.v2-meal-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 10px; }
+.v2-meal-row .v2-meal-label { grid-column: 1 / -1; }
+.v2-meal-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--v2-accent); }
+.v2-day-empty { margin: 0; font-size: 13px; color: var(--v2-muted); }
+.v2-day-add { display: flex; flex-wrap: wrap; gap: 6px; }
+.v2-plan-add-meal { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 8px 12px; border: 1px dashed #d7c9b8; border-radius: 999px; background: #fffdfa66; color: var(--v2-muted); font-size: 12.5px; }
+.v2-plan-add-meal:hover { background: #eee7dd; }
+.v2-proposal-meals { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.v2-proposal-meal { display: grid; gap: 6px; }
+.v2-meal-choices button { display: inline-flex; align-items: center; gap: 4px; }
+.v2-today-meals { margin: 0 0 18px; padding: 16px; border-radius: 14px; background: var(--v2-paper); border: 1px solid var(--v2-line); }
+.v2-today-meals h2 { margin: 0 0 10px; font-size: 18px; }
+.v2-today-meals ul { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 10px; }
+.v2-today-meals li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 10px; }
+.v2-today-meals li .v2-meal-label { grid-column: 1 / -1; }
+.v2-today-meals li a { color: var(--v2-ink); font-weight: 600; overflow-wrap: anywhere; }
+.v2-today-meals .v2-button { min-height: 44px; padding: 8px 12px; font-size: 13px; }
+@media (max-width: 760px) {
+  .v2-plan-day-meals { flex-wrap: nowrap; align-items: flex-start; }
+  .v2-meal-row .v2-plan-actions { flex-basis: auto; padding-left: 0; margin-top: 0; }
+}

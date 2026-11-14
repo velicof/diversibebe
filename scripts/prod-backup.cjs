@@ -18,7 +18,7 @@
 // Cost: 0 (local pg_dump 17 from ../real-supabase-runtime). Read-only for the source database.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto'),{spawnSync}=require('node:child_process');
 const repo=path.resolve(__dirname,'..'),bin=path.resolve(repo,'../real-supabase-runtime/postgres/pgsql/bin');
-const TABLES=['auth.users','public.profiles','public.babies','public.tried_foods','public.food_journal','public.allergy_records','public.favorite_recipes','public.cooked_recipes','public.custom_recipes','public.custom_foods','public.login_events','public.feedback'];
+const TABLES=['auth.users','public.profiles','public.babies','public.tried_foods','public.food_journal','public.allergy_records','public.favorite_recipes','public.cooked_recipes','public.custom_recipes','public.custom_foods','public.login_events','public.feedback','public.meal_plans','public.user_preferences','public.product_events'];
 const MAGIC=Buffer.from('DBBK1');
 // Thrown, not process.exit: every "finally" must run, because it removes the decrypted copy from the disk.
 const fail=m=>{throw new Error(m);};

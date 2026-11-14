@@ -1,6 +1,6 @@
 # Specificație: planificator flexibil (Varianta B extinsă)
 
-*13 nov. 2026 · status: **propunere, neaprobată**. Nimic din schema de producție nu se schimbă
+*13 nov. 2026 · status: **aprobată de fondator; implementată și testată local** (`docs/ai-ops/PLANNER-MIGRATION.md`). Nimic din schema de producție nu se schimbă
 înainte de aprobare.*
 
 ## 1. Ce vrea părintele

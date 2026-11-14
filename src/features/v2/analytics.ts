@@ -18,6 +18,9 @@ const allowed: Record<EventName, string[]> = {
   recipe_viewed: [],
   shopping_list_generated: ["count"],
   shopping_item_checked: [],
+  plan_generated: ["count", "days", "meals"],
+  plan_saved: ["count", "days", "meals"],
+  plan_meal_replaced: [],
 };
 /** A strict allowlist: health fields, child names and arbitrary text never enter analytics. */
 export function makeEvent(
@@ -30,7 +33,7 @@ export function makeEvent(
   for (const key of allowed[name]) {
     const value = properties[key];
     if (
-      ["count", "elapsedMs", "price"].includes(key) &&
+      ["count", "elapsedMs", "price", "days", "meals"].includes(key) &&
       typeof value === "number" &&
       Number.isFinite(value) &&
       value >= 0

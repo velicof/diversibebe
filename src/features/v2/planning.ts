@@ -1,5 +1,5 @@
 import type { Recipe } from "./catalog";
-import type { PlanEntry } from "./model";
+import { planKey, type MealSlot, type PlanEntry, type PlannableMeal } from "./model";
 import { replacePlannedRecipe } from "@/app/lib/planSelection";
 import { normalize } from "./review";
 import { detectProduce, produce } from "./season";
@@ -34,18 +34,22 @@ export function weekRange(now: Date) {
   end.setUTCDate(end.getUTCDate() + 6);
   return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
 }
-export function nextAvailableSlot(plan: PlanEntry[], days: { key: string }[]) {
-  return days.find((day) => !plan.some((p) => p.slot === day.key))?.key;
+/** The first day whose meal of this type is still free. */
+export function nextAvailableSlot(plan: PlanEntry[], days: { key: string }[], meal: MealSlot = "oricare") {
+  return days.find((day) => !plan.some((p) => p.slot === day.key && (p.meal ?? "oricare") === meal))?.key;
 }
+/** Another eligible recipe for one meal: of the same meal type, not already elsewhere in the plan. */
 export function swapRecipe(
   eligible: Recipe[],
   plan: PlanEntry[],
   slot: string,
+  meal: MealSlot = "oricare",
 ) {
+  const key = planKey({ slot, meal });
   return replacePlannedRecipe(
-    eligible,
-    plan.find((p) => p.slot === slot)?.recipeId,
-    plan.filter((p) => p.slot !== slot).map((p) => p.recipeId),
+    eligible.filter((r) => fitsMeal(r, meal)),
+    plan.find((p) => planKey(p) === key)?.recipeId,
+    plan.filter((p) => planKey(p) !== key).map((p) => p.recipeId),
   );
 }
 /** De-duplicate exact ingredient lines only; never guess units or sum uncertain quantities. */
@@ -283,4 +287,89 @@ export function shoppingKeyUniverse(recipes: Recipe[]): ReadonlySet<string> {
     }
   universeCache.set(recipes, keys);
   return keys;
+}
+
+/* ---------- Flexible planner: the meals and days the parent chooses ---------- */
+
+/** Orientative starting point per stage (the convention of V1), always editable; not a medical recommendation. */
+export function defaultMeals(stage: number): PlannableMeal[] {
+  if (stage < 8) return ["pranz"];
+  return ["mic-dejun", "pranz", "cina"];
+}
+/** "oricare" (plans saved before meals had types) accepts any recipe. */
+export const fitsMeal = (recipe: Pick<Recipe, "mealType">, meal: MealSlot) => meal === "oricare" || recipe.mealType === meal;
+
+export type MealRequest = { slot: string; meal: MealSlot };
+export type ProposedMeal = MealRequest & {
+  recipeId: string;
+  alternatives: string[];
+  /** Already in the plan and still eligible: left as it is. */
+  kept?: boolean;
+  /** Every other recipe for this meal was already used: shown as a repeat, never silently. */
+  repeated?: boolean;
+};
+export type MealPlanOptions = {
+  reuseIngredients: boolean;
+  alternatives?: number;
+  /** By planKey: meals already planned and still eligible. */
+  kept?: Map<string, Recipe>;
+};
+const dayDistance = (a: string, b: string) => Math.abs(Date.parse(a + "T12:00:00Z") - Date.parse(b + "T12:00:00Z")) / 86400000;
+
+/**
+ * Fills each requested day and meal from recipes that are ALREADY eligible (safety, allergies, stage, time
+ * and preferences are applied by `recommend` before this runs). A recipe appears once in the plan while the
+ * meal type has others; a meal with no eligible recipe stays empty and the caller says why.
+ */
+export function proposeMeals(eligible: Recipe[], requests: MealRequest[], options: MealPlanOptions): ProposedMeal[] {
+  const altCount = options.alternatives ?? 2;
+  const used = new Map<string, string[]>(); // recipe id -> days it is planned
+  const counts = new Map<string, number>(); // produce id -> meals using it
+  const byKey = new Map<string, ProposedMeal>();
+  const dayProduce = new Map<string, string[]>();
+  const take = (req: MealRequest, recipe: Recipe, extra: Partial<ProposedMeal> = {}) => {
+    used.set(recipe.id, [...(used.get(recipe.id) ?? []), req.slot]);
+    for (const id of new Set(coreProduce(recipe))) counts.set(id, (counts.get(id) ?? 0) + 1);
+    dayProduce.set(req.slot, [...(dayProduce.get(req.slot) ?? []), ...coreProduce(recipe)]);
+    byKey.set(planKey(req), { ...req, recipeId: recipe.id, alternatives: [], ...extra });
+  };
+  // Kept meals first: they are part of the plan before anything new is chosen.
+  for (const req of requests) {
+    const kept = options.kept?.get(planKey(req));
+    if (kept) take(req, kept, { kept: true });
+  }
+  const ordered = [...requests].sort((a, b) => a.slot.localeCompare(b.slot));
+  for (const req of ordered) {
+    if (byKey.has(planKey(req))) continue;
+    const pool = eligible.filter((r) => fitsMeal(r, req.meal));
+    const fresh = pool.filter((r) => !used.has(r.id));
+    // A repeat only when the meal type has nothing new, and never within two days of the same recipe.
+    const candidates = fresh.length ? fresh : pool.filter((r) => (used.get(r.id) ?? []).every((d) => dayDistance(d, req.slot) >= 2));
+    if (!candidates.length) continue;
+    const today = dayProduce.get(req.slot) ?? [];
+    const value = (r: Recipe, rank: number) => {
+      let v = -rank * 0.25;
+      const produce = coreProduce(r);
+      if (options.reuseIngredients) {
+        const shared = produce.filter((id) => (counts.get(id) ?? 0) > 0 && (counts.get(id) ?? 0) < 3);
+        v += Math.min(2, shared.length) * 1.5;
+      }
+      // Variety within the day: two meals of the same day should not rest on the same produce.
+      if (produce.some((id) => today.includes(id))) v -= 3;
+      return v;
+    };
+    const pick = candidates
+      .slice(0, 24)
+      .map((r, i) => ({ r, v: value(r, i) }))
+      .sort((a, b) => b.v - a.v || a.r.id.localeCompare(b.r.id))[0].r;
+    take(req, pick, fresh.length ? {} : { repeated: true });
+  }
+  // Alternatives: recipes of the same meal type not used anywhere in the plan, never shared between meals.
+  const offered = new Set(used.keys());
+  const result = requests.map((req) => byKey.get(planKey(req))).filter((p): p is ProposedMeal => Boolean(p));
+  for (const meal of result) {
+    meal.alternatives = eligible.filter((r) => fitsMeal(r, meal.meal) && !offered.has(r.id)).slice(0, altCount).map((r) => r.id);
+    meal.alternatives.forEach((id) => offered.add(id));
+  }
+  return result.sort((a, b) => a.slot.localeCompare(b.slot) || ["mic-dejun", "pranz", "cina", "gustare", "oricare"].indexOf(a.meal) - ["mic-dejun", "pranz", "cina", "gustare", "oricare"].indexOf(b.meal));
 }
